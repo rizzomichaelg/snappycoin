@@ -1,0 +1,242 @@
+/* General Resets */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Typography */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #333;
+  background-color: #fff;
+  line-height: 1.6;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #e3f2fd; /* Soft blue */
+  padding: 0.5rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+.logo a {
+  text-decoration: none;
+  font-size: 1.5rem;
+  color: #333;
+  font-weight: bold;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-links li a {
+  text-decoration: none;
+  color: #333;
+  padding: 0.5rem;
+  transition: background-color 0.3s ease;
+}
+
+.nav-links li a:hover,
+.nav-links li a.active {
+  background-color: #90caf9; /* Slight highlight */
+  border-radius: 4px;
+}
+
+/* Hero Section */
+.hero-section {
+  position: relative;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+}
+
+.home-hero {
+  background: url('https://via.placeholder.com/1400x800/90caf9/ffffff?text=Happy+Laundry+Customers') center/cover no-repeat;
+}
+
+.hero-overlay {
+  background-color: rgba(0, 0, 0, 0.45);
+  padding: 2rem;
+  width: 100%;
+}
+
+.hero-overlay h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.hero-overlay p {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn-cta {
+  display: inline-block;
+  background-color: #ffca28; /* Warm neutral accent */
+  color: #333;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-cta:hover {
+  background-color: #ffc107;
+  color: #222;
+}
+
+/* Quick Info Section */
+.quick-info-section {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  padding: 2rem;
+  gap: 1rem;
+  background-color: #f8f9fa;
+}
+
+.info-tile {
+  background-color: #fff;
+  flex: 1;
+  min-width: 250px;
+  max-width: 300px;
+  margin: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.info-tile img {
+  max-width: 60px;
+  margin-bottom: 1rem;
+}
+
+/* Content Sections */
+.content-section {
+  padding: 2rem 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.content-section h1,
+.content-section h2 {
+  margin-bottom: 1rem;
+}
+
+/* Service Blocks */
+.service-block {
+  margin-bottom: 2rem;
+}
+
+.service-block ul {
+  margin-top: 0.5rem;
+  padding-left: 1.2rem;
+}
+
+/* Pricing Table */
+.pricing-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.pricing-table thead {
+  background-color: #e3f2fd;
+}
+
+.pricing-table th, .pricing-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+/* Gallery Grid */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-gap: 1rem;
+}
+
+.gallery-grid img {
+  width: 100%;
+  border-radius: 4px;
+}
+
+/* Map Container */
+.map-container {
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin-bottom: 0.5rem;
+}
+
+input[type="text"],
+input[type="email"],
+textarea {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+}
+
+/* Footer */
+footer {
+  background-color: #e3f2fd;
+  padding: 1rem;
+  text-align: center;
+}
+
+.footer-content {
+  margin: 0 auto;
+  max-width: 900px;
+}
+
+.footer-content p {
+  margin: 0.3rem 0;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+  .quick-info-section {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .navbar {
+    flex-wrap: wrap;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-overlay {
+    text-align: center;
+  }
+}
