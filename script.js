@@ -2,13 +2,11 @@
  * Simple form validation for the contact form.
  * Ensures that all required fields are filled out before submission.
  */
-
 function validateForm() {
   const nameField = document.getElementById("name");
   const emailField = document.getElementById("email");
   const messageField = document.getElementById("message");
 
-  // Basic validations
   if (!nameField.value.trim()) {
     alert("Please enter your name.");
     nameField.focus();
@@ -27,6 +25,5 @@ function validateForm() {
     return false;
   }
 
-  // If all checks pass, allow form submission
   return true;
 }

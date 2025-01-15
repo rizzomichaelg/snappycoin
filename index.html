@@ -2,66 +2,229 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="description" content="Snappy Laundry — Single-page layout" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Snappy Laundry - Home</title>
+  <title>Snappy Laundry</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- HEADER -->
-  <header>
+  <!-- HEADER / NAVIGATION -->
+  <header class="header">
     <nav class="navbar">
       <div class="logo">
-        <!-- Replace with an actual logo image if desired -->
-        <a href="index.html">Snappy Laundry</a>
+        <a href="#hero">Snappy Laundry</a>
       </div>
       <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="about.html">About</a></li>
-        <li><a href="services.html">Services</a></li>
-        <li><a href="why-choose-us.html">Why Choose Us</a></li>
-        <li><a href="location-contact.html">Contact</a></li>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#why-choose-us">Why Choose Us</a></li>
+        <li><a href="#gallery">Gallery</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#contact-section">Contact</a></li>
       </ul>
     </nav>
   </header>
 
   <!-- HERO SECTION -->
-  <section id="hero" class="hero-section home-hero">
+  <section id="hero" class="hero-section">
     <div class="hero-overlay">
-      <h1>Your Clean Clothes, Snappier than Ever!</h1>
-      <p>Family-Owned Business — Proudly Serving the Community</p>
-      <a class="btn-cta" href="location-contact.html#contact-form">Visit Us Today!</a>
+      <h1>Your Clean Clothes, Snappier Than Ever!</h1>
+      <p>Family-Owned — Proudly Serving the Community</p>
+      <a class="btn-cta" href="#contact-section">Visit Us Today!</a>
     </div>
   </section>
 
-  <!-- QUICK INFO TILES -->
-  <section class="quick-info-section">
-    <div class="info-tile">
-      <img src="https://via.placeholder.com/60" alt="Location icon" />
-      <h3>Location & Hours</h3>
-      <p>2303B McKelvey Rd, Maryland Heights, MO 63043</p>
-      <p>Open Daily: 6:00 AM – 1:30 AM</p>
+  <!-- ABOUT SECTION -->
+  <section id="about" class="content-section">
+    <h2>About Snappy Laundry</h2>
+    <p>
+      Snappy Laundry has been proudly serving the Maryland Heights community for years.
+      Founded as a small family-owned business, we have grown into a beloved local staple.
+      Our mission is to provide a warm, welcoming environment, offering top-of-the-line
+      laundry services while maintaining personal connections with our customers.
+    </p>
+    <h3>Our Values and Vision</h3>
+    <ul class="checklist">
+      <li><span class="icon-check">&#10004;</span> Clean, Safe, Welcoming Facility</li>
+      <li><span class="icon-check">&#10004;</span> Exceptional Customer Focus</li>
+      <li><span class="icon-check">&#10004;</span> Quality and Care in Every Wash</li>
+    </ul>
+  </section>
+
+  <!-- SERVICES SECTION -->
+  <section id="services" class="content-section full-screen-section">
+    <h2>Our Services</h2>
+    <div class="services-wrapper">
+      <!-- Self-Service -->
+      <article class="service-block">
+        <div class="icon-wrapper">
+          <img src="https://via.placeholder.com/64" alt="Self-Service icon" />
+        </div>
+        <h3>Self-Service Laundry</h3>
+        <p>State-of-the-art coin-operated washers and dryers for large laundry loads.</p>
+        <p class="highlight">Perfect for comforters, bedding, and bulk laundry.</p>
+        <ul class="bulleted-list">
+          <li>Free Wi-Fi</li>
+          <li>Flat-screen TVs</li>
+          <li>Vending machines (snacks & detergent)</li>
+        </ul>
+      </article>
+
+      <!-- Drop-Off Service -->
+      <article class="service-block">
+        <div class="icon-wrapper">
+          <img src="https://via.placeholder.com/64" alt="Drop-Off icon" />
+        </div>
+        <h3>Drop-Off Service</h3>
+        <p><strong>Pressed for time or just don’t like doing laundry?</strong></p>
+        <p>We’ll wash, dry, and neatly fold your laundry for pick-up.</p>
+      </article>
+
+      <!-- Delivery (Optional) -->
+      <article class="service-block">
+        <div class="icon-wrapper">
+          <img src="https://via.placeholder.com/64" alt="Delivery service icon" />
+        </div>
+        <h3>Delivery Service</h3>
+        <p>For ultimate convenience, let us pick up and deliver your clean laundry right to your door.</p>
+        <p class="highlight">Spend your time on what truly matters!</p>
+      </article>
     </div>
-    <div class="info-tile">
-      <img src="https://via.placeholder.com/60" alt="Drop-off service icon" />
-      <h3>Drop-Off Service</h3>
-      <p>Pressed for time? We’ll do your laundry for you.</p>
+  </section>
+
+  <!-- WHY CHOOSE US SECTION -->
+  <section id="why-choose-us" class="content-section full-screen-section">
+    <h2>Why Choose Snappy Laundry?</h2>
+    <article class="why-reasons">
+      <div class="reason-item">
+        <div class="circle-check">
+          <span class="icon-check">&#10004;</span>
+        </div>
+        <h3>Family-Owned Business</h3>
+        <p>Rooted in the community, providing a family-friendly environment and personalized service.</p>
+      </div>
+      <div class="reason-item">
+        <div class="circle-check">
+          <span class="icon-check">&#10004;</span>
+        </div>
+        <h3>Clean & Safe Environment</h3>
+        <p>Spotless facility designed for customer comfort and safety.</p>
+      </div>
+      <div class="reason-item">
+        <div class="circle-check">
+          <span class="icon-check">&#10004;</span>
+        </div>
+        <h3>Modern Equipment</h3>
+        <p>Enjoy brand-new, state-of-the-art machines for a faster, more efficient wash.</p>
+      </div>
+      <div class="reason-item">
+        <div class="circle-check">
+          <span class="icon-check">&#10004;</span>
+        </div>
+        <h3>Friendly Staff</h3>
+        <p>Our team is available to answer questions and help you choose the best wash cycles.</p>
+      </div>
+      <div class="reason-item">
+        <div class="circle-check">
+          <span class="icon-check">&#10004;</span>
+        </div>
+        <h3>Convenient Location</h3>
+        <p>Located in Maryland Heights, near the Community Center and Scott Gallagher soccer fields.</p>
+      </div>
+      <div class="reason-item">
+        <div class="circle-check">
+          <span class="icon-check">&#10004;</span>
+        </div>
+        <h3>Spanish-Friendly Service</h3>
+        <p><strong>Se habla español</strong> — Our bilingual staff is here to assist Spanish-speaking customers.</p>
+      </div>
+    </article>
+  </section>
+
+  <!-- GALLERY SECTION (Optional) -->
+  <section id="gallery" class="content-section">
+    <h2>Gallery</h2>
+    <div class="gallery-grid">
+      <!-- Replace placeholders with real images -->
+      <img src="https://via.placeholder.com/400x300" alt="Washer and dryer" />
+      <img src="https://via.placeholder.com/400x300" alt="Seating area" />
+      <img src="https://via.placeholder.com/400x300" alt="Interior of laundromat" />
+      <img src="https://via.placeholder.com/400x300" alt="Folding station" />
     </div>
-    <div class="info-tile">
-      <img src="https://via.placeholder.com/60" alt="Family-owned icon" />
-      <h3>Family-Owned</h3>
-      <p>Serving the community with pride and care.</p>
+  </section>
+
+  <!-- FAQ SECTION (Optional) -->
+  <section id="faq" class="content-section">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-item">
+      <h3>What payment methods do the machines accept?</h3>
+      <p>Our washers and dryers accept coins. There is also a coin dispenser on-site.</p>
     </div>
+    <div class="faq-item">
+      <h3>Do you offer detergent if I forget mine?</h3>
+      <p>Absolutely! Our vending machines have detergent, fabric softener, and dryer sheets.</p>
+    </div>
+    <div class="faq-item">
+      <h3>Can I leave my clothes unattended?</h3>
+      <p>We recommend staying on-site for the safety and care of your items.</p>
+    </div>
+  </section>
+
+  <!-- CONTACT SECTION -->
+  <section id="contact-section" class="content-section">
+    <h2>Contact Us</h2>
+    <p>
+      <strong>Address:</strong> 2303 McKelvey Rd, Maryland Heights, MO 63043<br />
+      <strong>Across from:</strong> Maryland Heights Community Center
+    </p>
+    <div class="map-container">
+      <!-- Replace `src` with your actual map embed link -->
+      <iframe
+        title="Snappy Laundry Map"
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2sMaryland%20Heights%20Community%20Center!5e0!3m2!1sen!2sus!4v1602291528092!5m2!1sen!2sus"
+        width="600"
+        height="350"
+        style="border:0;"
+        allowfullscreen=""
+        loading="lazy">
+      </iframe>
+    </div>
+
+    <!-- CONTACT FORM -->
+    <form id="contactForm" onsubmit="return validateForm();">
+      <div class="form-group">
+        <label for="name">Name <span aria-hidden="true">*</span></label>
+        <input type="text" id="name" name="name" required aria-required="true"/>
+      </div>
+      <div class="form-group">
+        <label for="email">Email <span aria-hidden="true">*</span></label>
+        <input type="email" id="email" name="email" required aria-required="true"/>
+      </div>
+      <div class="form-group">
+        <label for="message">Message <span aria-hidden="true">*</span></label>
+        <textarea id="message" name="message" rows="4" required aria-required="true"></textarea>
+      </div>
+      <button type="submit" class="btn-cta">Send Message</button>
+    </form>
+
+    <h3>Hours of Operation</h3>
+    <p><strong>Monday – Sunday:</strong> 6:00 AM – 1:30 AM</p>
   </section>
 
   <!-- FOOTER -->
-  <footer>
-    <div class="footer-content">
-      <p><strong>Snappy Laundry</strong> | 2303B McKelvey Rd, Maryland Heights, MO 63043 | (Mon–Sun: 6:00 AM–1:30 AM)</p>
-      <p>Email: <a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a></p>
-      <p>© 2025 Snappy Laundry. All rights reserved.</p>
-    </div>
+  <footer class="footer">
+    <p>
+      <strong>Snappy Laundry</strong> | 2303 McKelvey Rd, Maryland Heights, MO 63043 
+      | <em>(Mon–Sun: 6:00 AM–1:30 AM)</em>
+    </p>
+    <p>
+      Email: <a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a><br />
+      &copy; 2025 Snappy Laundry. All Rights Reserved.
+    </p>
   </footer>
 
+  <!-- JAVASCRIPT -->
   <script src="script.js"></script>
 </body>
 </html>
