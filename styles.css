@@ -1,4 +1,5 @@
-/* 1. GLOBAL RESETS & SMOOTH SCROLLING */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto:wght@400;700&display=swap");
+
 * {
   margin: 0;
   padding: 0;
@@ -10,32 +11,46 @@ html {
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Poppins", "Roboto", Arial, sans-serif;
   color: #333;
-  background-color: #fff;
-  line-height: 1.5;
+  background-color: #f8f9fa;
+  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-/* 2. NAVIGATION & HEADER */
+/* VARIABLES */
+:root {
+  --header-height: 70px;
+  --primary-color: #0069c0;
+  --secondary-color: #ffca28;
+  --text-color: #333;
+  --light-bg: #f8f9fa;
+  --dark-bg: #333;
+  --white: #ffffff;
+}
+
+/* HEADER & NAVIGATION */
 .header {
   position: sticky;
   top: 0;
-  z-index: 999;
-  background-color: #e3f2fd;
+  z-index: 1000;
+  background-color: var(--white);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 0.5rem 1rem;
 }
 
-.logo a {
-  text-decoration: none;
-  font-size: 1.5rem;
-  color: #333;
-  font-weight: bold;
+.logo img {
+  max-height: 90px; 
+  height: auto;
+  width: auto;
 }
 
 .nav-links {
@@ -46,253 +61,274 @@ body {
 
 .nav-links li a {
   text-decoration: none;
-  color: #333;
-  padding: 0.5rem;
+  color: var(--text-color);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .nav-links li a:hover {
-  background-color: #90caf9;
+  background-color: var(--primary-color);
+  color: var(--white);
 }
 
-/* 3. HERO SECTION */
+/* OFFSET FIX FOR STICKY HEADER */
+section {
+  scroll-margin-top: var(--header-height);
+}
+
+/* HERO SECTION */
 .hero-section {
-  min-height: 100vh;
-  background: url('https://via.placeholder.com/1400x800/90caf9/ffffff?text=Happy+Laundry+Customers')
-    no-repeat center center/cover;
-  position: relative;
+  min-height: 90vh;
+  /* Add a darker gradient overlay and replace the old placeholder with the new file */
+  background: linear-gradient(
+      rgba(0, 0, 0, 0.5),
+      rgba(0, 0, 0, 0.5)
+    ),
+    url("assets/laundryrow.jpg.avif") center center / cover no-repeat;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: #fff;
-}
-
-.hero-overlay {
-  background-color: rgba(0, 0, 0, 0.4);
+  color: var(--white);
   padding: 2rem;
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  border-radius: 6px;
 }
 
-.hero-overlay h1 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+.hero-section h1 {
+  font-size: 3rem;
   font-weight: bold;
+  margin-bottom: 1rem;
+  letter-spacing: 2px;
 }
 
-.hero-overlay p {
-  font-size: 1.2rem;
+.hero-section p {
+  font-size: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
 .btn-cta {
   display: inline-block;
-  background-color: #ffca28;
-  color: #333;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
   padding: 0.75rem 1.5rem;
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 600;
   border-radius: 4px;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .btn-cta:hover {
   background-color: #ffc107;
+  transform: scale(1.05);
 }
 
-/* 4. CONTENT SECTIONS */
+/* CONTENT SECTIONS */
 .content-section {
-  width: 90%;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.bg-light {
+  background-color: var(--light-bg);
+}
+
+.section-inner {
   max-width: 900px;
   margin: 0 auto;
-  padding: 3rem 0;
 }
 
-.content-section h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.full-screen-section {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* 5. CHECKLIST / ICONS */
+/* ABOUT */
 .checklist {
   list-style: none;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
-.icon-check {
+.checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  margin-bottom: 0.75rem;
+}
+
+.checklist .icon-check {
+  font-size: 1.25rem;
   color: green;
-  font-weight: bold;
-  margin-right: 0.5rem;
+  margin-right: 0.75rem;
 }
 
-/* 6. SERVICES */
+/* SERVICES */
 .services-wrapper {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-around;
   gap: 2rem;
+  justify-content: center;
 }
 
 .service-block {
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  padding: 1.5rem;
-  flex: 1 1 250px;
-  max-width: 300px;
+  background-color: var(--white);
+  border-radius: 8px;
+  padding: 2rem;
+  flex: 1 1 calc(33.333% - 1rem);
+  max-width: 350px;
   text-align: center;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .service-block:hover {
-  transform: translateY(-5px);
+  transform: translateY(-10px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
 
-.icon-wrapper {
+.service-block img {
+  max-width: 80px;
   margin-bottom: 1rem;
 }
 
-.highlight {
-  font-style: italic;
-  color: #555;
+.service-block h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
 }
 
-.bulleted-list {
-  text-align: left;
-  margin: 1rem 0 0 1.5rem;
-  list-style: disc;
+.service-block .highlight {
+  font-weight: 600;
+  color: #d32f2f;
+  margin: 1rem 0;
 }
 
-/* 7. WHY CHOOSE US */
-/* Circle Check Icon with fade-in and scale effect on hover */
-.circle-check {
-  width: 40px;
-  height: 40px;
-  border: 2px solid #4caf50;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-  opacity: 0.8;
-  transition: all 0.3s ease;
-}
-
-.circle-check:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
+/* WHY CHOOSE US */
 .why-reasons {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 2rem;
 }
 
 .reason-item {
-  background-color: #f8f9fa;
-  border-radius: 6px;
+  background-color: var(--white);
+  border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s;
+  flex: 1 1 calc(33.333% - 1rem);
+  max-width: 300px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
 }
 
 .reason-item:hover {
-  transform: translateY(-5px);
+  transform: translateY(-10px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* 8. GALLERY */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  grid-gap: 1rem;
+.reason-item h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
 }
 
-.gallery-grid img {
-  width: 100%;
-  border-radius: 4px;
+.circle-check {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background-color: #e0f7fa;
+  color: #00838f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  font-size: 1.2rem;
 }
 
-/* 9. FAQ */
+/* FAQ */
 .faq-item {
   margin-bottom: 1.5rem;
+  text-align: left;
 }
 
 .faq-item h3 {
   margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
-/* 10. CONTACT & MAP */
+.faq-item p {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* CONTACT */
 .map-container {
-  margin: 1.5rem 0;
-  overflow: hidden;
-  border-radius: 8px;
-  text-align: center;
+  margin: 2rem 0;
+}
+
+#contactForm {
+  max-width: 600px;
+  margin: 0 auto 2rem;
+  text-align: left;
 }
 
 .form-group {
   margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
 }
 
-label {
-  margin-bottom: 0.5rem;
+.form-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
 }
 
-input[type="text"],
-input[type="email"],
-textarea {
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group textarea {
+  width: 100%;
   padding: 0.5rem;
+  font-family: inherit;
+  font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
 
-/* 11. FOOTER */
+.form-group textarea {
+  resize: vertical;
+}
+
+.btn-cta {
+  display: inline-block;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-cta:hover {
+  background-color: #ffc107;
+  transform: scale(1.05);
+}
+
+/* FOOTER */
 .footer {
   text-align: center;
-  background-color: #e3f2fd;
-  padding: 1rem;
+  padding: 2rem 1rem;
+  background-color: var(--dark-bg);
+  color: var(--white);
 }
 
-.footer p {
-  margin: 0.3rem 0;
+.footer-inner p a {
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-weight: 600;
 }
 
-/* 12. RESPONSIVE MEDIA QUERIES */
-@media (max-width: 768px) {
-  .services-wrapper {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .why-reasons {
-    grid-template-columns: 1fr;
-  }
-
-  .gallery-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .navbar {
-    flex-wrap: wrap;
-  }
-
-  .nav-links {
-    flex-direction: column;
-    gap: 0.5rem;
-    width: 100%;
-    margin-top: 0.5rem;
-  }
+.footer-inner p a:hover {
+  color: #ffd740;
 }
