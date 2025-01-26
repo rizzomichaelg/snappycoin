@@ -5,15 +5,18 @@
   <meta name="description" content="Snappy Coin Laundry — Single-page layout" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snappy Coin Laundry</title>
+  <!-- Link to external stylesheet -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
   <!-- HEADER / NAVIGATION -->
   <header class="header">
     <nav class="navbar">
       <div class="logo">
         <a href="#hero">
-          <!-- Updated logo reference -->
+          <!-- Logo reference: Adjust path/format as needed -->
           <img src="assets/logo.tiff" alt="Snappy Coin Laundry Logo" />
         </a>
       </div>
@@ -33,24 +36,34 @@
   <section id="hero" class="hero-section">
     <div class="hero-content">
       <h1>Wash &amp; Dry in a Snap!</h1>
-      <p>Family-Owned — Proudly Serving the Community</p>
+      <p class="tagline">Family-Owned — Proudly Serving the Community</p>
       <a class="btn-cta" href="#contact-section">Visit Us Today!</a>
     </div>
   </section>
 
-  <!-- ABOUT SECTION -->
   <section id="about" class="content-section bg-light">
     <div class="section-inner">
       <h2>About Snappy Coin Laundry</h2>
       <p>
-        At Snappy Coin Laundry, we understand that laundry day can be daunting. So we make it easier by providing a warm, welcoming environment with brand-new, state-of-the-art, Made in the USA machines—perfect for everything from everyday loads to bulky comforters.
+        Snappy Coin Laundry makes laundry day easier with brand new, state-of-the-art, Made in the USA machines.  
       </p>
-      <h3>Our Values and Vision</h3>
-      <ul class="checklist">
-        <li>Clean, Safe, Welcoming Facility</li>
-        <li>Exceptional Customer Focus</li>
-        <li>Quality and Care in Every Wash</li>
-        <!-- Removed the "Made in the USA Equipment" bullet -->
+      <!-- Extra spacing before Our Values heading -->
+      <h3 class="vision-heading">Our Values and Vision</h3>
+
+      <ul class="value-list">
+        <!-- Each bullet uses a Material Icon -->
+        <li>
+          <span class="material-icons bullet-icon">star</span>
+          Clean, Safe, Welcoming Facility
+        </li>
+        <li>
+          <span class="material-icons bullet-icon">star</span>
+          Exceptional Customer Focus
+        </li>
+        <li>
+          <span class="material-icons bullet-icon">star</span>
+          Quality and Care in Every Wash
+        </li>
       </ul>
     </div>
   </section>
@@ -63,21 +76,23 @@
         <!-- Self-Service -->
         <article class="service-block">
           <div class="icon-wrapper">
+            <!-- Use your updated icon as desired -->
             <img src="assets/laundrymachine icon.png" alt="Self-Service icon" />
           </div>
           <h3>Self-Service Laundry</h3>
           <p>
-            State-of-the-art, Made in the USA washers and dryers for large or small loads, including comforters, bedding, and family-size loads. Our 80 lb washers are perfect for handling bulky items or your entire family’s laundry in one cycle.
+            State-of-the-art, Made in the USA washers and dryers for large or small loads. Our 80 pound washers are perfect for comforters, bedding, and family-size loads. Get all of your family's laundry done in one load!
           </p>
-          <!-- Removed “Enjoy our free Wi-Fi while you wait!” -->
           <p class="highlight">Get all of your laundry done in ONE load!</p>
-          <ul class="bulleted-list">
-            <li>Free Wi-Fi</li>
-            <li>Flat-screen TVs</li>
-            <li>Vending machines (snacks &amp; laundry supplies)</li>
-            <li>ATM</li>
-            <li>Money Changers</li>
-            <li>Dexter Pay Laundry App for secure mobile payments and load tracking</li>
+
+          <!-- Example: custom bullet style using Material Icons and extra leading space -->
+          <ul class="bulleted-list fancy-bullets">
+            <li><span class="material-icons bullet-icon">check_circle</span> Free Wi-Fi</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> Flat-screen TVs</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> Vending machines (Drinks, snacks, &amp; laundry supplies)</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> ATM</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> Money Changers</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> Dexter Pay Laundry App</li>
           </ul>
         </article>
 
@@ -86,9 +101,9 @@
           <div class="icon-wrapper">
             <img src="assets/Delivery.png" alt="Drop-Off icon" />
           </div>
-          <h3>Drop-Off Service</h3>
-          <p><strong>Pressed for time or just don’t like doing laundry?</strong></p>
-          <p>Bring in your clothes, and our professional staff will wash, dry, and neatly fold everything for you.</p>
+          <h3>Drop-Off Laundry Service</h3>
+          <p><strong>Pressed for time or just don&apos;t like doing laundry?</strong></p>
+          <p>Bring in your clothes, and our professional staff will wash, dry, and neatly fold everything for you using only quality laundry products.</p>
           <p>Spend time on what you love instead of worrying about laundry. We use only quality laundry products.</p>
         </article>
       </div>
@@ -99,27 +114,27 @@
   <section id="why-choose-us" class="content-section bg-light">
     <div class="section-inner">
       <h2>Why Choose Snappy Coin Laundry?</h2>
+      <!-- Use a 3-column layout on desktop via CSS grid or flex -->
       <article class="why-reasons">
         <div class="reason-item">
-          <!-- Removed check mark icon -->
           <h3>Family-Owned Business</h3>
           <p>Rooted in the community, providing a family-friendly environment and personalized service.</p>
         </div>
         <div class="reason-item">
-          <h3>Clean &amp; Safe Environment</h3>
-          <p>Spotless facility designed for customer comfort and safety.</p>
+          <h3>Safe, Clean Facility</h3>
+          <p>Our immaculate laundromat is designed for customer comfort and safety.</p>
         </div>
         <div class="reason-item">
-          <h3>High-Capacity Equipment</h3>
+          <h3>State-of-the-Art Equipment</h3>
           <p>Enjoy brand-new, high-capacity, dependable machines for a faster, more efficient wash. <strong>Made in the USA.</strong></p>
         </div>
         <div class="reason-item">
           <h3>Friendly Staff</h3>
-          <p>Our team is available to answer questions and help you choose the best wash cycles.</p>
+          <p>Our staff is available to answer questions and help you choose the best wash cycles.</p>
         </div>
         <div class="reason-item">
           <h3>Convenient Location</h3>
-          <p>Located at the intersection of McKelvey and Ameling Roads in Maryland Heights, near the Community Center, Creve Coeur Lake, Sportport International, and Scott Gallagher soccer fields.</p>
+          <p>Located at the intersection of McKelvey and Ameling Roads in Maryland Heights, across from the Community Center and Aquaport, near Creve Coeur Lake, Sportport International, and Scott Gallagher &amp;Lou Fusz soccer fields.</p>
         </div>
         <div class="reason-item">
           <h3>Spanish-Friendly Service</h3>
@@ -129,25 +144,25 @@
     </div>
   </section>
 
-
   <!-- FAQ SECTION -->
   <section id="faq" class="content-section">
     <div class="section-inner">
       <h2>Frequently Asked Questions</h2>
+      <!-- Example icons added for each question -->
       <div class="faq-item">
-        <h3>What payment methods do the machines accept?</h3>
-        <p>The machines accept coins; there are money changers available on-site. We also accept Dexter Pay for secure, mobile payments.</p>
+        <h3><span class="material-icons faq-icon">help_outline</span> What payment methods do the machines accept?</h3>
+        <p>The machines accept coins; there are money changers available on-site. We also accept the Dexter Pay app for secure, mobile payments.</p>
       </div>
       <div class="faq-item">
-        <h3>Do you offer detergent if I forget mine?</h3>
+        <h3><span class="material-icons faq-icon">help_outline</span> Do you offer detergent if I forget mine?</h3>
         <p>Absolutely! Our vending machines have detergent, fabric softener, and dryer sheets.</p>
       </div>
       <div class="faq-item">
-        <h3>Can I leave my clothes unattended?</h3>
+        <h3><span class="material-icons faq-icon">help_outline</span> Can I leave my clothes unattended?</h3>
         <p>We recommend staying on-site for the safety and care of your items. We are not responsible for items left unattended.</p>
       </div>
       <div class="faq-item">
-        <h3>Do you have drop-off laundry service?</h3>
+        <h3><span class="material-icons faq-icon">help_outline</span> Do you have drop-off laundry service?</h3>
         <p>Yes! You may call in advance or just drop off your laundry for a quick turnaround.</p>
       </div>
     </div>
@@ -164,7 +179,7 @@
       <div class="map-container">
         <iframe
           title="Snappy Coin Laundry Map"
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2sMaryland%20Heights%20Community%20Center!5e0!3m2!1sen!2sus!4v1602291528092!5m2!1sen!2sus"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2s2303%20McKelvey%20Rd%2C%20Maryland%20Heights%2C%20MO%2063043!5e0!3m2!1sen!2sus!4v1610000000000!5m2!1sen!2sus"
           width="600"
           height="350"
           style="border:0;"
@@ -173,15 +188,17 @@
         </iframe>
       </div>
 
-      <!-- CONTACT FORM -->
-      <form id="contactForm" onsubmit="return validateForm();">
+      <!-- CONTACT FORM (submits via mailto) -->
+      <form 
+        id="contactForm"
+        action="mailto:snappycoinlaundry@gmail.com"
+        method="POST"
+        enctype="text/plain"
+        onsubmit="return validateForm();"
+        >
         <div class="form-group">
           <label for="name">Name <span aria-hidden="true">*</span></label>
-          <input type="text" id="name" name="name" required aria-required="true"/>
-        </div>
-        <div class="form-group">
-          <label for="email">Email <span aria-hidden="true">*</span></label>
-          <input type="email" id="email" name="email" required aria-required="true"/>
+          <input type="text" id="name" name="name" required aria-required="true" />
         </div>
         <div class="form-group">
           <label for="message">Message <span aria-hidden="true">*</span></label>
@@ -203,8 +220,12 @@
         | <em>(Mon–Sun: 6:00 AM–1:30 AM)</em>
       </p>
       <p>
-        Email: <a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a><br />
-        Website: <a href="https://snappycoinlaundry.com" target="_blank" rel="noopener noreferrer">snappycoinlaundry.com</a><br />
+        Email: 
+        <a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a><br />
+        Website: 
+        <a href="https://snappycoinlaundry.com" target="_blank" rel="noopener noreferrer">
+          snappycoinlaundry.com
+        </a><br />
         &copy; 2025 Snappy Coin Laundry. All Rights Reserved.
       </p>
     </div>
