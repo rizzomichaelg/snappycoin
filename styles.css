@@ -86,7 +86,7 @@ section {
       rgba(0, 0, 0, 0.5),
       rgba(0, 0, 0, 0.5)
     ),
-    url("assets/laundryrow.jpg.avif") center center / cover no-repeat;
+    url("assets/Dexter Machines.jpg") center center / cover no-repeat;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -123,6 +123,14 @@ section {
   background-color: #ffc107;
   transform: scale(1.05);
 }
+
+.bulleted-list {
+  text-align: center;
+}
+.bulleted-list li {
+  list-style-position: inside;
+}
+
 
 /* CONTENT SECTIONS */
 .content-section {

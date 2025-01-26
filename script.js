@@ -1,6 +1,7 @@
 /**
  * Simple form validation for the contact form.
  * Ensures that all required fields are filled out before submission.
+ * The action is set to mailto: so it will open a user's email client.
  */
 function validateForm() {
   const nameField = document.getElementById("name");
@@ -25,5 +26,6 @@ function validateForm() {
     return false;
   }
 
+  // All good, allow form submission
   return true;
 }
