@@ -29,3 +29,39 @@ function validateForm() {
   // All good, allow form submission
   return true;
 }
+
+const header = document.querySelector(".header");
+const logoImg = document.getElementById("logo-img");
+
+window.addEventListener("scroll", function () {
+  if (window.scrollY > 50) {
+    header.classList.add("shrunk");
+    logoImg.classList.add("shrunk");
+  } else {
+    header.classList.remove("shrunk");
+    logoImg.classList.remove("shrunk");
+  }
+});
+
+/* 2. HIGHLIGHT ACTIVE NAV LINK ON SCROLL */
+const navLinks = document.querySelectorAll(".nav-link");
+const sections = document.querySelectorAll("section[id]");
+
+window.addEventListener("scroll", function() {
+  let currentSectionId = "";
+
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop - 80;  // offset for sticky header
+    const sectionHeight = section.offsetHeight;
+    if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
+      currentSectionId = section.getAttribute("id");
+    }
+  });
+
+  navLinks.forEach(link => {
+    link.classList.remove("active");
+    if (link.getAttribute("href").includes(currentSectionId)) {
+      link.classList.add("active");
+    }
+  });
+});

@@ -21,36 +21,61 @@ body {
 /* VARIABLES */
 :root {
   --header-height: 70px;
-  --primary-color: #0069c0;        /* Rich blue for headings, accents */
-  --secondary-color: #ffc107;      /* Warm gold for CTAs, highlights */
+  --primary-color: #0069c0;       /* Rich blue for headings, accents */
+  --secondary-color: #ffc107;     /* Warm gold for CTAs, highlights */
   --text-color: #333;
   --light-bg: #f8f9fa;
   --dark-bg: #333;
   --white: #ffffff;
+
+  /* Example custom colors for backgrounds in sections */
+  --about-bg: #e3f2fd;     /* Light blue */
+  --services-bg: #fff8e1;  /* Soft yellow */
 }
 
 /* HEADER & NAVIGATION */
+/* Initial larger header */
 .header {
   position: sticky;
   top: 0;
   z-index: 1000;
   background-color: var(--white);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.9s ease;
 }
 
+/* NAVBAR - Ensures content is centered */
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0.5rem 1rem;
+  padding: 0.3rem 1rem;
+  width: 100%;
 }
 
-.logo img {
-  max-height: 90px; 
-  height: auto;
+/* The logo transitions smoothly */
+#logo-img {
+  height: 300px;  /* START LARGE */
   width: auto;
+  transition: transform 0.3s ease, height 0.3s ease;
+}
+
+#logo-img.shrunk {
+  height: 80px; /* SHRINK LOGO */
+}
+
+/* When scrolled, shrink the header and logo */
+.header.shrunk {
+  height: 100px;  /* SHRINK HEADER HEIGHT */
+}
+
+#logo-img.shrunk {
+  height: 80px; /* SHRINK LOGO */
 }
 
 /* NAV LINKS */
@@ -60,21 +85,30 @@ body {
   gap: 1rem;
 }
 
-.nav-links li a {
+.nav-link {
   text-decoration: none;
   color: var(--text-color);
   font-weight: 500;
   padding: 0.5rem 1rem;
   border-radius: 4px;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
 
-.nav-links li a:hover {
+/* Hover effect for nav links */
+.nav-link:hover {
   background-color: var(--primary-color);
   color: var(--white);
+  transform: scale(1.03);
 }
 
-/* OFFSET FIX FOR STICKY HEADER */
+/* Active class for scrolled section highlight (optional) */
+.nav-link.active {
+  background-color: var(--primary-color);
+  color: var(--white) !important;
+  border-bottom: 2px solid var(--secondary-color);
+}
+
+/* Offset fix for sticky header */
 section {
   scroll-margin-top: var(--header-height);
 }
@@ -82,7 +116,7 @@ section {
 /* HERO SECTION */
 .hero-section {
   min-height: 90vh;
-  background: 
+  background:
     linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
     url("assets/Dexter Machines.jpg") center center / cover no-repeat;
   display: flex;
@@ -125,8 +159,19 @@ section {
 
 /* CONTENT SECTIONS */
 .content-section {
-  padding: 4rem 1rem;
+  padding: 5rem 1rem; /* increased top/bottom padding */
 }
+
+/* ABOUT SECTION with a subtle background color */
+#about.content-section {
+  background-color: var(--about-bg);
+}
+
+/* SERVICES SECTION with a different subtle color */
+#services.content-section {
+  background-color: var(--services-bg);
+}
+
 .bg-light {
   background-color: var(--light-bg);
 }
@@ -145,6 +190,24 @@ section {
   display: inline-block; /* helps center in parent container */
 }
 
+.value-list li {
+  position: relative;
+  margin-bottom: 1rem;
+  padding-left: 2rem; /* space for the star icon */
+  transition: transform 0.2s ease;
+}
+
+.value-list li:hover {
+  transform: scale(1.02);
+}
+
+.value-list .bullet-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--secondary-color);
+}
+
 /* SERVICES */
 .services-wrapper {
   display: flex;
@@ -155,7 +218,7 @@ section {
 }
 
 .service-block {
-  background-color: var(--white);
+  background: linear-gradient(135deg, #f8fbff 0%, #bedaff 100%);
   border-radius: 8px;
   padding: 2rem;
   flex: 1 1 calc(33.333% - 1rem);
@@ -195,12 +258,34 @@ section {
   margin-bottom: 0.5rem;
 }
 
+.fancy-bullets {
+  list-style: none;
+  padding-left: 0;
+}
+
+/* For check_circle bullets in the services list */
+.fancy-bullets li {
+  position: relative;
+  margin-bottom: 0.75rem;
+  padding-left: 2rem;
+  transition: transform 0.2s ease;
+}
+.fancy-bullets li:hover {
+  transform: scale(1.02);
+}
+.fancy-bullets .bullet-icon {
+  position: absolute;
+  left: 0;
+  top: 0.2rem;
+  font-size: 1.2rem;
+  color: #2e7d32; /* green or whichever color you prefer */
+}
+
 /* WHY CHOOSE US */
 .why-reasons {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
-  justify-content: center;
   margin-top: 2rem;
 }
 
@@ -208,11 +293,9 @@ section {
   background-color: var(--white);
   border-radius: 8px;
   padding: 1.5rem;
-  flex: 1 1 calc(33.333% - 1rem);
-  max-width: 300px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
   text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .reason-item:hover {
@@ -228,17 +311,67 @@ section {
 
 /* FAQ */
 .faq-item {
-  margin-bottom: 1.5rem;
+  max-width: 700px;
+  margin: 0 auto 2.5rem;
   text-align: left;
+  transition: transform 0.2s ease;
+  padding: 1rem;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
 }
+
+.faq-item:hover {
+  transform: scale(1.02);
+}
+
 .faq-item h3 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
   font-size: 1.25rem;
   font-weight: 600;
 }
 .faq-item p {
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+.faq-icon {
+  font-size: 1.3rem;
+  color: var(--primary-color);
+  margin-right: 0.5rem;
+}
+
+.about-gradient {
+  background: linear-gradient(
+    120deg,
+    #e3f2fd 0%,
+    #ffffff 100%
+  );
+}
+
+/* Services gradient */
+.services-gradient {
+  background: linear-gradient(
+    120deg,
+    #fff8e1 0%,
+    #ffffff 100%
+  );
+}
+
+/* Another pastel/soft gradient for Why Choose Us */
+.why-gradient {
+  background: linear-gradient(
+    120deg,
+    #f3fde3 0%,
+    #ffffff 100%
+  );
+}
+
+.contact-gradient {
+  background: linear-gradient(
+    120deg,
+    #ffecec 0%,
+    #ffffff 100%
+  );
 }
 
 /* CONTACT */
@@ -256,13 +389,11 @@ form#contactForm {
 .form-group {
   margin-bottom: 1rem;
 }
-
 .form-group label {
   display: block;
   margin-bottom: 0.25rem;
   font-weight: 600;
 }
-
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group textarea {
@@ -273,7 +404,6 @@ form#contactForm {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
-
 .form-group textarea {
   resize: vertical;
 }
@@ -295,12 +425,11 @@ form#contactForm {
   text-decoration: none;
   font-weight: 600;
 }
-
 .footer-inner p a:hover {
   color: #ffd740;
 }
 
-/* MEDIA QUERIES - make sure the site is responsive */
+/* Responsive Adjustments */
 @media (max-width: 768px) {
   .navbar {
     flex-direction: column;
@@ -313,7 +442,7 @@ form#contactForm {
   .services-wrapper,
   .why-reasons {
     flex-direction: column;
-    align-items: center;
+    display: block;
   }
   .service-block,
   .reason-item {
@@ -321,81 +450,6 @@ form#contactForm {
   }
 }
 
-
-/* Extra space for the Our Values heading */
-.vision-heading {
-  margin-top: 3rem;
-  margin-bottom: 1.5rem;
-}
-
-/* Value list bullet styling (with material-icons) */
-.value-list {
-  list-style: none;
-  margin-top: 1.5rem;
-  text-align: left;
-  display: inline-block; /* centers the block in the parent container */
-  padding-left: 0;       /* remove default padding if any */
-}
-.value-list li {
-  position: relative;
-  margin-bottom: 1rem;
-  padding-left: 2rem; /* room for icon on the left */
-  transition: transform 0.2s ease;
-}
-.value-list li:hover {
-  transform: scale(1.02); /* subtle hover */
-}
-.bullet-icon {
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-size: 1.4rem;
-  color: var(--secondary-color);
-}
-
-/* Example fancy bullets for the Services list */
-.fancy-bullets {
-  list-style: none;
-  padding-left: 0;
-}
-.fancy-bullets li {
-  position: relative;
-  margin-bottom: 0.75rem;
-  padding-left: 2rem; /* to offset the icon */
-}
-.fancy-bullets li:hover {
-  transform: translateX(4px); /* small horizontal shift on hover, e.g. */
-}
-.fancy-bullets .bullet-icon {
-  position: absolute;
-  left: 0;
-  top: 0.2rem; /* vertical alignment tweak */
-  font-size: 1.2rem;
-  color: #2e7d32; /* green check circle, or whichever color you prefer */
-}
-
-/* 3-column layout for Why Choose Us (on wider screens) */
-.why-reasons {
-  /* Switch to a CSS grid for easier 3-column layout */
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-top: 2rem;
-}
-.reason-item {
-  background-color: var(--white);
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.reason-item:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-}
-
-/* Adjust breakpoints so it reflows to 2 columns & 1 column on smaller devices */
 @media (max-width: 992px) {
   .why-reasons {
     grid-template-columns: repeat(2, 1fr);
@@ -407,39 +461,5 @@ form#contactForm {
   }
 }
 
-/* FAQ icons & spacing */
-.faq-item {
-  max-width: 700px; /* Narrower width */
-  margin: 0 auto 2.5rem; /* Center the items and add more bottom spacing */
-  text-align: left;
-  transition: transform 0.2s ease;
-  padding: 1rem; /* Add padding for better readability */
-  background-color: #ffffff; /* Optional: add a white background for contrast */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Subtle shadow for emphasis */
-  border-radius: 8px; /* Rounded corners for a polished look */
-}
-
-.faq-item:hover {
-  transform: scale(1.02); /* Slight hover effect */
-}
-
-.faq-item h3 {
-  margin-bottom: 1rem; /* Increase spacing below the question */
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.faq-item p {
-  font-size: 1rem;
-  line-height: 1.6; /* Better line spacing for readability */
-}
-.faq-icon {
-  font-size: 1.3rem;
-  color: var(--primary-color);
-  margin-right: 0.5rem;
-}
-
-/* Additional minor improvements to spacing if desired */
-.content-section {
-  padding: 5rem 1rem; /* increased top/bottom padding a bit */
-}
+/* Additional style improvements if desired */
+/* e.g., .nav-link.active { border-bottom: 2px solid #ffb300; } */
