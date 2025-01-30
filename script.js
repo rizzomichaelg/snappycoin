@@ -30,70 +30,38 @@ function validateForm() {
   return true;
 }
 
-// Logo scroll animation
-window.addEventListener('scroll', () => {
-  const header = document.querySelector('.header');
-  const logo = document.querySelector('.logo img');
-  const scrollPos = window.scrollY;
+const header = document.querySelector(".header");
+const logoImg = document.getElementById("logo-img");
 
-  if (scrollPos > 100) {
-    header.classList.add('scrolled');
+window.addEventListener("scroll", function () {
+  if (window.scrollY > 50) {
+    header.classList.add("shrunk");
+    logoImg.classList.add("shrunk");
   } else {
-    header.classList.remove('scrolled');
+    header.classList.remove("shrunk");
+    logoImg.classList.remove("shrunk");
   }
 });
 
-// Active section detection
-document.addEventListener('DOMContentLoaded', () => {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      const id = entry.target.getAttribute('id');
-      const navLink = document.querySelector(`a[href="#${id}"]`);
-      if (entry.isIntersecting) {
-        navLink.classList.add('active');
-      } else {
-        navLink.classList.remove('active');
-      }
-    });
-  }, { threshold: 0.5 });
+/* 2. HIGHLIGHT ACTIVE NAV LINK ON SCROLL */
+const navLinks = document.querySelectorAll(".nav-link");
+const sections = document.querySelectorAll("section[id]");
 
-  document.querySelectorAll('section[id]').forEach(section => {
-    observer.observe(section);
+window.addEventListener("scroll", function() {
+  let currentSectionId = "";
+
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop - 80;  // offset for sticky header
+    const sectionHeight = section.offsetHeight;
+    if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
+      currentSectionId = section.getAttribute("id");
+    }
+  });
+
+  navLinks.forEach(link => {
+    link.classList.remove("active");
+    if (link.getAttribute("href").includes(currentSectionId)) {
+      link.classList.add("active");
+    }
   });
 });
-
-// Updated script.js
-function smoothScrollTo(target) {
-  const header = document.querySelector('.header');
-  const targetElement = document.querySelector(target);
-  if (!targetElement) return;
-
-  const headerHeight = header.offsetHeight;
-  const targetPosition = targetElement.offsetTop - headerHeight - 20;
-  
-  window.scrollTo({
-    top: targetPosition,
-    behavior: 'smooth'
-  });
-}
-
-// Update navigation link click handlers
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function(e) {
-    e.preventDefault();
-    const target = this.getAttribute('href');
-    smoothScrollTo(target);
-  });
-});
-
-// Update scroll padding when header changes
-function updateScrollSettings() {
-  const header = document.querySelector('.header');
-  const headerHeight = header.offsetHeight;
-  document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
-}
-
-// Event listeners
-window.addEventListener('load', updateScrollSettings);
-window.addEventListener('resize', updateScrollSettings);
-window.addEventListener('scroll', updateScrollSettings); // Add scroll listener
