@@ -29,3 +29,71 @@ function validateForm() {
   // All good, allow form submission
   return true;
 }
+
+// Logo scroll animation
+window.addEventListener('scroll', () => {
+  const header = document.querySelector('.header');
+  const logo = document.querySelector('.logo img');
+  const scrollPos = window.scrollY;
+
+  if (scrollPos > 100) {
+    header.classList.add('scrolled');
+  } else {
+    header.classList.remove('scrolled');
+  }
+});
+
+// Active section detection
+document.addEventListener('DOMContentLoaded', () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const id = entry.target.getAttribute('id');
+      const navLink = document.querySelector(`a[href="#${id}"]`);
+      if (entry.isIntersecting) {
+        navLink.classList.add('active');
+      } else {
+        navLink.classList.remove('active');
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('section[id]').forEach(section => {
+    observer.observe(section);
+  });
+});
+
+// Updated script.js
+function smoothScrollTo(target) {
+  const header = document.querySelector('.header');
+  const targetElement = document.querySelector(target);
+  if (!targetElement) return;
+
+  const headerHeight = header.offsetHeight;
+  const targetPosition = targetElement.offsetTop - headerHeight - 20;
+  
+  window.scrollTo({
+    top: targetPosition,
+    behavior: 'smooth'
+  });
+}
+
+// Update navigation link click handlers
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = this.getAttribute('href');
+    smoothScrollTo(target);
+  });
+});
+
+// Update scroll padding when header changes
+function updateScrollSettings() {
+  const header = document.querySelector('.header');
+  const headerHeight = header.offsetHeight;
+  document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+}
+
+// Event listeners
+window.addEventListener('load', updateScrollSettings);
+window.addEventListener('resize', updateScrollSettings);
+window.addEventListener('scroll', updateScrollSettings); // Add scroll listener

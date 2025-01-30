@@ -6,8 +6,31 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
+/* Remove these existing rules */
+.content-section {
+  opacity: 0;
+  animation: fadeInUp 0.6s ease forwards;
+  animation-delay: 0.2s;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Add these instead */
+.logo img {
+  will-change: transform; /* Optimize for animation */
+}
+
+.header {
+  background-color: rgba(255, 255, 255, 0);
+  box-shadow: none;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.nav-links li a.active {
+  transform: translateY(-2px);
 }
 
 body {
@@ -18,24 +41,25 @@ body {
   overflow-x: hidden;
 }
 
-/* VARIABLES */
 :root {
-  --header-height: 70px;
-  --primary-color: #0069c0;        /* Rich blue for headings, accents */
-  --secondary-color: #ffc107;      /* Warm gold for CTAs, highlights */
+  --header-height: 120px;
+  --primary-color: #0069c0;
+  --secondary-color: #ffc107;
   --text-color: #333;
   --light-bg: #f8f9fa;
   --dark-bg: #333;
   --white: #ffffff;
+  --accent-color: #e3f2fd;
+  --hover-color: #0056a0;
 }
 
-/* HEADER & NAVIGATION */
 .header {
   position: sticky;
   top: 0;
   z-index: 1000;
   background-color: var(--white);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .navbar {
@@ -48,12 +72,13 @@ body {
 }
 
 .logo img {
-  max-height: 90px; 
+  max-height: 120px;
   height: auto;
   width: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top center;
 }
 
-/* NAV LINKS */
 .nav-links {
   list-style: none;
   display: flex;
@@ -66,22 +91,37 @@ body {
   font-weight: 500;
   padding: 0.5rem 1rem;
   border-radius: 4px;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-.nav-links li a:hover {
-  background-color: var(--primary-color);
-  color: var(--white);
+.nav-links li a::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--secondary-color);
+  transition: width 0.3s ease;
 }
 
-/* OFFSET FIX FOR STICKY HEADER */
-section {
-  scroll-margin-top: var(--header-height);
+.nav-links li a:hover::after {
+  width: 100%;
 }
 
-/* HERO SECTION */
+.nav-links li a.active {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.nav-links li a.active::after {
+  width: 100% !important;
+  background: var(--primary-color);
+}
+
 .hero-section {
-  min-height: 90vh;
+  height: 350px;
   background: 
     linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
     url("assets/Dexter Machines.jpg") center center / cover no-repeat;
@@ -94,16 +134,23 @@ section {
   padding: 3rem 1rem;
 }
 
+@media (min-width: 768px) {
+  .hero-section {
+    height: 60vh;
+    min-height: 350px;
+  }
+}
+
 .hero-content h1 {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
   letter-spacing: 1px;
 }
 
 .hero-content .tagline {
-  font-size: 1.5rem;
-  margin-bottom: 2rem;
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
   opacity: 0.9;
 }
 
@@ -121,12 +168,22 @@ section {
 .btn-cta:hover {
   background-color: #ffb300;
   transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(0, 105, 192, 0.3);
 }
 
-/* CONTENT SECTIONS */
 .content-section {
-  padding: 4rem 1rem;
+  padding: 5rem 1rem;
+  opacity: 0;
+  animation: fadeInUp 0.6s ease forwards;
+  animation-delay: 0.2s;
+  position: relative;
 }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .bg-light {
   background-color: var(--light-bg);
 }
@@ -137,15 +194,33 @@ section {
   text-align: center;
 }
 
-/* ABOUT */
 .value-list {
   list-style: none;
   margin-top: 1.5rem;
   text-align: left;
-  display: inline-block; /* helps center in parent container */
+  display: inline-block;
+  padding-left: 0;
 }
 
-/* SERVICES */
+.value-list li {
+  position: relative;
+  margin-bottom: 1rem;
+  padding-left: 2rem;
+  transition: transform 0.2s ease;
+}
+
+.value-list li:hover {
+  transform: scale(1.02);
+}
+
+.bullet-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 1.4rem;
+  color: var(--secondary-color);
+}
+
 .services-wrapper {
   display: flex;
   flex-wrap: wrap;
@@ -155,7 +230,7 @@ section {
 }
 
 .service-block {
-  background-color: var(--white);
+  background: linear-gradient(145deg, #ffffff 0%, var(--accent-color) 100%);
   border-radius: 8px;
   padding: 2rem;
   flex: 1 1 calc(33.333% - 1rem);
@@ -170,37 +245,35 @@ section {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
-.icon-wrapper img {
-  max-width: 80px;
-  margin-bottom: 1rem;
-}
-
-.service-block h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--primary-color);
-}
-
-.service-block .highlight {
-  font-weight: 600;
-  color: #d32f2f;
-  margin: 1rem 0;
-}
-
-.bulleted-list {
-  text-align: left;
+.fancy-bullets {
+  list-style: none;
+  padding-left: 0;
   margin-top: 1.5rem;
 }
-.bulleted-list li {
-  margin-bottom: 0.5rem;
+
+.fancy-bullets li {
+  position: relative;
+  margin-bottom: 0.75rem;
+  padding-left: 2rem;
+  transition: transform 0.2s ease;
 }
 
-/* WHY CHOOSE US */
+.fancy-bullets li:hover {
+  transform: translateX(4px);
+}
+
+.fancy-bullets .bullet-icon {
+  position: absolute;
+  left: 0;
+  top: 0.2rem;
+  font-size: 1.2rem;
+  color: #2e7d32;
+}
+
 .why-reasons {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
-  justify-content: center;
   margin-top: 2rem;
 }
 
@@ -208,11 +281,9 @@ section {
   background-color: var(--white);
   border-radius: 8px;
   padding: 1.5rem;
-  flex: 1 1 calc(33.333% - 1rem);
-  max-width: 300px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
   text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .reason-item:hover {
@@ -220,65 +291,29 @@ section {
   box-shadow: 0 8px 16px rgba(0,0,0,0.2);
 }
 
-.reason-item h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
-  color: var(--primary-color);
-}
-
-/* FAQ */
 .faq-item {
-  margin-bottom: 1.5rem;
-  text-align: left;
-}
-.faq-item h3 {
-  margin-bottom: 0.5rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-.faq-item p {
-  font-size: 1rem;
-  line-height: 1.5;
+  max-width: 700px;
+  margin: 0 auto 2.5rem;
+  padding: 1rem;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  transition: transform 0.2s ease;
 }
 
-/* CONTACT */
+.faq-item:hover {
+  transform: scale(1.02);
+}
+
 .map-container {
   margin: 2rem 0;
 }
 
-/* CONTACT FORM */
 form#contactForm {
   max-width: 600px;
-  margin: 2rem auto 2rem;
-  text-align: left;
+  margin: 2rem auto;
 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-weight: 600;
-}
-
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  font-family: inherit;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.form-group textarea {
-  resize: vertical;
-}
-
-/* FOOTER */
 .footer {
   text-align: center;
   padding: 2rem 1rem;
@@ -286,160 +321,33 @@ form#contactForm {
   color: var(--white);
 }
 
-.footer-inner p {
-  margin-bottom: 1rem;
-}
-
-.footer-inner p a {
-  color: var(--secondary-color);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.footer-inner p a:hover {
-  color: #ffd740;
-}
-
-/* MEDIA QUERIES - make sure the site is responsive */
-@media (max-width: 768px) {
-  .navbar {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .nav-links {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .services-wrapper,
-  .why-reasons {
-    flex-direction: column;
-    align-items: center;
-  }
-  .service-block,
-  .reason-item {
-    max-width: 100%;
-  }
-}
-
-
-/* Extra space for the Our Values heading */
-.vision-heading {
-  margin-top: 3rem;
-  margin-bottom: 1.5rem;
-}
-
-/* Value list bullet styling (with material-icons) */
-.value-list {
-  list-style: none;
-  margin-top: 1.5rem;
-  text-align: left;
-  display: inline-block; /* centers the block in the parent container */
-  padding-left: 0;       /* remove default padding if any */
-}
-.value-list li {
-  position: relative;
-  margin-bottom: 1rem;
-  padding-left: 2rem; /* room for icon on the left */
-  transition: transform 0.2s ease;
-}
-.value-list li:hover {
-  transform: scale(1.02); /* subtle hover */
-}
-.bullet-icon {
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-size: 1.4rem;
-  color: var(--secondary-color);
-}
-
-/* Example fancy bullets for the Services list */
-.fancy-bullets {
-  list-style: none;
-  padding-left: 0;
-}
-.fancy-bullets li {
-  position: relative;
-  margin-bottom: 0.75rem;
-  padding-left: 2rem; /* to offset the icon */
-}
-.fancy-bullets li:hover {
-  transform: translateX(4px); /* small horizontal shift on hover, e.g. */
-}
-.fancy-bullets .bullet-icon {
-  position: absolute;
-  left: 0;
-  top: 0.2rem; /* vertical alignment tweak */
-  font-size: 1.2rem;
-  color: #2e7d32; /* green check circle, or whichever color you prefer */
-}
-
-/* 3-column layout for Why Choose Us (on wider screens) */
-.why-reasons {
-  /* Switch to a CSS grid for easier 3-column layout */
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-top: 2rem;
-}
-.reason-item {
-  background-color: var(--white);
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.reason-item:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-}
-
-/* Adjust breakpoints so it reflows to 2 columns & 1 column on smaller devices */
 @media (max-width: 992px) {
   .why-reasons {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+  
+  .hero-content .tagline {
+    font-size: 1.1rem;
+  }
+}
+
 @media (max-width: 600px) {
   .why-reasons {
     grid-template-columns: 1fr;
   }
-}
-
-/* FAQ icons & spacing */
-.faq-item {
-  max-width: 700px; /* Narrower width */
-  margin: 0 auto 2.5rem; /* Center the items and add more bottom spacing */
-  text-align: left;
-  transition: transform 0.2s ease;
-  padding: 1rem; /* Add padding for better readability */
-  background-color: #ffffff; /* Optional: add a white background for contrast */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Subtle shadow for emphasis */
-  border-radius: 8px; /* Rounded corners for a polished look */
-}
-
-.faq-item:hover {
-  transform: scale(1.02); /* Slight hover effect */
-}
-
-.faq-item h3 {
-  margin-bottom: 1rem; /* Increase spacing below the question */
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.faq-item p {
-  font-size: 1rem;
-  line-height: 1.6; /* Better line spacing for readability */
-}
-.faq-icon {
-  font-size: 1.3rem;
-  color: var(--primary-color);
-  margin-right: 0.5rem;
-}
-
-/* Additional minor improvements to spacing if desired */
-.content-section {
-  padding: 5rem 1rem; /* increased top/bottom padding a bit */
+  
+  .hero-section {
+    height: 300px;
+  }
 }
