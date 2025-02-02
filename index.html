@@ -5,9 +5,14 @@
   <meta name="description" content="Snappy Coin Laundry — Single-page layout" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snappy Coin Laundry</title>
-  <!-- Link to external stylesheet -->
+  <!-- Favicon (using the logo) -->
+  <link rel="icon" href="assets/logo.png" type="image/png" />
+  <!-- Material Icons -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <!-- External Stylesheet -->
   <link rel="stylesheet" href="styles.css" />
+  <!-- jQuery (for the gradual scroll transition and hamburger functionality) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
 
@@ -16,10 +21,12 @@
     <nav class="navbar">
       <div class="logo">
         <a href="#hero">
-          <!-- Logo reference: Adjust path/format as needed -->
-          <img id="logo-img" src="assets/logo.tiff" alt="Snappy Coin Laundry Logo" />
+          <!-- Changed logo format from .tiff to .png for Chrome compatibility -->
+          <img id="logo-img" src="assets/logo.png" alt="Snappy Coin Laundry Logo" />
         </a>
       </div>
+      <!-- Hamburger menu button for mobile displays -->
+      <button class="hamburger"><span class="material-icons">menu</span></button>
       <ul class="nav-links">
         <li><a href="#hero" class="nav-link">Home</a></li>
         <li><a href="#about" class="nav-link">About</a></li>
@@ -174,13 +181,11 @@
         <strong>Address:</strong> 2303 McKelvey Rd, Maryland Heights, MO 63043<br />
         <strong>Across from:</strong> Maryland Heights Community Center
       </p>
+      <!-- Updated map container for responsiveness -->
       <div class="map-container">
         <iframe
           title="Snappy Coin Laundry Map"
           src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2s2303%20McKelvey%20Rd%2C%20Maryland%20Heights%2C%20MO%2063043!5e0!3m2!1sen!2sus!4v1610000000000!5m2!1sen!2sus"
-          width="600"
-          height="350"
-          style="border:0;"
           allowfullscreen=""
           loading="lazy">
         </iframe>

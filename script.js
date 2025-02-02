@@ -1,7 +1,6 @@
 /**
  * Simple form validation for the contact form.
  * Ensures that all required fields are filled out before submission.
- * The action is set to mailto: so it will open a user's email client.
  */
 function validateForm() {
   const nameField = document.getElementById("name");
@@ -30,38 +29,60 @@ function validateForm() {
   return true;
 }
 
-const header = document.querySelector(".header");
-const logoImg = document.getElementById("logo-img");
+$(document).ready(function () {
+  var $header = $(".header");
+  var $logo = $("#logo-img");
 
-window.addEventListener("scroll", function () {
-  if (window.scrollY > 50) {
-    header.classList.add("shrunk");
-    logoImg.classList.add("shrunk");
-  } else {
-    header.classList.remove("shrunk");
-    logoImg.classList.remove("shrunk");
+  // Helper function to initialize header/logo resizing.
+  function initHeader() {
+    var initialLogoHeight = $logo.height();
+    var minLogoHeight = 80;
+    var initialHeaderHeight = $header.outerHeight();
+    var headerPadding = initialHeaderHeight - initialLogoHeight;
+    var maxScroll = 200;
+
+    $(window).on("scroll", function () {
+      var scrollTop = $(this).scrollTop();
+      var factor = Math.min(scrollTop / maxScroll, 1);
+      var newLogoHeight = initialLogoHeight - factor * (initialLogoHeight - minLogoHeight);
+      var newHeaderHeight = newLogoHeight + headerPadding;
+
+      $logo.css("height", newLogoHeight + "px");
+      $header.css("height", newHeaderHeight + "px");
+      document.documentElement.style.setProperty("--header-height", newHeaderHeight + "px");
+    });
   }
-});
 
-/* 2. HIGHLIGHT ACTIVE NAV LINK ON SCROLL */
-const navLinks = document.querySelectorAll(".nav-link");
-const sections = document.querySelectorAll("section[id]");
+  // Initialize header resize once logo is loaded.
+  if ($logo[0].complete) {
+    initHeader();
+  } else {
+    $logo.on("load", initHeader);
+  }
 
-window.addEventListener("scroll", function() {
-  let currentSectionId = "";
-
-  sections.forEach(section => {
-    const sectionTop = section.offsetTop - 80;  // offset for sticky header
-    const sectionHeight = section.offsetHeight;
-    if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
-      currentSectionId = section.getAttribute("id");
-    }
+  // Hamburger menu toggle.
+  $(".hamburger").on("click", function () {
+    $(".nav-links").toggleClass("active");
   });
 
-  navLinks.forEach(link => {
-    link.classList.remove("active");
-    if (link.getAttribute("href").includes(currentSectionId)) {
-      link.classList.add("active");
-    }
+  /* Highlight active nav link on scroll */
+  const navLinks = $(".nav-link");
+  const sections = $("section[id]");
+
+  $(window).on("scroll", function () {
+    let currentSectionId = "";
+    sections.each(function () {
+      const sectionTop = $(this).offset().top - 80;
+      const sectionHeight = $(this).outerHeight();
+      if ($(window).scrollTop() >= sectionTop && $(window).scrollTop() < sectionTop + sectionHeight) {
+        currentSectionId = $(this).attr("id");
+      }
+    });
+
+    navLinks.removeClass("active").each(function () {
+      if ($(this).attr("href").includes(currentSectionId)) {
+        $(this).addClass("active");
+      }
+    });
   });
 });
