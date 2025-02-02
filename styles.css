@@ -21,20 +21,17 @@ body {
 /* VARIABLES */
 :root {
   --header-height: 70px;
-  --primary-color: #0069c0;       /* Rich blue for headings, accents */
-  --secondary-color: #ffc107;     /* Warm gold for CTAs, highlights */
+  --primary-color: #0069c0;
+  --secondary-color: #ffc107;
   --text-color: #333;
   --light-bg: #f8f9fa;
   --dark-bg: #333;
   --white: #ffffff;
-
-  /* Example custom colors for backgrounds in sections */
-  --about-bg: #e3f2fd;     /* Light blue */
-  --services-bg: #fff8e1;  /* Soft yellow */
+  --about-bg: #e3f2fd;
+  --services-bg: #fff8e1;
 }
 
 /* HEADER & NAVIGATION */
-/* Initial larger header */
 .header {
   position: sticky;
   top: 0;
@@ -44,10 +41,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all 0.9s ease;
+  transition: height 0.3s ease;
 }
 
-/* NAVBAR - Ensures content is centered */
 .navbar {
   display: flex;
   align-items: center;
@@ -58,33 +54,20 @@ body {
   width: 100%;
 }
 
-/* The logo transitions smoothly */
 #logo-img {
-  height: 300px;  /* START LARGE */
+  height: 300px;
   width: auto;
-  transition: transform 0.3s ease, height 0.3s ease;
+  transition: height 0.3s ease;
+  border-radius: 20px;
 }
 
-#logo-img.shrunk {
-  height: 80px; /* SHRINK LOGO */
-}
-
-/* When scrolled, shrink the header and logo */
-.header.shrunk {
-  height: 100px;  /* SHRINK HEADER HEIGHT */
-}
-
-#logo-img.shrunk {
-  height: 80px; /* SHRINK LOGO */
-}
-
-/* NAV LINKS */
 .nav-links {
   list-style: none;
   display: flex;
   gap: 1rem;
 }
 
+/* Default nav links styling for desktop */
 .nav-link {
   text-decoration: none;
   color: var(--text-color);
@@ -94,21 +77,18 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
 
-/* Hover effect for nav links */
 .nav-link:hover {
   background-color: var(--primary-color);
   color: var(--white);
   transform: scale(1.03);
 }
 
-/* Active class for scrolled section highlight (optional) */
 .nav-link.active {
   background-color: var(--primary-color);
   color: var(--white) !important;
   border-bottom: 2px solid var(--secondary-color);
 }
 
-/* Offset fix for sticky header */
 section {
   scroll-margin-top: var(--header-height);
 }
@@ -159,15 +139,13 @@ section {
 
 /* CONTENT SECTIONS */
 .content-section {
-  padding: 5rem 1rem; /* increased top/bottom padding */
+  padding: 5rem 1rem;
 }
 
-/* ABOUT SECTION with a subtle background color */
 #about.content-section {
   background-color: var(--about-bg);
 }
 
-/* SERVICES SECTION with a different subtle color */
 #services.content-section {
   background-color: var(--services-bg);
 }
@@ -187,13 +165,13 @@ section {
   list-style: none;
   margin-top: 1.5rem;
   text-align: left;
-  display: inline-block; /* helps center in parent container */
+  display: inline-block;
 }
 
 .value-list li {
   position: relative;
   margin-bottom: 1rem;
-  padding-left: 2rem; /* space for the star icon */
+  padding-left: 2rem;
   transition: transform 0.2s ease;
 }
 
@@ -244,16 +222,11 @@ section {
   color: var(--primary-color);
 }
 
-.service-block .highlight {
-  font-weight: 600;
-  color: #d32f2f;
-  margin: 1rem 0;
-}
-
 .bulleted-list {
   text-align: left;
   margin-top: 1.5rem;
 }
+
 .bulleted-list li {
   margin-bottom: 0.5rem;
 }
@@ -263,22 +236,23 @@ section {
   padding-left: 0;
 }
 
-/* For check_circle bullets in the services list */
 .fancy-bullets li {
   position: relative;
   margin-bottom: 0.75rem;
   padding-left: 2rem;
   transition: transform 0.2s ease;
 }
+
 .fancy-bullets li:hover {
   transform: scale(1.02);
 }
+
 .fancy-bullets .bullet-icon {
   position: absolute;
   left: 0;
   top: 0.2rem;
   font-size: 1.2rem;
-  color: #2e7d32; /* green or whichever color you prefer */
+  color: #2e7d32;
 }
 
 /* WHY CHOOSE US */
@@ -330,10 +304,12 @@ section {
   font-size: 1.25rem;
   font-weight: 600;
 }
+
 .faq-item p {
   font-size: 1rem;
   line-height: 1.6;
 }
+
 .faq-icon {
   font-size: 1.3rem;
   color: var(--primary-color);
@@ -341,59 +317,57 @@ section {
 }
 
 .about-gradient {
-  background: linear-gradient(
-    120deg,
-    #e3f2fd 0%,
-    #ffffff 100%
-  );
+  background: linear-gradient(120deg, #e3f2fd 0%, #ffffff 100%);
 }
 
-/* Services gradient */
 .services-gradient {
-  background: linear-gradient(
-    120deg,
-    #fff8e1 0%,
-    #ffffff 100%
-  );
+  background: linear-gradient(120deg, #fff8e1 0%, #ffffff 100%);
 }
 
-/* Another pastel/soft gradient for Why Choose Us */
 .why-gradient {
-  background: linear-gradient(
-    120deg,
-    #f3fde3 0%,
-    #ffffff 100%
-  );
+  background: linear-gradient(120deg, #e3f2fd 0%, #ffffff 100%);
 }
 
 .contact-gradient {
-  background: linear-gradient(
-    120deg,
-    #ffecec 0%,
-    #ffffff 100%
-  );
+  background: linear-gradient(120deg, #e3f2fd 0%, #ffffff 100%);
 }
 
 /* CONTACT */
 .map-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  /* Use a padding-bottom to enforce a 16:9 aspect ratio (56.25% = 9/16 * 100) */
+  padding-bottom: 56.25%;
   margin: 2rem 0;
+}
+
+.map-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 /* CONTACT FORM */
 form#contactForm {
   max-width: 600px;
-  margin: 2rem auto 2rem;
+  margin: 2rem auto;
   text-align: left;
 }
 
 .form-group {
   margin-bottom: 1rem;
 }
+
 .form-group label {
   display: block;
   margin-bottom: 0.25rem;
   font-weight: 600;
 }
+
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group textarea {
@@ -404,6 +378,7 @@ form#contactForm {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
 .form-group textarea {
   resize: vertical;
 }
@@ -425,28 +400,65 @@ form#contactForm {
   text-decoration: none;
   font-weight: 600;
 }
+
 .footer-inner p a:hover {
   color: #ffd740;
 }
 
-/* Responsive Adjustments */
+/* Mobile Navigation: Hamburger & Accordion */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .navbar {
-    flex-direction: column;
-    gap: 0.5rem;
+    /* Keep the row layout so logo stays left and hamburger on right */
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
+  /* Hide nav-links by default on mobile */
   .nav-links {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .services-wrapper,
-  .why-reasons {
+    display: none;
     flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 999;
+  }
+  /* When active, show with slide-down animation */
+  .nav-links.active {
+    display: flex;
+    animation: slideDown 0.3s ease-out;
+  }
+  /* Show the hamburger button */
+  .hamburger {
     display: block;
   }
-  .service-block,
-  .reason-item {
+  /* Service blocks full width */
+  .service-block {
+    flex: 1 1 100%;
     max-width: 100%;
+  }
+}
+
+/* Animation keyframes for mobile accordion */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -455,11 +467,9 @@ form#contactForm {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
 @media (max-width: 600px) {
   .why-reasons {
     grid-template-columns: 1fr;
   }
 }
-
-/* Additional style improvements if desired */
-/* e.g., .nav-link.active { border-bottom: 2px solid #ffb300; } */
