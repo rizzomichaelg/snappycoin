@@ -71,8 +71,12 @@ $(document).ready(function () {
 
   $(window).on("scroll", function () {
     let currentSectionId = "";
+    // Retrieve the dynamic header height from the CSS variable.
+    const headerHeight = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
+    const tolerance = 10; // Tolerance offset in pixels
+    
     sections.each(function () {
-      const sectionTop = $(this).offset().top - 80;
+      const sectionTop = $(this).offset().top - headerHeight - tolerance;
       const sectionHeight = $(this).outerHeight();
       if ($(window).scrollTop() >= sectionTop && $(window).scrollTop() < sectionTop + sectionHeight) {
         currentSectionId = $(this).attr("id");
