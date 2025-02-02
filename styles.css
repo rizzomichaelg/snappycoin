@@ -325,11 +325,11 @@ section {
 }
 
 .why-gradient {
-  background: linear-gradient(120deg, #f3fde3 0%, #ffffff 100%);
+  background: linear-gradient(120deg, #e3f2fd 0%, #ffffff 100%);
 }
 
 .contact-gradient {
-  background: linear-gradient(120deg, #ffecec 0%, #ffffff 100%);
+  background: linear-gradient(120deg, #e3f2fd 0%, #ffffff 100%);
 }
 
 /* CONTACT */
