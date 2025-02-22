@@ -89,6 +89,25 @@ body {
   border-bottom: 2px solid var(--secondary-color);
 }
 
+/* Header Social Links (within navigation) */
+.nav-links li.social-link a {
+  /* Match the normal text color for nav links: */
+  color: var(--primary-color);
+  padding: 0.5rem;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.nav-links li.social-link a .material-icons {
+  vertical-align: middle;
+  font-size: 1.2rem;
+}
+
+/* Hover color can match the other nav links' hover color */
+.nav-links li.social-link a:hover {
+  color: var(--text-color);
+  transform: scale(1.1);
+}
+
 section {
   scroll-margin-top: var(--header-height);
 }
@@ -509,4 +528,29 @@ form#contactForm {
   .why-reasons {
     grid-template-columns: 1fr;
   }
+}
+
+/* Social Links in Footer */
+.social-links {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.social-links a {
+  display: inline-block;
+  margin: 0 10px;
+  color: var(--secondary-color);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.social-links a .material-icons {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.social-links a:hover {
+  color: #ffb300;
+  transform: scale(1.05);
 }
