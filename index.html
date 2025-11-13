@@ -65,12 +65,45 @@
 
   <!-- HERO SECTION -->
   <section id="hero" class="hero-section coming-soon">
-    <div class="hero-content">
-      <h1>GRAND OPENING!</h1>
-      <h2>Wash &amp; Dry in a Snap! 🫰</h2>
-      <p class="tagline">
-        Join us Saturday, November 15th for the festivities!
-      </p>
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="material-icons" aria-hidden="true">celebration</span>
+          Now Open in Maryland Heights
+        </div>
+        <h1>GRAND OPENING!</h1>
+        <h2>Wash &amp; Dry in a Snap! 🫰</h2>
+        <p class="tagline">
+          Join us Saturday, November 15th for the festivities!
+        </p>
+        <div class="hero-ctas" role="group" aria-label="Primary actions">
+          <a href="#contact-section" class="btn-cta primary">Plan Your Visit</a>
+          <a href="#services" class="btn-cta ghost">Explore Services</a>
+        </div>
+        <ul class="hero-highlights" aria-label="Key amenities">
+          <li><strong>80 lb</strong> Machines for bulky loads</li>
+          <li><strong>Free Wi-Fi</strong> &amp; flat-screen TVs</li>
+          <li><strong>Dexter Pay</strong> cashless checkout</li>
+        </ul>
+      </div>
+      <div class="hero-card" aria-label="Hours and quick facts">
+        <h3>Today&apos;s Hours</h3>
+        <p class="hero-hours">6:00 AM – 1:30 AM</p>
+        <div class="hero-pill-group">
+          <span class="hero-pill">Open 365 Days</span>
+          <span class="hero-pill">Family Owned</span>
+        </div>
+        <ul class="hero-card-list">
+          <li>
+            <span class="material-icons" aria-hidden="true">place</span>
+            2303 McKelvey Rd, Maryland Heights
+          </li>
+          <li>
+            <span class="material-icons" aria-hidden="true">star_rate</span>
+            Brand-new Dexter washers &amp; dryers
+          </li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -78,24 +111,50 @@
   <section id="about" class="content-section bg-light about-gradient">
     <div class="section-inner">
       <h2>About Snappy Coin Laundry</h2>
-      <p>
-        Snappy Coin Laundry makes laundry day easier with brand new, state-of-the-art, Made in the USA machines.
-      </p>
-      <h3 class="vision-heading">Our Values and Vision</h3>
-      <ul class="value-list">
-        <li>
-          <span class="material-icons bullet-icon">star</span>
-          Clean, Safe, Welcoming Facility
-        </li>
-        <li>
-          <span class="material-icons bullet-icon">star</span>
-          Exceptional Customer Focus
-        </li>
-        <li>
-          <span class="material-icons bullet-icon">star</span>
-          Quality and Care in Every Wash
-        </li>
-      </ul>
+      <div class="about-grid">
+        <div class="about-copy">
+          <p>
+            Snappy Coin Laundry makes laundry day easier with brand new, state-of-the-art, Made in the USA machines.
+          </p>
+          <h3 class="vision-heading">Our Values and Vision</h3>
+          <ul class="value-list">
+            <li>
+              <span class="material-icons bullet-icon">star</span>
+              Clean, Safe, Welcoming Facility
+            </li>
+            <li>
+              <span class="material-icons bullet-icon">star</span>
+              Exceptional Customer Focus
+            </li>
+            <li>
+              <span class="material-icons bullet-icon">star</span>
+              Quality and Care in Every Wash
+            </li>
+          </ul>
+        </div>
+        <div class="about-highlight-card">
+          <p class="about-highlight-heading">What you&apos;ll love</p>
+          <ul class="about-highlight-list">
+            <li><span class="material-icons" aria-hidden="true">wifi</span> Complimentary Wi-Fi &amp; entertainment</li>
+            <li><span class="material-icons" aria-hidden="true">local_drink</span> Fully stocked vending &amp; supplies</li>
+            <li><span class="material-icons" aria-hidden="true">security</span> Bright, secure facility with attendants</li>
+          </ul>
+          <div class="about-stats">
+            <div class="stat">
+              <span>80 lb</span>
+              Mega Washers
+            </div>
+            <div class="stat">
+              <span>365</span>
+              Days a Year
+            </div>
+            <div class="stat">
+              <span>Dexter Pay</span>
+              App Ready
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -103,6 +162,10 @@
   <section id="services" class="content-section services-gradient">
     <div class="section-inner">
       <h2>Our Services</h2>
+      <p class="section-lead">
+        Choose the experience that fits your schedule. Every visit comes with friendly attendants, spotless machines, and
+        a calm, family-friendly atmosphere.
+      </p>
       <div class="services-wrapper">
         <!-- Self-Service -->
         <article class="service-block">
@@ -123,6 +186,7 @@
             <li><span class="material-icons bullet-icon">check_circle</span> Money Changers</li>
             <li><span class="material-icons bullet-icon">check_circle</span> Dexter Pay Laundry App</li>
           </ul>
+          <a class="service-link" href="#contact-section">Get directions</a>
         </article>
 
         <!-- Drop-Off Service -->
@@ -139,6 +203,12 @@
           <p>
             Spend time on what you love instead of worrying about laundry.
           </p>
+          <ul class="bulleted-list fancy-bullets">
+            <li><span class="material-icons bullet-icon">check_circle</span> Same-day turnaround available</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> Fresh, hypoallergenic detergents</li>
+            <li><span class="material-icons bullet-icon">check_circle</span> Text updates when orders are ready</li>
+          </ul>
+          <a class="service-link" href="#contact-section">Schedule a drop-off</a>
         </article>
       </div>
     </div>
@@ -150,29 +220,35 @@
       <h2>Why Choose Snappy Coin Laundry?</h2>
       <article class="why-reasons">
         <div class="reason-item">
+          <span class="material-icons reason-icon" aria-hidden="true">diversity_3</span>
           <h3>Family-Owned Business</h3>
           <p>Rooted in the community, providing a family-friendly environment and personalized service.</p>
         </div>
         <div class="reason-item">
+          <span class="material-icons reason-icon" aria-hidden="true">verified_user</span>
           <h3>Safe, Clean Facility</h3>
           <p>Our immaculate laundromat is designed for customer comfort and safety.</p>
         </div>
         <div class="reason-item">
+          <span class="material-icons reason-icon" aria-hidden="true">build_circle</span>
           <h3>State-of-the-Art Equipment</h3>
           <p>Enjoy brand-new, high-capacity, dependable machines for a faster, more efficient wash. <strong>Made in the
               USA.</strong></p>
         </div>
         <div class="reason-item">
+          <span class="material-icons reason-icon" aria-hidden="true">volunteer_activism</span>
           <h3>Friendly Staff</h3>
           <p>Our staff is available to answer questions and help you choose the best wash cycles.</p>
         </div>
         <div class="reason-item">
+          <span class="material-icons reason-icon" aria-hidden="true">map</span>
           <h3>Convenient Location</h3>
           <p>Located at the intersection of McKelvey and Ameling Roads in Maryland Heights, across from the Community
             Center and Aquaport, near Creve Coeur Lake, Sportport International, and Scott Gallagher &amp; Lou Fusz
             soccer fields.</p>
         </div>
         <div class="reason-item">
+          <span class="material-icons reason-icon" aria-hidden="true">translate</span>
           <h3>Servicio Amigable para Hispanohablantes</h3>
           <p>
             <strong>Se habla español</strong> — Nuestro personal bilingüe está aquí para asistir a clientes que hablan
@@ -187,23 +263,37 @@
   <section id="faq" class="content-section">
     <div class="section-inner">
       <h2>Frequently Asked Questions</h2>
-      <div class="faq-item">
-        <h3><span class="material-icons faq-icon">help_outline</span> What payment methods do the machines accept?</h3>
-        <p>The machines accept coins; there are money changers available on-site. We also accept the Dexter Pay app for
-          secure, mobile payments.</p>
-      </div>
-      <div class="faq-item">
-        <h3><span class="material-icons faq-icon">help_outline</span> Do you offer detergent if I forget mine?</h3>
-        <p>Absolutely! Our vending machines have detergent, fabric softener, and dryer sheets.</p>
-      </div>
-      <div class="faq-item">
-        <h3><span class="material-icons faq-icon">help_outline</span> Can I leave my clothes unattended?</h3>
-        <p>We recommend staying on-site for the safety and care of your items. We are not responsible for items left
-          unattended.</p>
-      </div>
-      <div class="faq-item">
-        <h3><span class="material-icons faq-icon">help_outline</span> Do you have drop-off laundry service?</h3>
-        <p>Yes! You may call in advance or just drop off your laundry for a quick turnaround.</p>
+      <div class="faq-accordion">
+        <details class="faq-item" open>
+          <summary>
+            <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
+            <span>What payment methods do the machines accept?</span>
+          </summary>
+          <p>The machines accept coins; there are money changers available on-site. We also accept the Dexter Pay app for
+            secure, mobile payments.</p>
+        </details>
+        <details class="faq-item">
+          <summary>
+            <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
+            <span>Do you offer detergent if I forget mine?</span>
+          </summary>
+          <p>Absolutely! Our vending machines have detergent, fabric softener, and dryer sheets.</p>
+        </details>
+        <details class="faq-item">
+          <summary>
+            <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
+            <span>Can I leave my clothes unattended?</span>
+          </summary>
+          <p>We recommend staying on-site for the safety and care of your items. We are not responsible for items left
+            unattended.</p>
+        </details>
+        <details class="faq-item">
+          <summary>
+            <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
+            <span>Do you have drop-off laundry service?</span>
+          </summary>
+          <p>Yes! You may call in advance or just drop off your laundry for a quick turnaround.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -216,6 +306,30 @@
         <strong>Address:</strong> 2303 McKelvey Rd, Maryland Heights, MO 63043<br />
         <strong>Across from:</strong> Maryland Heights Community Center
       </p>
+      <div class="contact-info-grid">
+        <article class="contact-card">
+          <span class="material-icons contact-icon" aria-hidden="true">schedule</span>
+          <h3>Hours</h3>
+          <p><strong>Monday – Sunday:</strong> 6:00 AM – 1:30 AM</p>
+          <p>Open 365 days a year, even on holidays.</p>
+        </article>
+        <article class="contact-card">
+          <span class="material-icons contact-icon" aria-hidden="true">place</span>
+          <h3>Visit</h3>
+          <p>2303 McKelvey Rd<br />Maryland Heights, MO 63043</p>
+          <p>Across from the Community Center &amp; Aquaport.</p>
+        </article>
+        <article class="contact-card">
+          <span class="material-icons contact-icon" aria-hidden="true">email</span>
+          <h3>Message</h3>
+          <p><a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a></p>
+          <p>Follow us for updates on
+            <a href="https://www.facebook.com/profile.php?id=61573065201719" target="_blank" rel="noopener noreferrer">Facebook</a>
+            &amp;
+            <a href="https://www.instagram.com/snappycoinlaundry/" target="_blank" rel="noopener noreferrer">Instagram</a>.
+          </p>
+        </article>
+      </div>
       <!-- Updated map container for responsiveness -->
       <div class="map-container">
         <iframe title="Snappy Coin Laundry Map"
