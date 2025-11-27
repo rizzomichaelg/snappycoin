@@ -473,6 +473,43 @@ section {
   color: var(--primary-color);
 }
 
+.service-tagline {
+  margin: 0.25rem 0 0.9rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.service-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+
+.service-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--white);
+  color: var(--text-color);
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 86, 214, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 86, 214, 0.08);
+  font-weight: 600;
+}
+
+.service-pill.rate {
+  background: rgba(0, 86, 214, 0.08);
+  color: var(--primary-color);
+  border-color: rgba(0, 86, 214, 0.25);
+}
+
+.service-pill .material-icons {
+  font-size: 1.15rem;
+  color: var(--primary-color);
+}
+
 .service-link {
   display: inline-flex;
   align-items: center;
