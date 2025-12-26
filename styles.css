@@ -683,6 +683,7 @@ section {
 .faq-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  align-items: start;
   gap: 2rem;
   margin-top: 2rem;
 }
@@ -721,8 +722,33 @@ section {
 }
 
 .faq-item p {
-  padding: 0 1.5rem 1.5rem;
+  padding: 0 1.5rem;
   color: var(--muted-text);
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  overflow: hidden;
+  transition: max-height 0.55s ease-in, opacity 0.45s ease-in,
+    transform 0.45s ease-in, padding 0.55s ease-in;
+}
+
+.faq-item[open] p {
+  padding: 0 1.5rem 1.5rem;
+  max-height: 240px;
+  opacity: 1;
+  transform: translateY(0);
+  transition-timing-function: ease-out;
+}
+
+.faq-item:not([open]) p {
+  transition-timing-function: ease-in;
+}
+
+.faq-item.is-closing p {
+  padding: 0 1.5rem;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .faq-icon {

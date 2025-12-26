@@ -61,6 +61,34 @@ $(document).ready(function () {
     $(".nav-links").toggleClass("active");
   });
 
+  // FAQ closing animation for details elements.
+  document.querySelectorAll(".faq-item").forEach((item) => {
+    const summary = item.querySelector("summary");
+    if (!summary) {
+      return;
+    }
+
+    summary.addEventListener("click", (event) => {
+      if (!item.hasAttribute("open")) {
+        return;
+      }
+
+      if (item.classList.contains("is-closing")) {
+        event.preventDefault();
+        item.classList.remove("is-closing");
+        return;
+      }
+
+      event.preventDefault();
+      item.classList.add("is-closing");
+
+      window.setTimeout(() => {
+        item.removeAttribute("open");
+        item.classList.remove("is-closing");
+      }, 550);
+    });
+  });
+
   /* Highlight active nav link on scroll */
   const navLinks = $(".nav-link");
   const sections = $("section[id]");
