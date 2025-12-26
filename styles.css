@@ -926,6 +926,15 @@ form#contactForm {
   cursor: pointer;
 }
 
+@media (max-width: 992px) {
+  .why-reasons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   #logo-img {
     height: 100px;
@@ -983,6 +992,26 @@ form#contactForm {
   .feature-grid {
     grid-template-columns: 1fr;
   }
+
+  .feature-card {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: start;
+    gap: 0.5rem 1rem;
+    padding: 1.5rem;
+  }
+  .feature-icon {
+    margin-bottom: 0;
+  }
+  .feature-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  .feature-card p {
+    grid-column: 2 / -1;
+    margin: 0.35rem 0 0;
+    font-size: 0.98rem;
+  }
 }
 
 /* Animation keyframes for mobile accordion */
@@ -994,15 +1023,6 @@ form#contactForm {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (max-width: 992px) {
-  .why-reasons {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .feature-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
