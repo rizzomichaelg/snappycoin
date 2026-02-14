@@ -261,6 +261,19 @@ section {
   margin-bottom: 1rem;
 }
 
+.hero-hours-status {
+  margin-bottom: 0.55rem;
+  font-weight: 800;
+}
+
+.hero-hours-status.is-open {
+  color: #d1ffd4;
+}
+
+.hero-hours-status.is-closed {
+  color: #ffd0d0;
+}
+
 .hero-pill-group {
   display: flex;
   flex-wrap: wrap;

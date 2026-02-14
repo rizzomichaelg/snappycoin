@@ -29,6 +29,48 @@ function validateForm() {
   return true;
 }
 
+const CENTRAL_TIMEZONE = "America/Chicago";
+const CT_OPEN_START_MINUTE = 6 * 60; // 6:00 AM
+const CT_OPEN_END_MINUTE = 1 * 60 + 30; // 1:30 AM
+
+function getCentralTimeMinutes(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: CENTRAL_TIMEZONE,
+    hour12: false,
+    hour: "numeric",
+    minute: "numeric",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const hour = Number(parts.find((p) => p.type === "hour").value);
+  const minute = Number(parts.find((p) => p.type === "minute").value);
+
+  return hour * 60 + minute;
+}
+
+function isOpenNowInCentral(date = new Date()) {
+  const currentMinute = getCentralTimeMinutes(date);
+
+  // Open window crosses midnight, e.g. 6:00 AM to 1:30 AM.
+  return currentMinute >= CT_OPEN_START_MINUTE || currentMinute < CT_OPEN_END_MINUTE;
+}
+
+function updateOpenStatus() {
+  const statusEl = document.querySelector("[data-open-status]");
+  if (!statusEl) return;
+
+  if (isOpenNowInCentral()) {
+    statusEl.textContent = "Open now";
+    statusEl.classList.remove("is-closed");
+    statusEl.classList.add("is-open");
+    return;
+  }
+
+  statusEl.textContent = "Closed";
+  statusEl.classList.remove("is-open");
+  statusEl.classList.add("is-closed");
+}
+
 $(document).ready(function () {
   var $header = $(".header");
   var headerExpanded =
@@ -60,6 +102,8 @@ $(document).ready(function () {
   $(".hamburger").on("click", function () {
     $(".nav-links").toggleClass("active");
   });
+  updateOpenStatus();
+  setInterval(updateOpenStatus, 60000);
 
   // FAQ closing animation for details elements.
   document.querySelectorAll(".faq-item").forEach((item) => {
