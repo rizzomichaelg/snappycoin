@@ -294,6 +294,102 @@ section {
   margin-top: 0.1rem;
 }
 
+/* HERO CARDS */
+.hero-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+  flex: 1 1 440px;
+}
+
+.hero-content {
+  flex: 1 1 340px;
+}
+
+.info-card {
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+  border-radius: 20px;
+  padding: 1.75rem;
+  flex: 1 1 280px;
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+  animation: floatUp 0.9s ease 0.1s both;
+}
+
+.info-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+/* Availability card specifics */
+.availability-card .availability-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.availability-title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.availability-pill {
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.availability-rows {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.availability-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.availability-label {
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.availability-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+.availability-meta {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.availability-dot {
+  margin: 0 8px;
+}
+
+.availability-error {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+@media (max-width: 900px) {
+  .hero-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Optional Coming Soon Styles */
 .hero-section.coming-soon {
   text-align: left;
