@@ -42,7 +42,7 @@
     const ratios = [washerRatio, dryerRatio].filter((v) => v !== null);
 
     if (ratios.length === 0) {
-      return "—";
+      return "Busy right now";
     }
 
     const ratio = Math.min(...ratios);
@@ -63,6 +63,13 @@
   }
 
   function inServiceTotal(bucket, totalFallback) {
+    const available = normalizeNumber(bucket?.available ?? bucket?.available_count);
+    const inUse = normalizeNumber(bucket?.inUse ?? bucket?.in_use ?? bucket?.used ?? bucket?.occupied);
+
+    if (available !== null && inUse !== null) {
+      return Math.max(0, Math.floor(available + inUse));
+    }
+
     const explicitInService = normalizeNumber(
       bucket?.inServiceTotal ??
         bucket?.in_service_total ??
@@ -137,11 +144,11 @@
     return {
       washers: {
         available: w.available,
-        total: Math.max(0, w.total - w.outOfService - w.offline),
+        total: w.available + w.inUse,
       },
       dryers: {
         available: d.available,
-        total: Math.max(0, d.total - d.outOfService - d.offline),
+        total: d.available + d.inUse,
       },
       updatedAt: payload?.updatedAt || payload?.updated_at || nowIso(),
     };
@@ -160,17 +167,24 @@
       Number.isFinite(normalizeNumber(dryers.total));
 
     if (normalized) {
+      const washersAvailable = normalizeNumber(washers.available);
+      const dryersAvailable = normalizeNumber(dryers.available);
       const washerTotal = inServiceTotal(washers, normalizeNumber(washers.total));
       const dryerTotal = inServiceTotal(dryers, normalizeNumber(dryers.total));
 
+      const safeWasherTotal =
+        washerTotal === null ? normalizeNumber(washers.total) : washerTotal;
+      const safeDryerTotal =
+        dryerTotal === null ? normalizeNumber(dryers.total) : dryerTotal;
+
       return {
         washers: {
-          available: normalizeNumber(washers.available),
-          total: washerTotal === null ? normalizeNumber(washers.total) : washerTotal,
+          available: washersAvailable,
+          total: safeWasherTotal === null ? 0 : safeWasherTotal,
         },
         dryers: {
-          available: normalizeNumber(dryers.available),
-          total: dryerTotal === null ? normalizeNumber(dryers.total) : dryerTotal,
+          available: dryersAvailable,
+          total: safeDryerTotal === null ? 0 : safeDryerTotal,
         },
         updatedAt: payload?.updatedAt || payload?.updated_at || nowIso(),
       };
