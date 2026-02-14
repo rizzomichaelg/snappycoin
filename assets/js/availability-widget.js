@@ -62,6 +62,42 @@
     return Number.isFinite(n) ? n : null;
   }
 
+  function inServiceTotal(bucket, totalFallback) {
+    const explicitInService = normalizeNumber(
+      bucket?.inServiceTotal ??
+        bucket?.in_service_total ??
+        bucket?.serviceTotal ??
+        bucket?.service_total ??
+        null
+    );
+
+    if (explicitInService !== null) {
+      return Math.max(0, Math.floor(explicitInService));
+    }
+
+    const outOfService = normalizeNumber(
+      bucket?.outOfService ??
+        bucket?.out_of_service ??
+        bucket?.outOfServiceCount ??
+        bucket?.out_of_service_count ??
+        0
+    );
+
+    const offline = normalizeNumber(
+      bucket?.offline ??
+        bucket?.offline_count ??
+        bucket?.networkOutage ??
+        bucket?.network_outage ??
+        0
+    );
+
+    if (totalFallback === null) {
+      return null;
+    }
+
+    return Math.max(0, Math.floor(totalFallback - (outOfService || 0) - (offline || 0)));
+  }
+
   function computeFromRawDexter(payload) {
     // Counts pockets, which matches reality for stacked dryers.
     const w = { total: 0, inUse: 0, available: 0, offline: 0, outOfService: 0 };
@@ -99,8 +135,14 @@
     }
 
     return {
-      washers: { available: w.available, total: w.total },
-      dryers: { available: d.available, total: d.total },
+      washers: {
+        available: w.available,
+        total: Math.max(0, w.total - w.outOfService - w.offline),
+      },
+      dryers: {
+        available: d.available,
+        total: Math.max(0, d.total - d.outOfService - d.offline),
+      },
       updatedAt: payload?.updatedAt || payload?.updated_at || nowIso(),
     };
   }
@@ -118,14 +160,17 @@
       Number.isFinite(normalizeNumber(dryers.total));
 
     if (normalized) {
+      const washerTotal = inServiceTotal(washers, normalizeNumber(washers.total));
+      const dryerTotal = inServiceTotal(dryers, normalizeNumber(dryers.total));
+
       return {
         washers: {
           available: normalizeNumber(washers.available),
-          total: normalizeNumber(washers.total),
+          total: washerTotal === null ? normalizeNumber(washers.total) : washerTotal,
         },
         dryers: {
           available: normalizeNumber(dryers.available),
-          total: normalizeNumber(dryers.total),
+          total: dryerTotal === null ? normalizeNumber(dryers.total) : dryerTotal,
         },
         updatedAt: payload?.updatedAt || payload?.updated_at || nowIso(),
       };
