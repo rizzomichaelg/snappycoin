@@ -363,15 +363,41 @@ section {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.availability-card.availability-state-good .availability-pill {
+  color: #d8ffe0;
+  border-color: rgba(209, 255, 212, 0.45);
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.12)
+  );
+  background-size: 220% 100%;
+  animation: availability-pill-shimmer 2.8s ease-in-out infinite;
+}
+
+@keyframes availability-pill-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .availability-pill {
   font-size: 0.85rem;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.1);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .availability-pill.pill--loading {

@@ -50,6 +50,16 @@
     el.error.textContent = message;
   }
 
+  function setAvailabilityState(state) {
+    const states = ["loading", "good", "ok", "busy", "down"];
+    for (const s of states) {
+      root.classList.remove(`availability-state-${s}`);
+    }
+
+    const stateClass = `availability-state-${state || "loading"}`;
+    root.classList.add(stateClass);
+  }
+
   function safeNum(value, fallback = 0) {
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
@@ -236,7 +246,9 @@
     const label = busynessLabel(washers, dryers);
     const pillText = degraded ? `${label.text} (paused)` : label.text;
 
-    setPill(pillText, degraded ? "down" : label.variant);
+    const state = degraded ? "down" : label.variant;
+    setPill(pillText, state);
+    setAvailabilityState(state);
     if (el.status) {
       el.status.textContent = degraded ? "Live update paused" : "Updates automatically";
     }
@@ -247,6 +259,7 @@
   function showLoading() {
     setPill("Checking…", "loading");
     if (el.status) el.status.textContent = "Checking availability…";
+    setAvailabilityState("loading");
     setError("");
   }
 
@@ -255,6 +268,7 @@
     if (el.status) {
       el.status.textContent = "Live availability temporarily unavailable.";
     }
+    setAvailabilityState("down");
     setError(message);
   }
 
