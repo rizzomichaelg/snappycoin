@@ -350,7 +350,7 @@ section {
   margin-bottom: 0.35rem;
 }
 
-/* Availability card specifics */
+/* Availability v2 (clearer) */
 .availability-card .availability-header {
   display: flex;
   align-items: center;
@@ -359,20 +359,10 @@ section {
 }
 
 .availability-title {
-  font-weight: 700;
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
   letter-spacing: 0.2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.availability-live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #8bffab;
-  box-shadow: 0 0 0 0 rgba(139, 255, 171, 0.55);
-  animation: availability-live-pulse 2.2s ease-in-out infinite;
 }
 
 .availability-pill {
@@ -384,28 +374,86 @@ section {
   white-space: nowrap;
 }
 
-.availability-rows {
-  margin-top: 12px;
-  display: grid;
-  gap: 10px;
+.availability-pill.pill--loading {
+  opacity: 0.9;
 }
 
-.availability-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+.availability-pill.pill--good {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.availability-pill.pill--ok {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.availability-pill.pill--busy {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.availability-pill.pill--down {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.availability-metrics {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.availability-label {
-  font-weight: 600;
+.availability-metric {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 12px;
+}
+
+.metric-label {
+  font-weight: 700;
   opacity: 0.95;
 }
 
-.availability-value {
+.metric-main {
+  margin-top: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.metric-num {
+  font-size: 2.1rem;
+  font-weight: 900;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  font-size: 1.25rem;
+}
+
+.metric-of {
+  font-size: 1rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.metric-sub {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.metric-bar {
+  margin-top: 10px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: width 250ms ease;
 }
 
 .availability-meta {
@@ -424,23 +472,12 @@ section {
   opacity: 0.95;
 }
 
-@keyframes availability-live-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(139, 255, 171, 0.42);
-    transform: scale(1);
-  }
-  70% {
-    box-shadow: 0 0 0 7px rgba(139, 255, 171, 0);
-    transform: scale(1.05);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(139, 255, 171, 0);
-    transform: scale(1);
-  }
-}
-
 @media (max-width: 900px) {
   .hero-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .availability-metrics {
     grid-template-columns: 1fr;
   }
 }

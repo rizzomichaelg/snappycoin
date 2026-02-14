@@ -109,36 +109,52 @@
           data-availability-widget
           data-status-url="https://dexterlive-status.snappycoinlaundry.workers.dev/status"
           data-poll-ms="30000"
+          aria-live="polite"
         >
           <div class="availability-header">
-            <div class="availability-title">
-              <span class="availability-live-dot" aria-hidden="true"></span>
-              Live Availability
-            </div>
-            <div class="availability-pill" data-availability-pill>Checking availability…</div>
+            <h3 class="availability-title">Available now</h3>
+            <span class="availability-pill pill--loading" data-availability-pill>Checking…</span>
           </div>
 
-          <div class="availability-rows" aria-live="polite">
-            <div class="availability-row">
-              <div class="availability-label">Washers</div>
-              <div class="availability-value" data-washers>—</div>
+          <div class="availability-metrics">
+            <div class="availability-metric">
+              <div class="metric-label">Washers</div>
+              <div class="metric-main">
+                <span class="metric-num" data-washers-available>—</span>
+                <span class="metric-of">
+                  / <span data-washers-total>—</span>
+                </span>
+              </div>
+              <div class="metric-sub">
+                <span data-washers-inuse>—</span> in use
+              </div>
+              <div class="metric-bar" aria-hidden="true">
+                <span class="metric-bar-fill" data-washers-bar></span>
+              </div>
             </div>
 
-            <div class="availability-row">
-              <div class="availability-label">Dryers</div>
-              <div class="availability-value" data-dryers>—</div>
+            <div class="availability-metric">
+              <div class="metric-label">Dryers</div>
+              <div class="metric-main">
+                <span class="metric-num" data-dryers-available>—</span>
+                <span class="metric-of">
+                  / <span data-dryers-total>—</span>
+                </span>
+              </div>
+              <div class="metric-sub">
+                <span data-dryers-inuse>—</span> in use
+              </div>
+              <div class="metric-bar" aria-hidden="true">
+                <span class="metric-bar-fill" data-dryers-bar></span>
+              </div>
             </div>
           </div>
 
           <div class="availability-meta">
-            <span data-updated>Updated —</span>
-            <span class="availability-dot">•</span>
-            <span data-availability-status>Auto-updates</span>
+            <span data-availability-status>Updates automatically</span>
           </div>
 
-          <div class="availability-error" data-error hidden>
-            Live availability temporarily unavailable.
-          </div>
+          <div class="availability-error" data-availability-error hidden></div>
         </div>
       </div>
     </div>

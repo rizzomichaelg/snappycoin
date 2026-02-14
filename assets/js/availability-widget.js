@@ -2,140 +2,160 @@
   const root = document.querySelector("[data-availability-widget]");
   if (!root) return;
 
-  const statusUrl = root.dataset.statusUrl || "https://dexterlive-status.snappycoinlaundry.workers.dev/status";
-  const pollMs = Number(root.dataset.pollMs || 30000);
+  const statusUrl =
+    root.dataset.statusUrl ||
+    "https://dexterlive-status.snappycoinlaundry.workers.dev/status";
+  const pollMs = Math.max(5000, Number(root.dataset.pollMs || 30000));
   const timeoutMs = 8000;
 
-  const elWashers = root.querySelector("[data-washers]");
-  const elDryers = root.querySelector("[data-dryers]");
-  const elUpdated = root.querySelector("[data-updated]");
-  const elPill = root.querySelector("[data-availability-pill]");
-  const elStatus = root.querySelector("[data-availability-status]");
-  const elError = root.querySelector("[data-error]");
+  const $ = (sel) => root.querySelector(sel);
 
-  let lastGood = null;
+  const el = {
+    pill: $("[data-availability-pill]"),
+    status: $("[data-availability-status]"),
+    error: $("[data-availability-error]"),
+
+    wAvail: $("[data-washers-available]"),
+    wTotal: $("[data-washers-total]"),
+    wInUse: $("[data-washers-inuse]"),
+    wBar: $("[data-washers-bar]"),
+
+    dAvail: $("[data-dryers-available]"),
+    dTotal: $("[data-dryers-total]"),
+    dInUse: $("[data-dryers-inuse]"),
+    dBar: $("[data-dryers-bar]"),
+  };
+
   let timer = null;
+  let lastGood = null;
+  let lastGoodAt = 0;
 
-  function nowIso() {
-    return new Date().toISOString();
+  function setPill(text, variant) {
+    if (!el.pill) return;
+
+    el.pill.textContent = text;
+    el.pill.className = `availability-pill pill--${variant}`;
   }
 
-  function formatAgo(isoOrMs) {
-    const t = typeof isoOrMs === "number" ? isoOrMs : Date.parse(isoOrMs);
-    if (!Number.isFinite(t)) return "Updated just now";
+  function setError(message) {
+    if (!el.error) return;
 
-    const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
-    if (s < 10) {
-      return "Updated just now";
-    }
-    if (s < 60) {
-      return `Updated ${s}s ago`;
+    if (!message) {
+      el.error.hidden = true;
+      el.error.textContent = "";
+      return;
     }
 
-    const m = Math.floor(s / 60);
-    return `Updated ${m}m ago`;
+    el.error.hidden = false;
+    el.error.textContent = message;
   }
 
-  function busynessLabel(washers, dryers) {
-    const washerRatio = washers.total > 0 ? washers.available / washers.total : null;
-    const dryerRatio = dryers.total > 0 ? dryers.available / dryers.total : null;
-    const ratios = [washerRatio, dryerRatio].filter((v) => v !== null);
-
-    if (ratios.length === 0) {
-      return "Busy right now";
-    }
-
-    const ratio = Math.min(...ratios);
-
-    if (ratio >= 0.6) {
-      return "Plenty available";
-    }
-    if (ratio >= 0.3) {
-      return "Some available";
-    }
-
-    return "Busy right now";
-  }
-
-  function normalizeNumber(value) {
+  function safeNum(value, fallback = 0) {
     const n = Number(value);
-    return Number.isFinite(n) ? n : null;
+    return Number.isFinite(n) ? n : fallback;
   }
 
-  function inServiceTotal(bucket, totalFallback) {
-    const available = normalizeNumber(bucket?.available ?? bucket?.available_count);
-    const inUse = normalizeNumber(bucket?.inUse ?? bucket?.in_use ?? bucket?.used ?? bucket?.occupied);
+  function percent(numerator, denominator) {
+    if (!denominator) return 0;
+    return Math.max(0, Math.min(100, Math.round((numerator / denominator) * 100)));
+  }
 
-    if (available !== null && inUse !== null) {
-      return Math.max(0, Math.floor(available + inUse));
-    }
-
-    const explicitInService = normalizeNumber(
+  function normalizeBucket(bucket, fallbackTotal) {
+    const available = safeNum(bucket?.available ?? bucket?.free ?? bucket?.available_count, null);
+    const inUse = safeNum(bucket?.inUse ?? bucket?.in_use ?? bucket?.used ?? bucket?.occupied, null);
+    const rawTotal =
+      bucket?.total ??
+      bucket?.count ??
+      bucket?.capacity ??
+      bucket?.in_service_total ??
       bucket?.inServiceTotal ??
-        bucket?.in_service_total ??
-        bucket?.serviceTotal ??
-        bucket?.service_total ??
-        null
-    );
+      bucket?.service_total ??
+      bucket?.serviceTotal ??
+      fallbackTotal;
+    const totalCandidate = safeNum(rawTotal, null);
 
-    if (explicitInService !== null) {
-      return Math.max(0, Math.floor(explicitInService));
+    const outOfService =
+      safeNum(
+        bucket?.outOfService ??
+          bucket?.out_of_service ??
+          bucket?.outOfServiceCount ??
+          bucket?.out_of_service_count ??
+          bucket?.outOfServiceUnits ??
+          bucket?.out_of_service_units,
+        0
+      );
+    const offline =
+      safeNum(
+        bucket?.offline ??
+          bucket?.offline_count ??
+          bucket?.networkOutage ??
+          bucket?.network_outage,
+        0
+      );
+
+    let total = totalCandidate;
+    if (total === null && available !== null && inUse !== null) {
+      total = available + inUse;
+    }
+    if (total === null) {
+      return {
+        available: available ?? 0,
+        total: 0,
+        inUse: inUse ?? 0,
+      };
     }
 
-    const outOfService = normalizeNumber(
-      bucket?.outOfService ??
-        bucket?.out_of_service ??
-        bucket?.outOfServiceCount ??
-        bucket?.out_of_service_count ??
-        0
-    );
+    const inServiceTotal = Math.max(0, Math.floor(total - outOfService - offline));
+    const computedInUse = inUse === null ? Math.max(0, inServiceTotal - (available ?? 0)) : Math.max(0, inUse);
 
-    const offline = normalizeNumber(
-      bucket?.offline ??
-        bucket?.offline_count ??
-        bucket?.networkOutage ??
-        bucket?.network_outage ??
-        0
-    );
+    const availableFinal =
+      available === null ? Math.max(0, inServiceTotal - computedInUse) : Math.max(0, Math.min(available, inServiceTotal));
 
-    if (totalFallback === null) {
-      return null;
-    }
-
-    return Math.max(0, Math.floor(totalFallback - (outOfService || 0) - (offline || 0)));
+    return {
+      available: availableFinal,
+      total: inServiceTotal,
+      inUse: computedInUse,
+    };
   }
 
-  function computeFromRawDexter(payload) {
-    // Counts pockets, which matches reality for stacked dryers.
-    const w = { total: 0, inUse: 0, available: 0, offline: 0, outOfService: 0 };
-    const d = { total: 0, inUse: 0, available: 0, offline: 0, outOfService: 0 };
+  function computeFromMachineConfigs(machineConfigs) {
+    let wTotal = 0;
+    let wInUse = 0;
+    let dTotal = 0;
+    let dInUse = 0;
 
-    const configs = Array.isArray(payload?.machine_configs) ? payload.machine_configs : [];
-
-    for (const cfg of configs) {
+    for (const cfg of Array.isArray(machineConfigs) ? machineConfigs : []) {
       const machines = Array.isArray(cfg?.machines) ? cfg.machines : [];
       for (const machine of machines) {
-        const type = (machine?.machine_type || "").toLowerCase(); // "washer" or "dryer"
+        const type = (machine?.machine_type || "").toLowerCase();
         const pockets = Array.isArray(machine?.pockets) ? machine.pockets : [];
+        const retired = machine?.retired === true;
+        const online = machine?.online !== false;
+
+        if (retired || !online) {
+          continue;
+        }
 
         for (const pocket of pockets) {
-          const bucket = type === "dryer" ? d : w;
-          bucket.total += 1;
-
-          const out =
+          const outOfService =
             pocket?.out_of_service === true ||
             pocket?.payment_lockout === true ||
             pocket?.no_usage === true;
-          const offline = machine?.online === false || machine?.networked === false;
+          if (outOfService) {
+            continue;
+          }
 
-          if (out) {
-            bucket.outOfService += 1;
-          } else if (offline) {
-            bucket.offline += 1;
-          } else if (pocket?.in_use === true) {
-            bucket.inUse += 1;
+          const inUse = pocket?.in_use === true;
+          if (type === "dryer") {
+            dTotal += 1;
+            if (inUse) {
+              dInUse += 1;
+            }
           } else {
-            bucket.available += 1;
+            wTotal += 1;
+            if (inUse) {
+              wInUse += 1;
+            }
           }
         }
       }
@@ -143,97 +163,99 @@
 
     return {
       washers: {
-        available: w.available,
-        total: w.available + w.inUse,
+        available: Math.max(0, wTotal - wInUse),
+        total: wTotal,
+        inUse: wInUse,
       },
       dryers: {
-        available: d.available,
-        total: d.available + d.inUse,
+        available: Math.max(0, dTotal - dInUse),
+        total: dTotal,
+        inUse: dInUse,
       },
-      updatedAt: payload?.updatedAt || payload?.updated_at || nowIso(),
     };
   }
 
   function normalize(payload) {
-    const washers = payload?.washers || payload?.summary?.washers;
-    const dryers = payload?.dryers || payload?.summary?.dryers;
+    const maybeWashers = payload?.washers || payload?.summary?.washers || payload?.availability?.washers;
+    const maybeDryers = payload?.dryers || payload?.summary?.dryers || payload?.availability?.dryers;
 
-    const normalized =
-      washers &&
-      dryers &&
-      Number.isFinite(normalizeNumber(washers.available)) &&
-      Number.isFinite(normalizeNumber(washers.total)) &&
-      Number.isFinite(normalizeNumber(dryers.available)) &&
-      Number.isFinite(normalizeNumber(dryers.total));
-
-    if (normalized) {
-      const washersAvailable = normalizeNumber(washers.available);
-      const dryersAvailable = normalizeNumber(dryers.available);
-      const washerTotal = inServiceTotal(washers, normalizeNumber(washers.total));
-      const dryerTotal = inServiceTotal(dryers, normalizeNumber(dryers.total));
-
-      const safeWasherTotal =
-        washerTotal === null ? normalizeNumber(washers.total) : washerTotal;
-      const safeDryerTotal =
-        dryerTotal === null ? normalizeNumber(dryers.total) : dryerTotal;
-
-      return {
-        washers: {
-          available: washersAvailable,
-          total: safeWasherTotal === null ? 0 : safeWasherTotal,
-        },
-        dryers: {
-          available: dryersAvailable,
-          total: safeDryerTotal === null ? 0 : safeDryerTotal,
-        },
-        updatedAt: payload?.updatedAt || payload?.updated_at || nowIso(),
-      };
+    if (maybeWashers && maybeDryers) {
+      const washers = normalizeBucket(maybeWashers, payload?.washersTotal);
+      const dryers = normalizeBucket(maybeDryers, payload?.dryersTotal);
+      return { washers, dryers };
     }
 
     if (Array.isArray(payload?.machine_configs)) {
-      return computeFromRawDexter(payload);
+      return computeFromMachineConfigs(payload.machine_configs);
     }
 
     throw new Error("Unrecognized status payload shape");
   }
 
-  function render(model, degraded = false) {
-    const wText = `${model.washers.available} of ${model.washers.total} available`;
-    const dText = `${model.dryers.available} of ${model.dryers.total} available`;
+  function busynessLabel(washers, dryers) {
+    const ratios = [];
 
-    elWashers.textContent = wText;
-    elDryers.textContent = dText;
-    elUpdated.textContent = formatAgo(model.updatedAt);
-
-    const label = busynessLabel(model.washers, model.dryers);
-
-    elPill.textContent = degraded ? `${label} (paused)` : label;
-    if (elStatus) {
-      elStatus.textContent = degraded ? "Live update paused" : "Auto-updates";
+    if (washers.total > 0) {
+      ratios.push(washers.available / washers.total);
     }
-    elError.hidden = true;
+    if (dryers.total > 0) {
+      ratios.push(dryers.available / dryers.total);
+    }
+
+    if (!ratios.length) {
+      return { text: "Busy right now", variant: "busy" };
+    }
+
+    const ratio = Math.min(...ratios);
+    if (ratio >= 0.6) {
+      return { text: "Plenty available", variant: "good" };
+    }
+    if (ratio >= 0.3) {
+      return { text: "Some available", variant: "ok" };
+    }
+
+    return { text: "Busy right now", variant: "busy" };
+  }
+
+  function renderSummary(summary, degraded = false) {
+    const { washers, dryers } = summary;
+
+    const wHaveData = Number.isFinite(washers.total) && washers.total > 0;
+    const dHaveData = Number.isFinite(dryers.total) && dryers.total > 0;
+
+    el.wAvail.textContent = wHaveData ? String(washers.available) : "—";
+    el.wTotal.textContent = wHaveData ? String(washers.total) : "—";
+    el.wInUse.textContent = wHaveData ? String(washers.inUse) : "—";
+    el.wBar.style.width = `${wHaveData ? percent(washers.available, washers.total) : 0}%`;
+
+    el.dAvail.textContent = dHaveData ? String(dryers.available) : "—";
+    el.dTotal.textContent = dHaveData ? String(dryers.total) : "—";
+    el.dInUse.textContent = dHaveData ? String(dryers.inUse) : "—";
+    el.dBar.style.width = `${dHaveData ? percent(dryers.available, dryers.total) : 0}%`;
+
+    const label = busynessLabel(washers, dryers);
+    const pillText = degraded ? `${label.text} (paused)` : label.text;
+
+    setPill(pillText, degraded ? "down" : label.variant);
+    if (el.status) {
+      el.status.textContent = degraded ? "Live update paused" : "Updates automatically";
+    }
+
+    setError("");
   }
 
   function showLoading() {
-    elPill.textContent = "Checking availability…";
-    elUpdated.textContent = "Updated —";
-    if (elStatus) {
-      elStatus.textContent = "Checking availability…";
-    }
-    elError.hidden = true;
+    setPill("Checking…", "loading");
+    if (el.status) el.status.textContent = "Checking availability…";
+    setError("");
   }
 
-  function showError() {
-    if (lastGood) {
-      render(lastGood, true);
-      return;
+  function showDown(message) {
+    setPill("Unavailable", "down");
+    if (el.status) {
+      el.status.textContent = "Live availability temporarily unavailable.";
     }
-
-    elPill.textContent = "Unavailable";
-    if (elStatus) {
-      elStatus.textContent = "Live availability temporarily unavailable.";
-    }
-    elError.hidden = false;
+    setError(message);
   }
 
   async function fetchWithTimeout(url, ms) {
@@ -245,8 +267,8 @@
         method: "GET",
         headers: { accept: "application/json" },
         cache: "no-store",
-        signal: ctrl.signal,
         credentials: "omit",
+        signal: ctrl.signal,
       });
 
       if (!response.ok) {
@@ -259,17 +281,6 @@
     }
   }
 
-  async function tick() {
-    try {
-      const payload = await fetchWithTimeout(statusUrl, timeoutMs);
-      const model = normalize(payload);
-      lastGood = model;
-      render(model, false);
-    } catch (error) {
-      showError();
-    }
-  }
-
   function stopPolling() {
     if (timer) {
       clearInterval(timer);
@@ -278,12 +289,33 @@
   }
 
   function startPolling() {
-    tick();
     stopPolling();
+    tick();
     timer = setInterval(tick, pollMs);
   }
 
+  async function tick() {
+    try {
+      const payload = await fetchWithTimeout(statusUrl, timeoutMs);
+      const summary = normalize(payload);
+      lastGood = summary;
+      lastGoodAt = Date.now();
+      renderSummary(summary, false);
+    } catch (error) {
+      if (lastGood) {
+        renderSummary(lastGood, true);
+        if (Date.now() - lastGoodAt > pollMs * 2.5) {
+          setError("Live updates are delayed right now.");
+        }
+        return;
+      }
+
+      showDown("Live availability temporarily unavailable.");
+    }
+  }
+
   function start() {
+    stopPolling();
     showLoading();
     startPolling();
 
