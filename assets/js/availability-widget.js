@@ -36,9 +36,16 @@
     return `Updated ${m}m ago`;
   }
 
-  function busynessLabel(available, total) {
-    if (!total) return "—";
-    const ratio = available / total;
+  function busynessLabel(washers, dryers) {
+    const washerRatio = washers.total > 0 ? washers.available / washers.total : null;
+    const dryerRatio = dryers.total > 0 ? dryers.available / dryers.total : null;
+    const ratios = [washerRatio, dryerRatio].filter((v) => v !== null);
+
+    if (ratios.length === 0) {
+      return "—";
+    }
+
+    const ratio = Math.min(...ratios);
 
     if (ratio >= 0.6) {
       return "Plenty available";
@@ -139,9 +146,7 @@
     elDryers.textContent = dText;
     elUpdated.textContent = formatAgo(model.updatedAt);
 
-    const overallAvailable = model.washers.available + model.dryers.available;
-    const overallTotal = model.washers.total + model.dryers.total;
-    const label = busynessLabel(overallAvailable, overallTotal);
+    const label = busynessLabel(model.washers, model.dryers);
 
     elPill.textContent = degraded ? `${label} (paused)` : label;
     if (elStatus) {
