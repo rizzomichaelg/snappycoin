@@ -1,4 +1,13 @@
-const GA_MEASUREMENT_ID = "G-W0E4GHV24B";
+(() => {
+  const canTrack =
+    window.location &&
+    (window.location.protocol === "https:" || window.location.protocol === "http:");
+
+  if (!canTrack) {
+    return;
+  }
+
+  const GA_MEASUREMENT_ID = "G-W0E4GHV24B";
 const GA_SRC = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
 
 let initialized = false;
@@ -110,3 +119,4 @@ if (document.readyState === "loading") {
 } else {
   init();
 }
+})();

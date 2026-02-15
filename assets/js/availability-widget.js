@@ -16,6 +16,7 @@
   const el = {
     pill: $("[data-availability-pill]"),
     status: $("[data-availability-status]"),
+    statusState: $("[data-availability-state]"),
     error: $("[data-availability-error]"),
 
     wAvail: $("[data-washers-available]"),
@@ -30,11 +31,14 @@
   };
 
   let timer = null;
+  let ageTimer = null;
   let lastGood = null;
   let lastGoodAt = 0;
   let inFlight = false;
   let lastActivityAt = Date.now();
   let isStaleState = false;
+  let ageBaseTs = null;
+  let ageStateText = "";
 
   function setPill(text, variant) {
     if (!el.pill) return;
@@ -56,6 +60,93 @@
     el.error.textContent = message;
   }
 
+  function formatAgo(input) {
+    const ts = Number(input);
+    if (!Number.isFinite(ts)) {
+      return "<1 minute ago";
+    }
+
+    const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (seconds < 60) return "<1 minute ago";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  function parseTimestamp(value) {
+    if (value == null) return NaN;
+
+    if (typeof value === "number") {
+      if (value > 1e12) return value;
+      if (value > 1e9) return value * 1000;
+      return value;
+    }
+
+    const asNumber = Number(value);
+    if (Number.isFinite(asNumber)) {
+      if (asNumber > 1e12) return asNumber;
+      if (asNumber > 1e9) return asNumber * 1000;
+      return asNumber;
+    }
+
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function resolveUpdatedAt(payload, fallbackTs) {
+    const candidates = [
+      payload?.updatedAt,
+      payload?.updated_at,
+      payload?.generatedAt,
+      payload?.generated_at,
+      payload?.timestamp,
+      payload?.time,
+      payload?.updated,
+    ];
+
+    for (const candidate of candidates) {
+      const parsed = parseTimestamp(candidate);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+
+    const fromHeader = parseTimestamp(fallbackTs);
+    if (Number.isFinite(fromHeader)) return fromHeader;
+
+    return Date.now();
+  }
+
+  function statusLine(updatedAt, stateText) {
+    ageBaseTs = Number.isFinite(updatedAt) ? updatedAt : Date.now();
+    ageStateText = stateText || "";
+    if (el.status) {
+      el.status.textContent = `Updated ${formatAgo(ageBaseTs)}`;
+    }
+    if (el.statusState) {
+      el.statusState.textContent = ageStateText;
+    }
+  }
+
+  function startAgeTicker() {
+    if (ageTimer) {
+      clearInterval(ageTimer);
+    }
+
+    ageTimer = setInterval(() => {
+      if (!ageBaseTs) return;
+      if (el.status) {
+        el.status.textContent = `Updated ${formatAgo(ageBaseTs)}`;
+      }
+      if (el.statusState) {
+        el.statusState.textContent = ageStateText;
+      }
+    }, 15000);
+  }
+
   function markActivity() {
     lastActivityAt = Date.now();
     if (isStaleState) {
@@ -75,9 +166,7 @@
     if (!document.hidden && isPageStale()) {
       isStaleState = true;
       setPill("Paused", "down");
-      if (el.status) {
-        el.status.textContent = "Live updates paused (inactive)";
-      }
+      statusLine(lastGoodAt || Date.now(), "Updates paused (inactive)");
       setAvailabilityState("down");
       setError("Updates paused while page is stale.");
       return true;
@@ -124,12 +213,10 @@
     }
 
     if (cached.summary.washers || cached.summary.dryers) {
-      lastGood = {
-        washers: cached.summary.washers,
-        dryers: cached.summary.dryers,
-      };
-      lastGoodAt = Number(cached.fetchedAt) || 0;
-      renderSummary(lastGood, age > pollMs);
+      lastGood = cached.summary;
+      const cachedUpdatedAt = Number(cached.summary?.updatedAt);
+      lastGoodAt = Number.isFinite(cachedUpdatedAt) ? cachedUpdatedAt : Number(cached.fetchedAt) || 0;
+      renderSummary(lastGood, age > pollMs, lastGoodAt);
       return true;
     }
 
@@ -268,11 +355,12 @@
         total: dTotal,
         inUse: dInUse,
       },
-      updatedAt: Date.now(),
     };
   }
 
-  function normalize(payload) {
+  function normalize(payload, responseDate) {
+    const updatedAt = resolveUpdatedAt(payload, responseDate);
+
     const maybeWashers = payload?.washers || payload?.summary?.washers || payload?.availability?.washers;
     const maybeDryers = payload?.dryers || payload?.summary?.dryers || payload?.availability?.dryers;
 
@@ -282,14 +370,15 @@
       return {
         washers,
         dryers,
-        updatedAt: payload?.updatedAt || payload?.updated_at || payload?.generatedAt || Date.now(),
+        updatedAt,
       };
     }
 
     if (Array.isArray(payload?.machine_configs)) {
-      const model = computeFromMachineConfigs(payload.machine_configs);
-      model.updatedAt = payload?.updatedAt || payload?.updated_at || payload?.generatedAt || model.updatedAt;
-      return model;
+      return {
+        ...computeFromMachineConfigs(payload.machine_configs),
+        updatedAt,
+      };
     }
 
     throw new Error("Unrecognized status payload shape");
@@ -320,7 +409,7 @@
     return { text: "Busy right now", variant: "busy" };
   }
 
-  function renderSummary(summary, degraded = false) {
+  function renderSummary(summary, degraded = false, updatedAt = null) {
     const { washers, dryers } = summary;
 
     const wHaveData = Number.isFinite(washers.total) && washers.total > 0;
@@ -342,25 +431,23 @@
     const state = degraded ? "down" : label.variant;
     setPill(pillText, state);
     setAvailabilityState(state);
-    if (el.status) {
-      el.status.textContent = degraded ? "Live update paused" : "Updates automatically";
-    }
+
+    const stateText = degraded ? "Updates paused" : "Updates automatically";
+    statusLine(updatedAt || Date.now(), stateText);
 
     setError("");
   }
 
   function showLoading() {
     setPill("Checking…", "loading");
-    if (el.status) el.status.textContent = "Checking availability…";
+    statusLine(Date.now(), "Checking");
     setAvailabilityState("loading");
     setError("");
   }
 
   function showDown(message) {
     setPill("Unavailable", "down");
-    if (el.status) {
-      el.status.textContent = "Live availability temporarily unavailable.";
-    }
+    statusLine(Date.now(), "Live availability temporarily unavailable.");
     setAvailabilityState("down");
     setError(message);
   }
@@ -383,7 +470,7 @@
       }
 
       const payload = await response.json();
-      return normalize(payload);
+      return normalize(payload, response.headers.get("date"));
     } finally {
       clearTimeout(timer);
     }
@@ -412,7 +499,7 @@
         }
 
         if (lastGoodAt && now - lastGoodAt < maxCacheAgeMs) {
-          renderSummary(lastGood, now - lastGoodAt > pollMs);
+          renderSummary(lastGood, now - lastGoodAt > pollMs, lastGoodAt);
           return;
         }
       }
@@ -420,12 +507,12 @@
       const summary = await fetchWithTimeout(statusUrl, timeoutMs);
       lastGood = summary;
       lastGoodAt = Number(summary.updatedAt) || Date.now();
-      renderSummary(summary, false);
+      renderSummary(summary, false, lastGoodAt);
       setCachedState(summary);
       setError("");
     } catch (_error) {
       if (lastGood) {
-        renderSummary(lastGood, true);
+        renderSummary(lastGood, true, lastGoodAt);
         if (Date.now() - lastGoodAt > pollMs * 2.5) {
           setError("Live updates are delayed right now.");
         }
@@ -461,6 +548,7 @@
 
   function start() {
     stopPolling();
+    startAgeTicker();
     const activityEvents = [
       "click",
       "keydown",
