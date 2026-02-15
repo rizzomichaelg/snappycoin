@@ -473,27 +473,7 @@
   </footer>
 
   <!-- JAVASCRIPT -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-    import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBb620xQloiEyMMyvoG8QmIlqyMlXJa2uw",
-      authDomain: "snappycoinlaundry-aa997.firebaseapp.com",
-      projectId: "snappycoinlaundry-aa997",
-      storageBucket: "snappycoinlaundry-aa997.firebasestorage.app",
-      messagingSenderId: "914761992616",
-      appId: "1:914761992616:web:a86f223e03e3e0c1c7b59d",
-      measurementId: "G-W0E4GHV24B",
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-
-    window.SC_TRACK_EVENT = (name, params = {}) => logEvent(analytics, name, params);
-  </script>
-
-  <script src="assets/js/site-analytics.js" defer></script>
+  <script type="module" src="assets/js/site-analytics.js"></script>
   <script src="assets/js/availability-widget.js" defer></script>
   <script src="script.js"></script>
 </body>
