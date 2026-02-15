@@ -5,8 +5,10 @@
   const statusUrl =
     root.dataset.statusUrl ||
     "https://dexterlive-status.snappycoinlaundry.workers.dev/status";
-  const pollMs = Math.max(5000, Number(root.dataset.pollMs || 30000));
+  const pollMs = Math.max(15000, Number(root.dataset.pollMs || 90000));
   const timeoutMs = 8000;
+  const cacheKey = "snappy-availability-cache-v1";
+  const maxCacheAgeMs = pollMs + 8000;
 
   const $ = (sel) => root.querySelector(sel);
 
@@ -29,6 +31,7 @@
   let timer = null;
   let lastGood = null;
   let lastGoodAt = 0;
+  let inFlight = false;
 
   function setPill(text, variant) {
     if (!el.pill) return;
@@ -48,6 +51,57 @@
 
     el.error.hidden = false;
     el.error.textContent = message;
+  }
+
+  function getCachedState() {
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return null;
+      if (!parsed.summary || !parsed.fetchedAt) return null;
+      return parsed;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function setCachedState(summary) {
+    if (!summary) return;
+    try {
+      const payload = {
+        summary,
+        fetchedAt: Date.now(),
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(payload));
+    } catch (_err) {
+      // Ignore quota/serialize failures in normal usage.
+    }
+  }
+
+  function hydrateFromCache() {
+    const cached = getCachedState();
+    if (!cached || !cached.summary) {
+      return false;
+    }
+
+    const age = Date.now() - Number(cached.fetchedAt || 0);
+    if (!Number.isFinite(age)) {
+      return false;
+    }
+
+    if (cached.summary.washers || cached.summary.dryers) {
+      lastGood = {
+        washers: cached.summary.washers,
+        dryers: cached.summary.dryers,
+      };
+      lastGoodAt = Number(cached.fetchedAt) || 0;
+      renderSummary(lastGood, age > pollMs);
+      return true;
+    }
+
+    return false;
   }
 
   function setAvailabilityState(state) {
@@ -182,6 +236,7 @@
         total: dTotal,
         inUse: dInUse,
       },
+      updatedAt: Date.now(),
     };
   }
 
@@ -192,11 +247,17 @@
     if (maybeWashers && maybeDryers) {
       const washers = normalizeBucket(maybeWashers, payload?.washersTotal);
       const dryers = normalizeBucket(maybeDryers, payload?.dryersTotal);
-      return { washers, dryers };
+      return {
+        washers,
+        dryers,
+        updatedAt: payload?.updatedAt || payload?.updated_at || payload?.generatedAt || Date.now(),
+      };
     }
 
     if (Array.isArray(payload?.machine_configs)) {
-      return computeFromMachineConfigs(payload.machine_configs);
+      const model = computeFromMachineConfigs(payload.machine_configs);
+      model.updatedAt = payload?.updatedAt || payload?.updated_at || payload?.generatedAt || model.updatedAt;
+      return model;
     }
 
     throw new Error("Unrecognized status payload shape");
@@ -275,21 +336,32 @@
   async function fetchWithTimeout(url, ms) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), ms);
+    const cached = getCachedState();
+    const headers = { accept: "application/json" };
+
+    if (cached?.fetchedAt) {
+      headers["If-Modified-Since"] = new Date(cached.fetchedAt).toUTCString();
+    }
 
     try {
       const response = await fetch(url, {
         method: "GET",
-        headers: { accept: "application/json" },
-        cache: "no-store",
+        headers,
+        cache: "default",
         credentials: "omit",
         signal: ctrl.signal,
       });
+
+      if (response.status === 304 && cached?.summary) {
+        return normalize({ ...cached.summary, updatedAt: cached.fetchedAt });
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      return await response.json();
+      const payload = await response.json();
+      return normalize(payload);
     } finally {
       clearTimeout(timer);
     }
@@ -297,25 +369,39 @@
 
   function stopPolling() {
     if (timer) {
-      clearInterval(timer);
+      clearTimeout(timer);
       timer = null;
     }
   }
 
-  function startPolling() {
-    stopPolling();
-    tick();
-    timer = setInterval(tick, pollMs);
-  }
-
   async function tick() {
+    if (inFlight || document.hidden) {
+      return;
+    }
+    inFlight = true;
+    const now = Date.now();
+    const shared = getCachedState();
+
     try {
-      const payload = await fetchWithTimeout(statusUrl, timeoutMs);
-      const summary = normalize(payload);
+      if (shared?.summary && now - Number(shared.fetchedAt || 0) < maxCacheAgeMs) {
+        if (!lastGood) {
+          lastGood = shared.summary;
+          lastGoodAt = Number(shared.fetchedAt) || now;
+        }
+
+        if (lastGoodAt && now - lastGoodAt < maxCacheAgeMs) {
+          renderSummary(lastGood, now - lastGoodAt > pollMs);
+          return;
+        }
+      }
+
+      const summary = await fetchWithTimeout(statusUrl, timeoutMs);
       lastGood = summary;
-      lastGoodAt = Date.now();
+      lastGoodAt = Number(summary.updatedAt) || Date.now();
       renderSummary(summary, false);
-    } catch (error) {
+      setCachedState(summary);
+      setError("");
+    } catch (_error) {
       if (lastGood) {
         renderSummary(lastGood, true);
         if (Date.now() - lastGoodAt > pollMs * 2.5) {
@@ -325,12 +411,33 @@
       }
 
       showDown("Live availability temporarily unavailable.");
+    } finally {
+      inFlight = false;
     }
+  }
+
+  function startPolling() {
+    stopPolling();
+    const run = async () => {
+      if (document.hidden) {
+        stopPolling();
+        return;
+      }
+
+      await tick();
+      const jitter = Math.floor(Math.random() * 8000);
+      timer = setTimeout(run, pollMs + jitter);
+    };
+
+    run();
   }
 
   function start() {
     stopPolling();
-    showLoading();
+    const hadCache = hydrateFromCache();
+    if (!hadCache) {
+      showLoading();
+    }
     startPolling();
 
     document.addEventListener("visibilitychange", () => {
