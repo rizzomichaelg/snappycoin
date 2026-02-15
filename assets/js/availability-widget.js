@@ -6,6 +6,7 @@
     root.dataset.statusUrl ||
     "https://dexterlive-status.snappycoinlaundry.workers.dev/status";
   const pollMs = Math.max(15000, Number(root.dataset.pollMs || 90000));
+  const staleMs = Math.max(30000, Number(root.dataset.staleMs || 300000));
   const timeoutMs = 8000;
   const cacheKey = "snappy-availability-cache-v1";
   const maxCacheAgeMs = pollMs + 8000;
@@ -32,6 +33,8 @@
   let lastGood = null;
   let lastGoodAt = 0;
   let inFlight = false;
+  let lastActivityAt = Date.now();
+  let isStaleState = false;
 
   function setPill(text, variant) {
     if (!el.pill) return;
@@ -51,6 +54,35 @@
 
     el.error.hidden = false;
     el.error.textContent = message;
+  }
+
+  function markActivity() {
+    lastActivityAt = Date.now();
+    if (isStaleState) {
+      isStaleState = false;
+      setError("");
+      if (!document.hidden) {
+        startPolling();
+      }
+    }
+  }
+
+  function isPageStale() {
+    return Date.now() - lastActivityAt > staleMs;
+  }
+
+  function pauseForStaleness() {
+    if (!document.hidden && isPageStale()) {
+      isStaleState = true;
+      setPill("Paused", "down");
+      if (el.status) {
+        el.status.textContent = "Live updates paused (inactive)";
+      }
+      setAvailabilityState("down");
+      setError("Updates paused while page is stale.");
+      return true;
+    }
+    return false;
   }
 
   function getCachedState() {
@@ -336,25 +368,15 @@
   async function fetchWithTimeout(url, ms) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), ms);
-    const cached = getCachedState();
-    const headers = { accept: "application/json" };
-
-    if (cached?.fetchedAt) {
-      headers["If-Modified-Since"] = new Date(cached.fetchedAt).toUTCString();
-    }
 
     try {
       const response = await fetch(url, {
         method: "GET",
-        headers,
-        cache: "default",
+        headers: { accept: "application/json" },
+        cache: "no-cache",
         credentials: "omit",
         signal: ctrl.signal,
       });
-
-      if (response.status === 304 && cached?.summary) {
-        return normalize({ ...cached.summary, updatedAt: cached.fetchedAt });
-      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -424,6 +446,11 @@
         return;
       }
 
+      if (pauseForStaleness()) {
+        stopPolling();
+        return;
+      }
+
       await tick();
       const jitter = Math.floor(Math.random() * 8000);
       timer = setTimeout(run, pollMs + jitter);
@@ -434,6 +461,22 @@
 
   function start() {
     stopPolling();
+    const activityEvents = [
+      "click",
+      "keydown",
+      "mousedown",
+      "touchstart",
+      "mousemove",
+      "scroll",
+      "focus",
+      "pointerdown",
+      "wheel",
+    ];
+
+    for (const eventType of activityEvents) {
+      document.addEventListener(eventType, markActivity, { passive: true });
+    }
+
     const hadCache = hydrateFromCache();
     if (!hadCache) {
       showLoading();
@@ -443,6 +486,13 @@
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         stopPolling();
+        return;
+      }
+
+      markActivity();
+
+      if (isPageStale()) {
+        pauseForStaleness();
         return;
       }
 
