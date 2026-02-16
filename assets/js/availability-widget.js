@@ -10,6 +10,9 @@
   const timeoutMs = 8000;
   const cacheKey = "snappy-availability-cache-v1";
   const maxCacheAgeMs = pollMs + 8000;
+  const CENTRAL_TIMEZONE = "America/Chicago";
+  const OPEN_START_MINUTE = 6 * 60;
+  const OPEN_END_MINUTE = 1 * 60 + 30;
 
   const $ = (sel) => root.querySelector(sel);
 
@@ -17,6 +20,7 @@
     pill: $("[data-availability-pill]"),
     status: $("[data-availability-status]"),
     statusState: $("[data-availability-state]"),
+    title: root.querySelector(".availability-title"),
     error: $("[data-availability-error]"),
 
     wAvail: $("[data-washers-available]"),
@@ -39,6 +43,7 @@
   let isStaleState = false;
   let ageBaseTs = null;
   let ageStateText = "";
+  let headingTimer = null;
 
   function setPill(text, variant) {
     if (!el.pill) return;
@@ -128,6 +133,92 @@
     }
     if (el.statusState) {
       el.statusState.textContent = ageStateText;
+    }
+  }
+
+  function isOpenCentralNow() {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: CENTRAL_TIMEZONE,
+      hour12: false,
+      hour: "numeric",
+      minute: "numeric",
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value);
+
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+      return true;
+    }
+
+    const currentMinute = hour * 60 + minute;
+    return currentMinute >= OPEN_START_MINUTE || currentMinute < OPEN_END_MINUTE;
+  }
+
+  function minutesUntilOpening() {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: CENTRAL_TIMEZONE,
+      hour12: false,
+      hour: "numeric",
+      minute: "numeric",
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value);
+
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+      return 0;
+    }
+
+    const currentMinute = hour * 60 + minute;
+    if (currentMinute >= OPEN_START_MINUTE || currentMinute < OPEN_END_MINUTE) {
+      return 0;
+    }
+
+    return OPEN_START_MINUTE - currentMinute;
+  }
+
+  function pluralize(value, singular, plural) {
+    return value === 1 ? `${value} ${singular}` : `${value} ${plural}`;
+  }
+
+  function formatOpeningIn() {
+    const minutes = minutesUntilOpening();
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+
+    if (!minutes) {
+      return "Available now";
+    }
+
+    if (minutes < 60) {
+      return `Opening in ${pluralize(minutes, "minute", "minutes")}`;
+    }
+
+    const parts = [];
+    if (hours > 0) {
+      parts.push(pluralize(hours, "hour", "hours"));
+    }
+
+    if (mins > 0) {
+      parts.push(pluralize(mins, "minute", "minutes"));
+    }
+
+    if (!parts.length) {
+      return "Opening in <1 minute";
+    }
+
+    return `Opening in ${parts.join(" ")}`;
+  }
+
+  function syncAvailabilityHeading() {
+    const isOpen = isOpenCentralNow();
+    if (el.title) {
+      el.title.textContent = formatOpeningIn();
+    }
+
+    if (el.pill) {
+      el.pill.hidden = !isOpen;
     }
   }
 
@@ -436,6 +527,8 @@
     statusLine(updatedAt || Date.now(), stateText);
 
     setError("");
+
+    syncAvailabilityHeading();
   }
 
   function showLoading() {
@@ -443,6 +536,7 @@
     statusLine(Date.now(), "Checking");
     setAvailabilityState("loading");
     setError("");
+    syncAvailabilityHeading();
   }
 
   function showDown(message) {
@@ -450,6 +544,7 @@
     statusLine(Date.now(), "Live availability temporarily unavailable.");
     setAvailabilityState("down");
     setError(message);
+    syncAvailabilityHeading();
   }
 
   async function fetchWithTimeout(url, ms) {
@@ -549,6 +644,9 @@
   function start() {
     stopPolling();
     startAgeTicker();
+    syncAvailabilityHeading();
+    if (headingTimer) clearInterval(headingTimer);
+    headingTimer = setInterval(syncAvailabilityHeading, 60000);
     const activityEvents = [
       "click",
       "keydown",
