@@ -105,6 +105,10 @@
 
   function resolveUpdatedAt(payload, fallbackTs) {
     const candidates = [
+      payload?.fetchedAtMs,
+      payload?.fetched_at_ms,
+      payload?.fetchedAt,
+      payload?.fetched_at,
       payload?.updatedAt,
       payload?.updated_at,
       payload?.generatedAt,
@@ -451,6 +455,7 @@
 
   function normalize(payload, responseDate) {
     const updatedAt = resolveUpdatedAt(payload, responseDate);
+    const delayed = payload?.stale === true;
 
     const maybeWashers = payload?.washers || payload?.summary?.washers || payload?.availability?.washers;
     const maybeDryers = payload?.dryers || payload?.summary?.dryers || payload?.availability?.dryers;
@@ -462,6 +467,7 @@
         washers,
         dryers,
         updatedAt,
+        delayed,
       };
     }
 
@@ -469,6 +475,7 @@
       return {
         ...computeFromMachineConfigs(payload.machine_configs),
         updatedAt,
+        delayed,
       };
     }
 
@@ -502,6 +509,7 @@
 
   function renderSummary(summary, degraded = false, updatedAt = null) {
     const { washers, dryers } = summary;
+    const delayed = degraded || summary?.delayed === true;
 
     const wHaveData = Number.isFinite(washers.total) && washers.total > 0;
     const dHaveData = Number.isFinite(dryers.total) && dryers.total > 0;
@@ -517,16 +525,16 @@
     el.dBar.style.width = `${dHaveData ? percent(dryers.available, dryers.total) : 0}%`;
 
     const label = busynessLabel(washers, dryers);
-    const pillText = degraded ? `${label.text} (paused)` : label.text;
+    const pillText = delayed ? `${label.text} (delayed)` : label.text;
 
-    const state = degraded ? "down" : label.variant;
+    const state = delayed ? "down" : label.variant;
     setPill(pillText, state);
     setAvailabilityState(state);
 
-    const stateText = degraded ? "Updates paused" : "Updates automatically";
+    const stateText = delayed ? "Live updates delayed" : "Updates automatically";
     statusLine(updatedAt || Date.now(), stateText);
 
-    setError("");
+    setError(delayed ? "Live updates are delayed right now." : "");
 
     syncAvailabilityHeading();
   }
@@ -602,9 +610,8 @@
       const summary = await fetchWithTimeout(statusUrl, timeoutMs);
       lastGood = summary;
       lastGoodAt = Number(summary.updatedAt) || Date.now();
-      renderSummary(summary, false, lastGoodAt);
+      renderSummary(summary, summary.delayed === true, lastGoodAt);
       setCachedState(summary);
-      setError("");
     } catch (_error) {
       if (lastGood) {
         renderSummary(lastGood, true, lastGoodAt);
