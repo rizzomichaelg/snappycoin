@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="description" content="Snappy Coin Laundry — Single-page layout" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://snappycoinlaundry.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://dexterlive-status.snappycoinlaundry.workers.dev"
+  />
   <title>Snappy Coin Laundry</title>
 
   <!-- Favicon and Homescreen Icons -->
@@ -17,10 +21,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260527" />
 
-  <!-- jQuery (for the gradual scroll transition and hamburger functionality) -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <!-- (Optional) Web App Manifest -->
   <!--
@@ -45,6 +48,7 @@
         <li><a href="#hero" class="nav-link">Home</a></li>
         <li><a href="#about" class="nav-link">About</a></li>
         <li><a href="#services" class="nav-link">Services</a></li>
+        <li><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
         <li><a href="#why-choose-us" class="nav-link">Why Choose Us</a></li>
         <li><a href="#faq" class="nav-link">FAQ</a></li>
         <li><a href="#contact-section" class="nav-link">Contact</a></li>
@@ -74,7 +78,7 @@
         <h2>Wash &amp; Dry in a Snap! 🫰</h2>
         <div class="hero-ctas" role="group" aria-label="Primary actions">
           <a href="#contact-section" class="btn-cta primary">Plan Your Visit</a>
-          <a href="#services" class="btn-cta ghost">Explore Services</a>
+          <a href="#free-weekday-wash" class="btn-cta ghost">Claim Free Wash</a>
         </div>
         <ul class="hero-highlights" aria-label="Key amenities">
           <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
@@ -175,6 +179,93 @@
           <div class="availability-error" data-availability-error hidden></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- PROMO SIGNUP SECTION -->
+  <section id="free-weekday-wash" class="content-section promo-embed-section">
+    <div class="section-inner promo-embed-layout">
+      <div class="promo-embed-copy">
+        <p class="eyebrow">Weekday offer</p>
+        <h2>Claim a free weekday washer load.</h2>
+        <p id="promo-offer" class="section-lead promo-offer-copy">One free 20- or 30-pound washer load</p>
+        <ul class="promo-facts" aria-label="Offer details">
+          <li><span class="material-icons" aria-hidden="true">calendar_month</span>Valid Monday through Thursday</li>
+          <li><span class="material-icons" aria-hidden="true">schedule</span>Redeem between 9 AM and 7 PM</li>
+          <li><span class="material-icons" aria-hidden="true">local_laundry_service</span>Use in person at Snappy Coin Laundry</li>
+        </ul>
+        <div class="promo-detail-grid">
+          <article class="promo-detail">
+            <h3>Offer</h3>
+            <p>One free 20- or 30-pound washer load for qualifying first-time promo claims.</p>
+          </article>
+          <article class="promo-detail">
+            <h3>When</h3>
+            <p>Valid Monday through Thursday, 9 AM to 7 PM Central Time.</p>
+          </article>
+          <article class="promo-detail">
+            <h3>Where</h3>
+            <p>Redeem in person with staff at Snappy Coin Laundry in Maryland Heights.</p>
+          </article>
+        </div>
+      </div>
+
+      <section class="promo-card promo-signup-card" aria-label="Claim form">
+        <h2>Get your code</h2>
+        <p>Verify your phone, then we&apos;ll email your coupon code.</p>
+        <div id="promo-message" class="promo-alert" role="alert" hidden></div>
+        <form id="promo-signup-form" class="promo-form" novalidate>
+          <div class="promo-field">
+            <label for="promo-firstName">First name</label>
+            <input id="promo-firstName" name="firstName" autocomplete="given-name" required />
+          </div>
+          <div class="promo-field">
+            <label for="promo-lastName">Last name</label>
+            <input id="promo-lastName" name="lastName" autocomplete="family-name" required />
+          </div>
+          <div class="promo-field">
+            <label for="promo-email">Email</label>
+            <input id="promo-email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="promo-field">
+            <label for="promo-phone">Mobile phone</label>
+            <input id="promo-phone" name="phone" type="tel" autocomplete="tel" required />
+          </div>
+          <div class="promo-field">
+            <label for="promo-zip">ZIP code</label>
+            <input id="promo-zip" name="zip" inputmode="numeric" autocomplete="postal-code" required />
+          </div>
+          <div class="promo-field">
+            <label for="promo-community">Apartment or community</label>
+            <input id="promo-community" name="community" autocomplete="organization" />
+          </div>
+          <label class="promo-check">
+            <input type="checkbox" name="phoneVerificationConsent" required />
+            <span>I agree to receive a one-time SMS verification code for this offer.</span>
+          </label>
+          <label class="promo-check">
+            <input type="checkbox" name="emailMarketingConsent" />
+            <span>I&apos;d like to receive Snappy Coin Laundry offers by email.</span>
+          </label>
+          <div id="promo-turnstile" data-turnstile-site-key="0x4AAAAAADVlAL_Y3ES5Jk6-"></div>
+          <div class="promo-actions">
+            <button id="promo-submit" class="promo-submit" type="submit">Send verification code</button>
+          </div>
+        </form>
+
+        <section id="promo-verification" class="promo-verification-panel" hidden>
+          <h2>Enter the SMS code</h2>
+          <div id="promo-verify-message" class="promo-alert" role="alert" hidden></div>
+          <form id="promo-verify-form" class="promo-form" novalidate>
+            <input id="promo-claim-id" name="claimId" type="hidden" />
+            <div class="promo-field">
+              <label for="promo-phoneCode">Verification code</label>
+              <input id="promo-phoneCode" name="phoneCode" inputmode="numeric" autocomplete="one-time-code" required />
+            </div>
+            <button id="promo-verify-submit" class="promo-submit" type="submit">Verify and email coupon</button>
+          </form>
+        </section>
+      </section>
     </div>
   </section>
 
@@ -569,7 +660,8 @@
   <!-- JAVASCRIPT -->
   <script type="module" src="assets/js/site-analytics.js"></script>
   <script src="assets/js/availability-widget.js" defer></script>
-  <script src="script.js"></script>
+  <script src="assets/js/promo-signup.js?v=20260527" defer></script>
+  <script src="script.js?v=20260527"></script>
 </body>
 
 </html>

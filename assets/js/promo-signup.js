@@ -1,10 +1,27 @@
 (function () {
   const promotionSlug = "free-weekday-wash";
-  const defaultApiBase = "https://api.snappycoinlaundry.com";
+  const isProductionHost = /(^|\.)snappycoinlaundry\.com$/i.test(window.location.hostname);
+  const defaultApiBase = isProductionHost ? "https://api.snappycoinlaundry.com" : "https://api-staging.snappycoinlaundry.com";
   const config = window.SNAPPY_PROMO_CONFIG || {};
   const apiBase = (config.apiBase || defaultApiBase).replace(/\/+$/, "");
-  const turnstileSiteKey = config.turnstileSiteKey || "";
+  let resolvedTurnstileSiteKey = config.turnstileSiteKey || "";
   const turnstileLoadWarningMs = 8000;
+  const attributionStorageKey = "snappyPromoFirstTouch";
+  const attributionKeys = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+    "utm_id",
+    "gclid",
+    "gbraid",
+    "wbraid",
+    "fbclid",
+    "ttclid",
+    "msclkid",
+    "li_fat_id"
+  ];
 
   const els = {
     form: document.getElementById("promo-signup-form"),
@@ -17,6 +34,8 @@
     claimId: document.getElementById("promo-claim-id"),
     turnstile: document.getElementById("promo-turnstile")
   };
+
+  if (!els.form && !els.verifyForm) return;
 
   function showMessage(node, text, variant) {
     if (!node) return;
@@ -31,26 +50,118 @@
     if (label) button.textContent = label;
   }
 
-  function attribution() {
+  function browserStorage(name) {
+    try {
+      return window[name];
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function storageGet(storage, key) {
+    if (!storage) return "";
+    try {
+      return storage.getItem(key);
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function storageSet(storage, key, value) {
+    if (!storage) return;
+    try {
+      storage.setItem(key, value);
+    } catch (error) {
+      // Storage may be unavailable in private browsing or strict privacy modes.
+    }
+  }
+
+  function referrerDomain(referrer) {
+    if (!referrer) return "";
+    try {
+      return new URL(referrer).hostname;
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function pagePath(url) {
+    return `${url.pathname}${url.search}`;
+  }
+
+  function captureAttributionSnapshot() {
     const url = new URL(window.location.href);
+    const referrer = document.referrer || "";
     const params = url.searchParams;
-    const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "utm_id", "gclid", "fbclid"];
     const data = {
       landing_url: url.href,
-      landing_path: `${url.pathname}${url.search ? "?..." : ""}`,
-      referrer: document.referrer || "",
+      landing_path: pagePath(url),
+      referrer,
+      referrer_domain: referrerDomain(referrer),
       client_captured_at: new Date().toISOString()
     };
-    keys.forEach((key) => {
-      const value = params.get(key);
-      if (value) data[key] = value;
+
+    attributionKeys.forEach((key) => {
+      data[key] = params.get(key) || "";
     });
+
     return data;
+  }
+
+  function storedFirstTouchAttribution() {
+    const localStore = browserStorage("localStorage");
+    const sessionStore = browserStorage("sessionStorage");
+    const stored =
+      storageGet(localStore, attributionStorageKey) ||
+      storageGet(sessionStore, attributionStorageKey);
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === "object") {
+          return parsed;
+        }
+      } catch (error) {
+        // Fall through and replace malformed stored attribution.
+      }
+    }
+
+    const firstTouch = captureAttributionSnapshot();
+    const serialized = JSON.stringify(firstTouch);
+    storageSet(localStore, attributionStorageKey, serialized);
+    storageSet(sessionStore, attributionStorageKey, serialized);
+    return firstTouch;
+  }
+
+  const firstTouchAttribution = storedFirstTouchAttribution();
+
+  function attribution() {
+    const currentUrl = new URL(window.location.href);
+    const referrer = document.referrer || "";
+
+    return {
+      ...captureAttributionSnapshot(),
+      ...firstTouchAttribution,
+      current_url: currentUrl.href,
+      current_path: pagePath(currentUrl),
+      current_referrer: referrer,
+      current_referrer_domain: referrerDomain(referrer),
+      submitted_at: new Date().toISOString()
+    };
+  }
+
+  function turnstileWidgetId() {
+    if (!els.turnstile) return "";
+    return els.turnstile.dataset.turnstileWidgetId || "";
+  }
+
+  function turnstileSiteKey() {
+    return resolvedTurnstileSiteKey || els.turnstile?.dataset.turnstileSiteKey || "";
   }
 
   function turnstileToken() {
     if (window.turnstile && els.turnstile) {
-      const response = window.turnstile.getResponse(els.turnstile);
+      const response = window.turnstile.getResponse(turnstileWidgetId() || els.turnstile);
       if (response) return response;
     }
     const field = document.querySelector("[name='cf-turnstile-response']");
@@ -72,12 +183,6 @@
     return data;
   }
 
-  async function loadPromotion() {
-    const data = await requestJson(`/api/promotions/${promotionSlug}/public`, { method: "GET" });
-    const offer = document.getElementById("promo-offer");
-    if (offer && data.offerLabel) offer.textContent = data.offerLabel;
-  }
-
   function turnstileHasVisibleWidget() {
     return !!document.querySelector("iframe[src*='challenges.cloudflare.com'], iframe[title*='Widget'], iframe[title*='Turnstile']");
   }
@@ -92,23 +197,36 @@
   }
 
   function renderTurnstile() {
-    if (!els.turnstile || !turnstileSiteKey) {
+    const sitekey = turnstileSiteKey();
+    if (!els.turnstile || !sitekey) {
       showMessage(els.message, "The security check is not configured. Please try again later.", "error");
       return;
     }
+    if (turnstileWidgetId()) return;
     if (!window.turnstile) {
       window.setTimeout(renderTurnstile, 200);
       return;
     }
-    window.turnstile.render(els.turnstile, {
-      sitekey: turnstileSiteKey,
+    const widgetId = window.turnstile.render(els.turnstile, {
+      sitekey,
       theme: "light"
     });
+    els.turnstile.dataset.turnstileWidgetId = widgetId;
+  }
+
+  async function loadPromotion() {
+    const data = await requestJson(`/api/promotions/${promotionSlug}/public`, { method: "GET" });
+    const offer = document.getElementById("promo-offer");
+    if (offer && data.offerLabel) offer.textContent = data.offerLabel;
+    if (!resolvedTurnstileSiteKey && data.turnstileSiteKey) {
+      resolvedTurnstileSiteKey = String(data.turnstileSiteKey);
+    }
   }
 
   async function startClaim(event) {
     event.preventDefault();
     showMessage(els.message, "", "info");
+    if (els.form && !els.form.reportValidity()) return;
     const token = turnstileToken();
     if (!token) {
       showMessage(els.message, "Please complete the verification challenge before submitting.", "error");
@@ -141,7 +259,7 @@
       els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
       showMessage(els.message, error.message, "error");
-      if (window.turnstile && els.turnstile) window.turnstile.reset(els.turnstile);
+      if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId() || els.turnstile);
     } finally {
       setBusy(els.submit, false, "Send verification code");
     }
@@ -150,6 +268,7 @@
   async function verifyClaim(event) {
     event.preventDefault();
     showMessage(els.verifyMessage, "", "info");
+    if (els.verifyForm && !els.verifyForm.reportValidity()) return;
     const formData = new FormData(els.verifyForm);
     try {
       setBusy(els.verifySubmit, true, "Verifying...");
@@ -172,7 +291,10 @@
 
   if (els.form) els.form.addEventListener("submit", startClaim);
   if (els.verifyForm) els.verifyForm.addEventListener("submit", verifyClaim);
-  loadPromotion().catch((error) => showMessage(els.message, error.message, "error"));
-  renderTurnstile();
+  loadPromotion()
+    .catch((error) => {
+      if (!turnstileSiteKey()) showMessage(els.message, error.message, "error");
+    })
+    .finally(renderTurnstile);
   window.setTimeout(warnIfTurnstileMissing, turnstileLoadWarningMs);
 })();

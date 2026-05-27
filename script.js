@@ -71,27 +71,28 @@ function updateOpenStatus() {
   statusEl.classList.add("is-closed");
 }
 
-$(document).ready(function () {
-  var $header = $(".header");
-  var headerExpanded =
-    parseInt(getComputedStyle(document.documentElement).getPropertyValue("--header-height")) || 120;
-  var headerCondensed =
-    parseInt(getComputedStyle(document.documentElement).getPropertyValue("--header-height-condensed")) || 90;
-  var shrinkThreshold = 60;
+document.addEventListener("DOMContentLoaded", function () {
+  const header = document.querySelector(".header");
+  const headerExpanded =
+    parseInt(getComputedStyle(document.documentElement).getPropertyValue("--header-height"), 10) || 120;
+  const headerCondensed =
+    parseInt(getComputedStyle(document.documentElement).getPropertyValue("--header-height-condensed"), 10) || 90;
+  const shrinkThreshold = 60;
 
   function setHeaderHeight(value) {
     document.documentElement.style.setProperty("--header-height", value + "px");
   }
 
   function handleHeader() {
-    if ($(window).scrollTop() > shrinkThreshold) {
-      if (!$header.hasClass("header-condensed")) {
-        $header.addClass("header-condensed");
+    if (!header) return;
+    if (window.scrollY > shrinkThreshold) {
+      if (!header.classList.contains("header-condensed")) {
+        header.classList.add("header-condensed");
         setHeaderHeight(headerCondensed);
       }
     } else {
-      if ($header.hasClass("header-condensed")) {
-        $header.removeClass("header-condensed");
+      if (header.classList.contains("header-condensed")) {
+        header.classList.remove("header-condensed");
         setHeaderHeight(headerExpanded);
       }
     }
@@ -99,9 +100,13 @@ $(document).ready(function () {
   setHeaderHeight(headerExpanded);
 
   // Hamburger menu toggle.
-  $(".hamburger").on("click", function () {
-    $(".nav-links").toggleClass("active");
-  });
+  const hamburger = document.querySelector(".hamburger");
+  const navLinksList = document.querySelector(".nav-links");
+  if (hamburger && navLinksList) {
+    hamburger.addEventListener("click", function () {
+      navLinksList.classList.toggle("active");
+    });
+  }
   updateOpenStatus();
   setInterval(updateOpenStatus, 60000);
 
@@ -134,30 +139,30 @@ $(document).ready(function () {
   });
 
   /* Highlight active nav link on scroll */
-  const navLinks = $(".nav-link");
-  const sections = $("section[id]");
+  const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+  const sections = Array.from(document.querySelectorAll("section[id]"));
 
   function handleActiveLink() {
     let currentSectionId = "";
-    const headerHeight = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue("--header-height")) || headerExpanded;
+    const headerHeight =
+      parseInt(window.getComputedStyle(document.documentElement).getPropertyValue("--header-height"), 10) ||
+      headerExpanded;
     const tolerance = 10;
 
-    sections.each(function () {
-      const sectionTop = $(this).offset().top - headerHeight - tolerance;
-      const sectionHeight = $(this).outerHeight();
-      if ($(window).scrollTop() >= sectionTop && $(window).scrollTop() < sectionTop + sectionHeight) {
-        currentSectionId = $(this).attr("id");
+    sections.forEach((section) => {
+      const sectionTop = section.getBoundingClientRect().top + window.scrollY - headerHeight - tolerance;
+      const sectionHeight = section.offsetHeight;
+      if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
+        currentSectionId = section.id;
       }
     });
 
-    navLinks.removeClass("active").each(function () {
-      if ($(this).attr("href").includes(currentSectionId)) {
-        $(this).addClass("active");
-      }
+    navLinks.forEach((link) => {
+      link.classList.toggle("active", !!currentSectionId && link.getAttribute("href").includes(currentSectionId));
     });
   }
 
-  $(window).on("scroll", function () {
+  window.addEventListener("scroll", function () {
     handleHeader();
     handleActiveLink();
   });
