@@ -4,6 +4,7 @@
   const config = window.SNAPPY_PROMO_CONFIG || {};
   const apiBase = (config.apiBase || defaultApiBase).replace(/\/+$/, "");
   const turnstileSiteKey = config.turnstileSiteKey || "";
+  const turnstileLoadWarningMs = 8000;
 
   const els = {
     form: document.getElementById("promo-signup-form"),
@@ -77,8 +78,24 @@
     if (offer && data.offerLabel) offer.textContent = data.offerLabel;
   }
 
+  function turnstileHasVisibleWidget() {
+    return !!document.querySelector("iframe[src*='challenges.cloudflare.com'], iframe[title*='Widget'], iframe[title*='Turnstile']");
+  }
+
+  function warnIfTurnstileMissing() {
+    if (turnstileToken() || turnstileHasVisibleWidget()) return;
+    showMessage(
+      els.message,
+      "The security check did not load. Refresh the page or try a standard browser with content blockers disabled.",
+      "error"
+    );
+  }
+
   function renderTurnstile() {
-    if (!els.turnstile || !turnstileSiteKey) return;
+    if (!els.turnstile || !turnstileSiteKey) {
+      showMessage(els.message, "The security check is not configured. Please try again later.", "error");
+      return;
+    }
     if (!window.turnstile) {
       window.setTimeout(renderTurnstile, 200);
       return;
@@ -157,4 +174,5 @@
   if (els.verifyForm) els.verifyForm.addEventListener("submit", verifyClaim);
   loadPromotion().catch((error) => showMessage(els.message, error.message, "error"));
   renderTurnstile();
+  window.setTimeout(warnIfTurnstileMissing, turnstileLoadWarningMs);
 })();
