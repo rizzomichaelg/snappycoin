@@ -1,0 +1,8 @@
+(function () {
+  var productionHost = /(^|\.)snappycoinlaundry\.com$/i.test(window.location.hostname);
+
+  window.SNAPPY_PROMO_CONFIG = {
+    apiBase: productionHost ? "https://api.snappycoinlaundry.com" : "https://api-staging.snappycoinlaundry.com",
+    turnstileSiteKey: "0x4AAAAAADVlAL_Y3ES5Jk6-"
+  };
+})();

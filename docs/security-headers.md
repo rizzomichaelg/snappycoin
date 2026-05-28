@@ -20,7 +20,7 @@ The public site is currently static HTML on GitHub Pages. Static meta CSP tags a
 
 Cloudflare Turnstile is the only third-party script needed by the promo form. It cannot be pinned with Subresource Integrity because Cloudflare serves a changing challenge script. Keep it limited through `script-src` and `frame-src`.
 
-Promo runtime config should stay in same-origin JavaScript or data attributes. The current page derives the API host in `assets/js/promo-signup.js` and reads the Turnstile site key from the form container or the public promotion endpoint. Do not add inline JavaScript.
+Promo runtime config should stay in same-origin JavaScript or data attributes. The current page loads `assets/js/promo-config.js` before Turnstile and the signup script so production hosts use the production API while local/non-production hosts use staging. Do not add inline JavaScript.
 
 ## Self-Hosting Plan
 
