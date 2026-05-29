@@ -188,7 +188,7 @@
   }
 
   function warnIfTurnstileMissing() {
-    if (turnstileToken() || turnstileHasVisibleWidget()) return;
+    if (turnstileToken() || turnstileWidgetId() || turnstileHasVisibleWidget()) return;
     showMessage(
       els.message,
       "The security check did not load. Refresh the page or try a standard browser with content blockers disabled.",
@@ -209,7 +209,10 @@
     }
     const widgetId = window.turnstile.render(els.turnstile, {
       sitekey,
-      theme: "light"
+      theme: "light",
+      callback: function () {
+        showMessage(els.message, "", "info");
+      }
     });
     els.turnstile.dataset.turnstileWidgetId = widgetId;
   }
