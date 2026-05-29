@@ -195,7 +195,7 @@ async function runSignupScenario(fetchHandler, options = {}) {
 
   await Promise.resolve();
 
-  return { document, fetchCalls };
+  return { document, fetchCalls, localStorage, sessionStorage };
 }
 
 function jsonResponse(status, body) {
@@ -223,7 +223,7 @@ function verifyStaticPage() {
 }
 
 async function verifySignupStartPayload() {
-  const { document, fetchCalls } = await runSignupScenario((url, options) => {
+  const { document, fetchCalls, localStorage, sessionStorage } = await runSignupScenario((url, options) => {
     if (url.endsWith("/public")) {
       return jsonResponse(200, {
         offerLabel: "One free 20- or 30-pound washer load",
@@ -255,8 +255,13 @@ async function verifySignupStartPayload() {
     assert(Object.prototype.hasOwnProperty.call(body.attribution, key), `missing attribution key ${key}`);
   }
   assert(body.attribution.utm_source === "google", "first-touch utm_source was not captured");
+  assert(body.attribution.utm_medium === "cpc", "first-touch utm_medium was not captured");
+  assert(body.attribution.utm_campaign === "freewash", "first-touch utm_campaign was not captured");
   assert(body.attribution.gclid === "gclid-1", "first-touch gclid was not captured");
+  assert(body.attribution.referrer_domain === "ads.example", "first-touch referrer domain was not captured");
   assert(body.attribution.current_url.includes("127.0.0.1:5500"), "current URL was not captured at submit");
+  assert(localStorage.getItem("snappyPromoFirstTouch"), "first-touch attribution was not persisted to localStorage");
+  assert(sessionStorage.getItem("snappyPromoFirstTouch"), "first-touch attribution was not persisted to sessionStorage");
   assert(document.elements["promo-claim-id"].value === "claim_test", "claim ID was not stored for verification");
   assert(document.elements["promo-verification"].hidden === false, "verification panel did not open");
 }

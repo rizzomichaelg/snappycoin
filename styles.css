@@ -694,43 +694,50 @@ section {
   background:
     linear-gradient(135deg, rgba(255, 248, 225, 0.9), rgba(240, 248, 255, 0.96)),
     radial-gradient(circle at 20% 20%, rgba(255, 193, 7, 0.18), transparent 32%);
+  padding: 3.5rem 1rem;
 }
 
 .promo-embed-layout {
   display: grid;
-  gap: 2rem;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  gap: 1.5rem;
+  grid-template-columns: minmax(220px, 0.5fr) minmax(580px, 1fr);
   align-items: start;
+  max-width: 1280px;
 }
 
 .promo-embed-copy h2 {
+  font-size: 2.1rem;
+  line-height: 1.15;
   text-align: left;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .promo-offer-copy {
-  margin: 0 0 1.25rem;
+  font-size: 0.98rem;
+  margin: 0 0 1rem;
   text-align: left;
 }
 
 .promo-facts {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.55rem;
   list-style: none;
-  margin: 1.5rem 0;
+  margin: 1rem 0 0;
   padding: 0;
 }
 
 .promo-facts li {
   align-items: center;
   display: flex;
-  gap: 0.65rem;
+  gap: 0.55rem;
   color: var(--text-color);
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
 .promo-facts .material-icons {
   color: var(--primary-color);
+  font-size: 1.1rem;
 }
 
 .promo-detail-grid {
@@ -765,14 +772,19 @@ section {
   border-radius: 8px;
   box-shadow: var(--card-shadow);
   color: var(--text-color);
-  padding: 1.35rem;
+  padding: 1.2rem;
 }
 
 .promo-card h2 {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   line-height: 1.2;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.25rem;
   text-align: left;
+}
+
+.promo-card > p {
+  font-size: 0.98rem;
+  margin-bottom: 0;
 }
 
 .promo-signup-card {
@@ -782,8 +794,9 @@ section {
 
 .promo-form {
   display: grid;
-  gap: 0.85rem;
-  margin-top: 1rem;
+  gap: 0.7rem 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.85rem;
 }
 
 .promo-field {
@@ -791,9 +804,17 @@ section {
   gap: 0.25rem;
 }
 
+.promo-check,
+#promo-turnstile,
+.promo-actions,
+.promo-verification-panel,
+.promo-alert {
+  grid-column: 1 / -1;
+}
+
 .promo-field label,
 .promo-check {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 600;
 }
 
@@ -802,8 +823,8 @@ section {
   border-radius: 6px;
   color: var(--text-color);
   font: inherit;
-  min-height: 44px;
-  padding: 0.7rem 0.75rem;
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
   width: 100%;
 }
 
@@ -837,8 +858,8 @@ section {
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  min-height: 48px;
-  padding: 0.8rem 1rem;
+  min-height: 44px;
+  padding: 0.7rem 1rem;
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 
@@ -1699,6 +1720,18 @@ form#contactForm {
   }
 
   .dexterpay-steps-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .promo-embed-section {
+    padding: 2.75rem 1rem;
+  }
+
+  .promo-embed-copy h2 {
+    font-size: 1.85rem;
+  }
+
+  .promo-form {
     grid-template-columns: 1fr;
   }
 
