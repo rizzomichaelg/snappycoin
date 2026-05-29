@@ -376,6 +376,14 @@ function verifyHostConfig() {
     runConfigForHost("www.snappycoinlaundry.com").turnstileSiteKey === "",
     "production host should not use the staging Turnstile key"
   );
+  assert(
+    runConfigForHost("test.snappycoinlaundry.com").apiBase === "https://api-staging.snappycoinlaundry.com",
+    "test subdomains should use staging API"
+  );
+  assert(
+    runConfigForHost("test.snappycoinlaundry.com").turnstileSiteKey === "0x4AAAAAADVlAL_Y3ES5Jk6-",
+    "test subdomains should use staging Turnstile key"
+  );
 }
 
 (async () => {
