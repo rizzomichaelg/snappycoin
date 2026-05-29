@@ -377,6 +377,14 @@ function verifyHostConfig() {
     "production host should not use the staging Turnstile key"
   );
   assert(
+    runConfigForHost("snappycoin-promo-test.pages.dev").apiBase === "https://api.snappycoinlaundry.com",
+    "Pages test site should use production API"
+  );
+  assert(
+    runConfigForHost("snappycoin-promo-test.pages.dev").turnstileSiteKey === "",
+    "Pages test site should load Turnstile key from production metadata"
+  );
+  assert(
     runConfigForHost("test.snappycoinlaundry.com").apiBase === "https://api-staging.snappycoinlaundry.com",
     "test subdomains should use staging API"
   );
