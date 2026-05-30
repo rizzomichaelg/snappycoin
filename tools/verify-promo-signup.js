@@ -51,6 +51,7 @@ class ElementMock {
     this.fields = options.fields || {};
     this.disabled = false;
     this.valid = options.valid !== false;
+    this.scrolledIntoView = false;
   }
 
   addEventListener(type, handler) {
@@ -61,7 +62,9 @@ class ElementMock {
     return this.valid;
   }
 
-  scrollIntoView() {}
+  scrollIntoView() {
+    this.scrolledIntoView = true;
+  }
 }
 
 class FormDataMock {
@@ -362,6 +365,7 @@ async function verifyDuplicateMessagePassthrough() {
   });
 
   assert(document.elements["promo-message"].textContent === duplicateMessage, "duplicate message was not displayed as returned");
+  assert(document.elements["promo-message"].scrolledIntoView === true, "submit error message was not scrolled into view");
 }
 
 function verifyHostConfig() {

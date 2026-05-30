@@ -44,6 +44,13 @@
     node.hidden = !text;
   }
 
+  function showMessageInView(node, text, variant) {
+    showMessage(node, text, variant);
+    if (text && node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   function setBusy(button, busy, label) {
     if (!button) return;
     button.disabled = busy;
@@ -232,7 +239,7 @@
     if (els.form && !els.form.reportValidity()) return;
     const token = turnstileToken();
     if (!token) {
-      showMessage(els.message, "Please complete the verification challenge before submitting.", "error");
+      showMessageInView(els.message, "Please complete the verification challenge before submitting.", "error");
       return;
     }
 
@@ -261,7 +268,7 @@
       showMessage(els.message, data.message || "Verification code sent.", "success");
       els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
-      showMessage(els.message, error.message, "error");
+      showMessageInView(els.message, error.message, "error");
       if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId() || els.turnstile);
     } finally {
       setBusy(els.submit, false, "Send verification code");
