@@ -31,11 +31,15 @@
     submit: document.getElementById("promo-submit"),
     verifySubmit: document.getElementById("promo-verify-submit"),
     verificationPanel: document.getElementById("promo-verification"),
+    successPanel: document.getElementById("promo-success"),
+    successMessage: document.getElementById("promo-success-message"),
     claimId: document.getElementById("promo-claim-id"),
     turnstile: document.getElementById("promo-turnstile")
   };
 
   if (!els.form && !els.verifyForm) return;
+  let claimRequestInFlight = false;
+  let verifyRequestInFlight = false;
 
   function showMessage(node, text, variant) {
     if (!node) return;
@@ -54,7 +58,16 @@
   function setBusy(button, busy, label) {
     if (!button) return;
     button.disabled = busy;
+    button.setAttribute("aria-busy", busy ? "true" : "false");
     if (label) button.textContent = label;
+  }
+
+  function setFormDisabled(form, disabled) {
+    if (!form || typeof form.querySelectorAll !== "function") return;
+    form.querySelectorAll("input, button, select, textarea").forEach((control) => {
+      control.disabled = disabled;
+    });
+    form.setAttribute("aria-busy", disabled ? "true" : "false");
   }
 
   function browserStorage(name) {
@@ -235,6 +248,7 @@
 
   async function startClaim(event) {
     event.preventDefault();
+    if (claimRequestInFlight) return;
     showMessage(els.message, "", "info");
     if (els.form && !els.form.reportValidity()) return;
     const token = turnstileToken();
@@ -258,29 +272,39 @@
     };
 
     try {
+      claimRequestInFlight = true;
+      setFormDisabled(els.form, true);
       setBusy(els.submit, true, "Sending code...");
       const data = await requestJson(`/api/promotions/${promotionSlug}/claim/start`, {
         method: "POST",
         body: JSON.stringify(body)
       });
       els.claimId.value = data.claimId || "";
+      els.form.hidden = true;
       els.verificationPanel.hidden = false;
-      showMessage(els.message, data.message || "Verification code sent.", "success");
-      els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      showMessage(els.verifyMessage, data.message || "Verification code sent. Enter the code from your text message.", "success");
+      els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
       showMessageInView(els.message, error.message, "error");
       if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId() || els.turnstile);
     } finally {
-      setBusy(els.submit, false, "Send verification code");
+      claimRequestInFlight = false;
+      if (els.form && !els.form.hidden) {
+        setFormDisabled(els.form, false);
+        setBusy(els.submit, false, "Send verification code");
+      }
     }
   }
 
   async function verifyClaim(event) {
     event.preventDefault();
+    if (verifyRequestInFlight) return;
     showMessage(els.verifyMessage, "", "info");
     if (els.verifyForm && !els.verifyForm.reportValidity()) return;
     const formData = new FormData(els.verifyForm);
     try {
+      verifyRequestInFlight = true;
+      setFormDisabled(els.verifyForm, true);
       setBusy(els.verifySubmit, true, "Verifying...");
       const data = await requestJson(`/api/promotions/${promotionSlug}/claim/verify-phone`, {
         method: "POST",
@@ -289,13 +313,23 @@
           phoneCode: String(formData.get("phoneCode") || "")
         })
       });
-      showMessage(els.verifyMessage, data.message || "Your coupon code was emailed.", "success");
+      if (els.successMessage) {
+        els.successMessage.textContent = data.message || "Your coupon code was emailed.";
+      }
       els.form.hidden = true;
-      els.verifyForm.hidden = true;
+      els.verificationPanel.hidden = true;
+      if (els.successPanel) {
+        els.successPanel.hidden = false;
+        els.successPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     } catch (error) {
       showMessage(els.verifyMessage, error.message, "error");
     } finally {
-      setBusy(els.verifySubmit, false, "Verify and email coupon");
+      verifyRequestInFlight = false;
+      if (els.verificationPanel && !els.verificationPanel.hidden) {
+        setFormDisabled(els.verifyForm, false);
+        setBusy(els.verifySubmit, false, "Verify and email coupon");
+      }
     }
   }
 

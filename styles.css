@@ -799,6 +799,11 @@ section {
   margin-top: 0.85rem;
 }
 
+.promo-form[hidden],
+.promo-verification-panel[hidden] {
+  display: none;
+}
+
 .promo-field {
   display: grid;
   gap: 0.25rem;
@@ -873,6 +878,12 @@ section {
   opacity: 0.65;
 }
 
+.promo-form input:disabled {
+  background: #f8fafc;
+  color: #64748b;
+  cursor: wait;
+}
+
 .promo-alert {
   border-radius: 6px;
   font-weight: 600;
@@ -899,6 +910,40 @@ section {
   border-top: 1px solid #e2e8f0;
   margin-top: 1.25rem;
   padding-top: 1.25rem;
+}
+
+.promo-success-panel {
+  align-items: center;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #14532d;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: center;
+  margin-top: 1.2rem;
+  padding: 1.6rem;
+  text-align: center;
+}
+
+.promo-success-panel[hidden] {
+  display: none;
+}
+
+.promo-success-panel h2 {
+  color: #14532d;
+  font-size: 1.35rem;
+  margin: 0;
+  text-align: center;
+}
+
+.promo-success-panel p {
+  margin: 0;
+}
+
+.promo-success-icon {
+  color: #16a34a;
+  font-size: 3rem;
 }
 
 /* ABOUT */

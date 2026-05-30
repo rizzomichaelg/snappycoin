@@ -52,6 +52,8 @@ class ElementMock {
     this.disabled = false;
     this.valid = options.valid !== false;
     this.scrolledIntoView = false;
+    this.attributes = {};
+    this.controls = options.controls || [];
   }
 
   addEventListener(type, handler) {
@@ -64,6 +66,14 @@ class ElementMock {
 
   scrollIntoView() {
     this.scrolledIntoView = true;
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+  }
+
+  querySelectorAll() {
+    return this.controls;
   }
 }
 
@@ -91,10 +101,14 @@ function makeDocument(formFields = {}) {
     "promo-submit": new ElementMock("promo-submit", { textContent: "Send verification code" }),
     "promo-verify-submit": new ElementMock("promo-verify-submit", { textContent: "Verify and email coupon" }),
     "promo-verification": new ElementMock("promo-verification", { hidden: true }),
+    "promo-success": new ElementMock("promo-success", { hidden: true }),
+    "promo-success-message": new ElementMock("promo-success-message"),
     "promo-claim-id": new ElementMock("promo-claim-id"),
     "promo-turnstile": new ElementMock("promo-turnstile"),
     "promo-offer": new ElementMock("promo-offer")
   };
+  elements["promo-signup-form"].controls = [elements["promo-submit"]];
+  elements["promo-verify-form"].controls = [elements["promo-verify-submit"]];
 
   return {
     referrer: "https://ads.example/campaign",
@@ -192,9 +206,11 @@ async function runSignupScenario(fetchHandler, options = {}) {
 
   for (const timer of timers.splice(0)) timer();
 
-  await document.elements["promo-signup-form"].listeners.submit({
-    preventDefault() {}
-  });
+  if (options.autoSubmit !== false) {
+    await document.elements["promo-signup-form"].listeners.submit({
+      preventDefault() {}
+    });
+  }
 
   await Promise.resolve();
 
@@ -266,7 +282,9 @@ async function verifySignupStartPayload() {
   assert(localStorage.getItem("snappyPromoFirstTouch"), "first-touch attribution was not persisted to localStorage");
   assert(sessionStorage.getItem("snappyPromoFirstTouch"), "first-touch attribution was not persisted to sessionStorage");
   assert(document.elements["promo-claim-id"].value === "claim_test", "claim ID was not stored for verification");
+  assert(document.elements["promo-signup-form"].hidden === true, "signup form should hide while awaiting SMS verification");
   assert(document.elements["promo-verification"].hidden === false, "verification panel did not open");
+  assert(document.elements["promo-verify-message"].textContent === "Verification code sent.", "verification step did not show SMS sent message");
 }
 
 async function verifyPhoneVerificationPayload() {
@@ -300,9 +318,10 @@ async function verifyPhoneVerificationPayload() {
   const body = JSON.parse(verifyCall.options.body);
   assert(body.claimId === "claim_test", "verify-phone claim ID was not included");
   assert(body.phoneCode === "123456", "verify-phone SMS code was not included");
-  assert(document.elements["promo-verify-message"].textContent === "Your coupon code was emailed.", "verify success message was not displayed");
+  assert(document.elements["promo-success"].hidden === false, "success panel did not open after verification");
+  assert(document.elements["promo-success-message"].textContent === "Your coupon code was emailed.", "verify success message was not displayed");
   assert(document.elements["promo-signup-form"].hidden === true, "signup form did not hide after verification");
-  assert(document.elements["promo-verify-form"].hidden === true, "verify form did not hide after verification");
+  assert(document.elements["promo-verification"].hidden === true, "verification panel did not hide after verification");
 }
 
 async function verifyFirstTouchPersistence() {
@@ -368,6 +387,60 @@ async function verifyDuplicateMessagePassthrough() {
   assert(document.elements["promo-message"].scrolledIntoView === true, "submit error message was not scrolled into view");
 }
 
+async function verifyStartSubmitGuard() {
+  let startCount = 0;
+  let resolveStart;
+  const startResponse = new Promise((resolve) => {
+    resolveStart = resolve;
+  });
+  const { document } = await runSignupScenario(
+    async (url) => {
+      if (url.endsWith("/public")) return jsonResponse(200, {});
+      if (url.endsWith("/claim/start")) {
+        startCount += 1;
+        return startResponse;
+      }
+      throw new Error(`Unexpected fetch URL ${url}`);
+    },
+    { autoSubmit: false }
+  );
+
+  const firstSubmit = document.elements["promo-signup-form"].listeners.submit({ preventDefault() {} });
+  const secondSubmit = document.elements["promo-signup-form"].listeners.submit({ preventDefault() {} });
+  await Promise.resolve();
+  assert(startCount === 1, "claim/start should ignore duplicate submissions while in flight");
+  assert(document.elements["promo-submit"].disabled === true, "claim/start button was not disabled while in flight");
+  resolveStart(jsonResponse(200, { claimId: "claim_test", message: "Verification code sent." }));
+  await firstSubmit;
+  await secondSubmit;
+}
+
+async function verifyPhoneVerificationSubmitGuard() {
+  let verifyCount = 0;
+  let resolveVerify;
+  const verifyResponse = new Promise((resolve) => {
+    resolveVerify = resolve;
+  });
+  const { document } = await runSignupScenario(async (url) => {
+    if (url.endsWith("/public")) return jsonResponse(200, {});
+    if (url.endsWith("/claim/start")) return jsonResponse(200, { claimId: "claim_test", message: "Verification code sent." });
+    if (url.endsWith("/claim/verify-phone")) {
+      verifyCount += 1;
+      return verifyResponse;
+    }
+    throw new Error(`Unexpected fetch URL ${url}`);
+  });
+
+  const firstSubmit = document.elements["promo-verify-form"].listeners.submit({ preventDefault() {} });
+  const secondSubmit = document.elements["promo-verify-form"].listeners.submit({ preventDefault() {} });
+  await Promise.resolve();
+  assert(verifyCount === 1, "verify-phone should ignore duplicate submissions while in flight");
+  assert(document.elements["promo-verify-submit"].disabled === true, "verify button was not disabled while in flight");
+  resolveVerify(jsonResponse(200, { message: "Your coupon code was emailed." }));
+  await firstSubmit;
+  await secondSubmit;
+}
+
 function verifyHostConfig() {
   assert(
     runConfigForHost("127.0.0.1").apiBase === "https://api-staging.snappycoinlaundry.com",
@@ -410,6 +483,8 @@ function verifyHostConfig() {
   await verifyPhoneVerificationPayload();
   await verifyFirstTouchPersistence();
   await verifyDuplicateMessagePassthrough();
+  await verifyStartSubmitGuard();
+  await verifyPhoneVerificationSubmitGuard();
   console.log("promo signup verification passed");
 })().catch((error) => {
   console.error(error.message);
