@@ -6,6 +6,7 @@
   const apiBase = (config.apiBase || defaultApiBase).replace(/\/+$/, "");
   let resolvedTurnstileSiteKey = config.turnstileSiteKey || "";
   const turnstileLoadWarningMs = 8000;
+  const resendCooldownSeconds = 60;
   const attributionStorageKey = "snappyPromoFirstTouch";
   const attributionKeys = [
     "utm_source",
@@ -30,16 +31,21 @@
     verifyMessage: document.getElementById("promo-verify-message"),
     submit: document.getElementById("promo-submit"),
     verifySubmit: document.getElementById("promo-verify-submit"),
+    resend: document.getElementById("promo-resend"),
+    resendStatus: document.getElementById("promo-resend-status"),
     verificationPanel: document.getElementById("promo-verification"),
     successPanel: document.getElementById("promo-success"),
     successMessage: document.getElementById("promo-success-message"),
     claimId: document.getElementById("promo-claim-id"),
+    phoneCode: document.getElementById("promo-phoneCode"),
     turnstile: document.getElementById("promo-turnstile")
   };
 
   if (!els.form && !els.verifyForm) return;
   let claimRequestInFlight = false;
   let verifyRequestInFlight = false;
+  let resendRequestInFlight = false;
+  let resendTimerId = 0;
 
   function showMessage(node, text, variant) {
     if (!node) return;
@@ -68,6 +74,49 @@
       control.disabled = disabled;
     });
     form.setAttribute("aria-busy", disabled ? "true" : "false");
+  }
+
+  function setResendState(remainingSeconds) {
+    if (!els.resend) return;
+    if (remainingSeconds > 0) {
+      els.resend.disabled = true;
+      els.resend.textContent = `Resend code in ${remainingSeconds}s`;
+      if (els.resendStatus) els.resendStatus.textContent = `Didn't get a text? You can resend in ${remainingSeconds}s.`;
+    } else {
+      els.resend.disabled = false;
+      els.resend.textContent = "Resend code";
+      if (els.resendStatus) els.resendStatus.textContent = "Didn't get a text? You can resend now.";
+    }
+  }
+
+  function stopResendCooldown() {
+    if (resendTimerId) {
+      window.clearInterval(resendTimerId);
+      resendTimerId = 0;
+    }
+  }
+
+  function startResendCooldown(seconds) {
+    let remaining = seconds || resendCooldownSeconds;
+    stopResendCooldown();
+    setResendState(remaining);
+    resendTimerId = window.setInterval(() => {
+      remaining -= 1;
+      setResendState(remaining);
+      if (remaining <= 0) stopResendCooldown();
+    }, 1000);
+  }
+
+  function returnToSignup(message, variant) {
+    stopResendCooldown();
+    if (els.verificationPanel) els.verificationPanel.hidden = true;
+    if (els.successPanel) els.successPanel.hidden = true;
+    if (els.form) {
+      els.form.hidden = false;
+      setFormDisabled(els.form, false);
+    }
+    if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId() || els.turnstile);
+    showMessageInView(els.message, message, variant || "error");
   }
 
   function browserStorage(name) {
@@ -198,7 +247,10 @@
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.message || data.error || `Request failed with HTTP ${response.status}`);
+      const error = new Error(data.message || data.error || `Request failed with HTTP ${response.status}`);
+      error.code = data.error || "";
+      error.status = response.status;
+      throw error;
     }
     return data;
   }
@@ -283,6 +335,7 @@
       els.form.hidden = true;
       els.verificationPanel.hidden = false;
       showMessage(els.verifyMessage, data.message || "Verification code sent. Enter the code from your text message.", "success");
+      startResendCooldown(resendCooldownSeconds);
       els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
       showMessageInView(els.message, error.message, "error");
@@ -322,6 +375,7 @@
         els.successPanel.hidden = false;
         els.successPanel.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+      stopResendCooldown();
     } catch (error) {
       showMessage(els.verifyMessage, error.message, "error");
     } finally {
@@ -333,8 +387,36 @@
     }
   }
 
+  async function resendVerification(event) {
+    event.preventDefault();
+    if (resendRequestInFlight || !els.claimId?.value || els.resend?.disabled) return;
+    try {
+      resendRequestInFlight = true;
+      setBusy(els.resend, true, "Sending...");
+      const data = await requestJson(`/api/promotions/${promotionSlug}/claim/resend`, {
+        method: "POST",
+        body: JSON.stringify({
+          claimId: String(els.claimId.value || "")
+        })
+      });
+      if (els.phoneCode) els.phoneCode.value = "";
+      showMessageInView(els.verifyMessage, data.message || "A new verification code was sent.", "success");
+      startResendCooldown(resendCooldownSeconds);
+    } catch (error) {
+      if (error.code === "verification_expired" || error.status === 410) {
+        returnToSignup(error.message || "Verification expired. Please submit the form again.", "error");
+        return;
+      }
+      showMessageInView(els.verifyMessage, error.message, "error");
+      setResendState(0);
+    } finally {
+      resendRequestInFlight = false;
+    }
+  }
+
   if (els.form) els.form.addEventListener("submit", startClaim);
   if (els.verifyForm) els.verifyForm.addEventListener("submit", verifyClaim);
+  if (els.resend) els.resend.addEventListener("click", resendVerification);
   loadPromotion()
     .catch((error) => {
       if (!turnstileSiteKey()) showMessage(els.message, error.message, "error");

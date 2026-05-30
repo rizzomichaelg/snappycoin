@@ -878,6 +878,29 @@ section {
   opacity: 0.65;
 }
 
+.promo-secondary-action {
+  background: transparent;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  color: var(--primary-color);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 0.55rem 0.85rem;
+}
+
+.promo-secondary-action:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: var(--primary-color);
+}
+
+.promo-secondary-action:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .promo-form input:disabled {
   background: #f8fafc;
   color: #64748b;
@@ -910,6 +933,20 @@ section {
   border-top: 1px solid #e2e8f0;
   margin-top: 1.25rem;
   padding-top: 1.25rem;
+}
+
+.promo-resend-row {
+  align-items: center;
+  display: flex;
+  gap: 0.8rem;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+}
+
+.promo-resend-row p {
+  color: var(--muted-text);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 .promo-success-panel {
@@ -1778,6 +1815,11 @@ form#contactForm {
 
   .promo-form {
     grid-template-columns: 1fr;
+  }
+
+  .promo-resend-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .promo-detail-grid {

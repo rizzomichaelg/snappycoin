@@ -100,15 +100,18 @@ function makeDocument(formFields = {}) {
     "promo-verify-message": new ElementMock("promo-verify-message", { hidden: true }),
     "promo-submit": new ElementMock("promo-submit", { textContent: "Send verification code" }),
     "promo-verify-submit": new ElementMock("promo-verify-submit", { textContent: "Verify and email coupon" }),
+    "promo-resend": new ElementMock("promo-resend", { textContent: "Resend code in 60s" }),
+    "promo-resend-status": new ElementMock("promo-resend-status", { textContent: "Didn't get a text? You can resend in 60s." }),
     "promo-verification": new ElementMock("promo-verification", { hidden: true }),
     "promo-success": new ElementMock("promo-success", { hidden: true }),
     "promo-success-message": new ElementMock("promo-success-message"),
     "promo-claim-id": new ElementMock("promo-claim-id"),
+    "promo-phoneCode": new ElementMock("promo-phoneCode", { value: "123456" }),
     "promo-turnstile": new ElementMock("promo-turnstile"),
     "promo-offer": new ElementMock("promo-offer")
   };
   elements["promo-signup-form"].controls = [elements["promo-submit"]];
-  elements["promo-verify-form"].controls = [elements["promo-verify-submit"]];
+  elements["promo-verify-form"].controls = [elements["promo-phoneCode"], elements["promo-verify-submit"], elements["promo-resend"]];
 
   return {
     referrer: "https://ads.example/campaign",
@@ -157,6 +160,7 @@ async function runSignupScenario(fetchHandler, options = {}) {
   };
   const document = makeDocument(formFields);
   const timers = [];
+  const intervals = [];
   const window = {
     SNAPPY_PROMO_CONFIG: {
       apiBase: "https://api-staging.snappycoinlaundry.com",
@@ -175,6 +179,11 @@ async function runSignupScenario(fetchHandler, options = {}) {
       timers.push(fn);
       return timers.length;
     },
+    setInterval(fn) {
+      intervals.push(fn);
+      return intervals.length;
+    },
+    clearInterval() {},
     turnstile: {
       render(node) {
         node.dataset.turnstileWidgetId = "widget_1";
@@ -285,6 +294,8 @@ async function verifySignupStartPayload() {
   assert(document.elements["promo-signup-form"].hidden === true, "signup form should hide while awaiting SMS verification");
   assert(document.elements["promo-verification"].hidden === false, "verification panel did not open");
   assert(document.elements["promo-verify-message"].textContent === "Verification code sent.", "verification step did not show SMS sent message");
+  assert(document.elements["promo-resend"].disabled === true, "resend button should start disabled");
+  assert(document.elements["promo-resend"].textContent === "Resend code in 60s", "resend button did not show cooldown");
 }
 
 async function verifyPhoneVerificationPayload() {
@@ -387,6 +398,30 @@ async function verifyDuplicateMessagePassthrough() {
   assert(document.elements["promo-message"].scrolledIntoView === true, "submit error message was not scrolled into view");
 }
 
+async function verifyResendPayload() {
+  const { document, fetchCalls } = await runSignupScenario((url) => {
+    if (url.endsWith("/public")) return jsonResponse(200, {});
+    if (url.endsWith("/claim/start")) return jsonResponse(200, { claimId: "claim_test", message: "Verification code sent." });
+    if (url.endsWith("/claim/resend")) return jsonResponse(200, { claimId: "claim_test", message: "A new verification code was sent." });
+    throw new Error(`Unexpected fetch URL ${url}`);
+  });
+
+  document.elements["promo-resend"].disabled = false;
+  await document.elements["promo-resend"].listeners.click({ preventDefault() {} });
+
+  const resendCall = fetchCalls.find((call) => call.url.endsWith("/claim/resend"));
+  assert(resendCall, "claim/resend was not called");
+  assert(
+    resendCall.url === "https://api-staging.snappycoinlaundry.com/api/promotions/free-weekday-wash/claim/resend",
+    "claim/resend URL is incorrect"
+  );
+  const body = JSON.parse(resendCall.options.body);
+  assert(body.claimId === "claim_test", "resend claim ID was not included");
+  assert(document.elements["promo-verify-message"].textContent === "A new verification code was sent.", "resend success message was not displayed");
+  assert(document.elements["promo-resend"].disabled === true, "resend button did not restart cooldown");
+  assert(document.elements["promo-resend"].textContent === "Resend code in 60s", "resend cooldown text did not restart");
+}
+
 async function verifyStartSubmitGuard() {
   let startCount = 0;
   let resolveStart;
@@ -483,6 +518,7 @@ function verifyHostConfig() {
   await verifyPhoneVerificationPayload();
   await verifyFirstTouchPersistence();
   await verifyDuplicateMessagePassthrough();
+  await verifyResendPayload();
   await verifyStartSubmitGuard();
   await verifyPhoneVerificationSubmitGuard();
   console.log("promo signup verification passed");
