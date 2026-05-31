@@ -754,6 +754,10 @@ section {
   max-width: 1280px;
 }
 
+.promo-embed-layout.is-promo-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .promo-embed-copy h2 {
   font-size: 2.1rem;
   line-height: 1.15;
@@ -839,6 +843,30 @@ section {
 .promo-signup-card {
   position: sticky;
   top: calc(var(--header-height) + 20px);
+}
+
+.promo-paused-panel {
+  max-width: 760px;
+}
+
+.promo-paused-panel[hidden] {
+  display: none;
+}
+
+.promo-paused-panel p {
+  color: var(--text-color);
+  margin: 0.5rem 0 0;
+}
+
+.promo-paused-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.promo-paused-actions .btn-cta {
+  margin: 0;
 }
 
 .promo-form {
@@ -1694,6 +1722,77 @@ section {
   text-decoration: none;
 }
 
+.newsletter-card {
+  align-items: start;
+  background: var(--white);
+  border: 1px solid rgba(0, 86, 214, 0.12);
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(300px, 1.2fr);
+  margin: 0 0 3rem;
+  padding: 1.5rem;
+  text-align: left;
+}
+
+.newsletter-copy h3 {
+  color: var(--primary-color);
+  font-size: 1.35rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.newsletter-copy p:last-child,
+.newsletter-note {
+  color: var(--muted-text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0.45rem 0 0;
+}
+
+.newsletter-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.newsletter-fields {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr) auto;
+}
+
+.newsletter-fields input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: var(--text-color);
+  font: inherit;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.newsletter-fields input:focus {
+  border-color: var(--primary-color);
+  outline: 3px solid rgba(0, 86, 214, 0.16);
+}
+
+#newsletter-turnstile:empty {
+  display: none;
+}
+
+.sr-only {
+  clip: rect(0 0 0 0);
+  border: 0;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .map-container {
   position: relative;
   width: 100%;
@@ -1901,6 +2000,11 @@ form#contactForm {
     grid-template-columns: 1fr;
   }
 
+  .promo-paused-actions,
+  .promo-paused-actions .btn-cta {
+    width: 100%;
+  }
+
   .promo-resend-row {
     align-items: stretch;
     flex-direction: column;
@@ -1972,6 +2076,15 @@ form#contactForm {
   .contact-cta {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .newsletter-card,
+  .newsletter-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .newsletter-card {
+    padding: 1.2rem;
   }
 }
 

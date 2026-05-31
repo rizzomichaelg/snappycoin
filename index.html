@@ -21,9 +21,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260531" />
+  <link rel="stylesheet" href="styles.css?v=20260531-2" />
 
-  <script src="assets/js/promo-config.js?v=20260527"></script>
+  <script src="assets/js/promo-config.js?v=20260531"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <!-- (Optional) Web App Manifest -->
@@ -47,7 +47,7 @@
       <button class="hamburger"><span class="material-icons">menu</span></button>
       <ul class="nav-links">
         <li><a href="#hero" class="nav-link">Home</a></li>
-        <li><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
+        <li id="promo-nav-item"><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
         <li><a href="#about" class="nav-link">About</a></li>
         <li><a href="#services" class="nav-link">Services</a></li>
         <li><a href="#why-choose-us" class="nav-link">Why Choose Us</a></li>
@@ -75,8 +75,8 @@
         <h2>Wash &amp; Dry in a Snap! 🫰</h2>
         <div class="hero-action-stack">
           <div class="hero-ctas" role="group" aria-label="Primary actions">
-            <a href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
-            <a href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
+            <a id="hero-promo-cta" href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
+            <a id="hero-plan-cta" href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
           </div>
           <a class="hero-wdf-callout" href="#services" aria-label="Wash Dry Fold service details">
             <span class="hero-wdf-title">Wash/Dry/Fold</span>
@@ -188,9 +188,9 @@
   </section>
 
   <!-- PROMO SIGNUP SECTION -->
-  <section id="free-weekday-wash" class="content-section promo-embed-section">
+  <section id="free-weekday-wash" class="content-section promo-embed-section" data-promo-section>
     <div class="section-inner promo-embed-layout">
-      <div class="promo-embed-copy">
+      <div class="promo-embed-copy" data-promo-active-content>
         <p class="eyebrow">Weekday offer</p>
         <h2>Claim a free weekday washer load.</h2>
         <p id="promo-offer" class="section-lead promo-offer-copy">One free 20- or 30-pound washer load</p>
@@ -202,7 +202,7 @@
         </ul>
       </div>
 
-      <section class="promo-card promo-signup-card" aria-label="Claim form">
+      <section class="promo-card promo-signup-card" aria-label="Claim form" data-promo-active-content>
         <h2>Get your code</h2>
         <p>Verify your phone, then we&apos;ll email your coupon code.</p>
         <form id="promo-signup-form" class="promo-form" novalidate>
@@ -232,7 +232,7 @@
           </label>
           <label class="promo-check">
             <input type="checkbox" name="emailMarketingConsent" />
-            <span>I&apos;d like to receive Snappy Coin Laundry offers by email.</span>
+            <span>Send me future Snappy Coin Laundry deals, discounts, and updates by email.</span>
           </label>
           <div id="promo-turnstile"></div>
           <div class="promo-actions">
@@ -263,6 +263,24 @@
           <h2>Coupon emailed</h2>
           <p id="promo-success-message">Your coupon code was emailed.</p>
         </section>
+      </section>
+
+      <section id="promo-paused" class="promo-card promo-paused-panel" hidden>
+        <p class="eyebrow">Promotions</p>
+        <h2>More ways to save are coming.</h2>
+        <p>
+          The free washer-load offer is not open right now. Stop in for fast machines, friendly attendants, and
+          convenient wash, dry, and fold service.
+        </p>
+        <ul class="promo-facts" aria-label="Snappy Coin Laundry highlights">
+          <li><span class="material-icons" aria-hidden="true">schedule</span>Open 6:00 AM to 1:30 AM every day</li>
+          <li><span class="material-icons" aria-hidden="true">local_laundry_service</span>Large Dexter washers for bulky loads</li>
+          <li><span class="material-icons" aria-hidden="true">local_shipping</span>Wash/Dry/Fold with free pickup and delivery</li>
+        </ul>
+        <div class="promo-paused-actions">
+          <a class="btn-cta primary" href="#contact-section">Plan Your Visit</a>
+          <a class="btn-cta ghost" href="#services">Explore Services</a>
+        </div>
       </section>
     </div>
   </section>
@@ -617,6 +635,25 @@
           </p>
         </article>
       </div>
+      <section class="newsletter-card" aria-labelledby="newsletter-heading">
+        <div class="newsletter-copy">
+          <p class="eyebrow">Deals &amp; updates</p>
+          <h3 id="newsletter-heading">Get future Snappy Coin Laundry offers.</h3>
+          <p>Join the email list for promotions, service updates, and local laundry tips.</p>
+        </div>
+        <form id="newsletter-signup-form" class="newsletter-form" novalidate>
+          <div class="newsletter-fields">
+            <label class="sr-only" for="newsletter-firstName">First name</label>
+            <input id="newsletter-firstName" name="firstName" autocomplete="given-name" placeholder="First name" />
+            <label class="sr-only" for="newsletter-email">Email address</label>
+            <input id="newsletter-email" name="email" type="email" autocomplete="email" placeholder="Email address" required />
+            <button id="newsletter-submit" class="promo-submit" type="submit">Join email list</button>
+          </div>
+          <p class="newsletter-note">By joining, you agree to receive marketing emails from Snappy Coin Laundry. Unsubscribe anytime.</p>
+          <div id="newsletter-turnstile"></div>
+          <div id="newsletter-message" class="promo-alert" role="alert" hidden></div>
+        </form>
+      </section>
       <!-- Updated map container for responsiveness -->
       <div class="map-container">
         <iframe title="Snappy Coin Laundry Map"
@@ -658,7 +695,7 @@
   <!-- JAVASCRIPT -->
   <script type="module" src="assets/js/site-analytics.js"></script>
   <script src="assets/js/availability-widget.js" defer></script>
-  <script src="assets/js/promo-signup.js?v=20260531-2" defer></script>
+  <script src="assets/js/promo-signup.js?v=20260531-3" defer></script>
   <script src="script.js?v=20260527"></script>
 </body>
 
