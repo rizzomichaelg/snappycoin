@@ -316,6 +316,7 @@
       email: String(formData.get("email") || ""),
       phone: String(formData.get("phone") || ""),
       zip: String(formData.get("zip") || ""),
+      community: String(formData.get("community") || ""),
       emailMarketingConsent: formData.get("emailMarketingConsent") === "on",
       phoneVerificationConsent: formData.get("phoneVerificationConsent") === "on",
       turnstileToken: token,

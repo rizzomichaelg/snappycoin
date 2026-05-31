@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260530-2" />
+  <link rel="stylesheet" href="styles.css?v=20260531" />
 
   <script src="assets/js/promo-config.js?v=20260527"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -73,37 +73,40 @@
     <div class="hero-inner">
       <div class="hero-content">
         <h2>Wash &amp; Dry in a Snap! 🫰</h2>
-        <div class="hero-ctas" role="group" aria-label="Primary actions">
-          <a href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
-          <a href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
+        <div class="hero-action-stack">
+          <div class="hero-ctas" role="group" aria-label="Primary actions">
+            <a href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
+            <a href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
+          </div>
+          <a class="hero-wdf-callout" href="#services" aria-label="Wash Dry Fold service details">
+            <span class="hero-wdf-title">Wash/Dry/Fold</span>
+            <span>$1.50 per pound</span>
+            <span>FREE pickup &amp; delivery!</span>
+            <span class="hero-wdf-action">See details below.</span>
+          </a>
+          <a class="hero-services-link" href="#services">Explore services</a>
+          <ul class="hero-highlights" aria-label="Key amenities">
+            <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
+            <li class="hero-highlight-link-item">
+              <a href="#dexterpay" class="hero-highlight-link" aria-label="DexterPay cashless checkout, location number 12105. View setup instructions.">
+                <strong>DexterPay</strong> cashless checkout · Location #12105
+              </a>
+            </li>
+          </ul>
+          <a href="#mending-alterations" class="hero-spotlight-link">
+            <span class="hero-spotlight-icon">
+              <span class="material-icons" aria-hidden="true">content_cut</span>
+            </span>
+            <span class="hero-spotlight-copy">
+              <span class="hero-spotlight-eyebrow">New service available</span>
+              <span class="hero-spotlight-title">Mending &amp; Simple Alterations</span>
+            </span>
+            <span class="hero-spotlight-action">
+              See details
+              <span class="material-icons" aria-hidden="true">south_east</span>
+            </span>
+          </a>
         </div>
-        <a class="hero-wdf-callout" href="#services" aria-label="Wash Dry Fold service details">
-          <span class="hero-wdf-title">Wash/Dry/Fold</span>
-          <span>$1.50 per pound</span>
-          <span>FREE pickup &amp; delivery!</span>
-          <span class="hero-wdf-action">See details below.</span>
-        </a>
-        <ul class="hero-highlights" aria-label="Key amenities">
-          <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
-          <li class="hero-highlight-link-item">
-            <a href="#dexterpay" class="hero-highlight-link" aria-label="DexterPay cashless checkout, location number 12105. View setup instructions.">
-              <strong>DexterPay</strong> cashless checkout · Location #12105
-            </a>
-          </li>
-        </ul>
-        <a href="#mending-alterations" class="hero-spotlight-link">
-          <span class="hero-spotlight-icon">
-            <span class="material-icons" aria-hidden="true">content_cut</span>
-          </span>
-          <span class="hero-spotlight-copy">
-            <span class="hero-spotlight-eyebrow">New service available</span>
-            <span class="hero-spotlight-title">Mending &amp; Simple Alterations</span>
-          </span>
-          <span class="hero-spotlight-action">
-            See details
-            <span class="material-icons" aria-hidden="true">south_east</span>
-          </span>
-        </a>
       </div>
       <div class="hero-cards">
         <div class="hero-card info-card" aria-label="Hours and quick facts">
@@ -222,6 +225,11 @@
           <div class="promo-field promo-field-half">
             <label for="promo-zip">ZIP code</label>
             <input id="promo-zip" name="zip" inputmode="numeric" autocomplete="postal-code" required />
+          </div>
+          <div class="promo-field promo-field-half">
+            <label for="promo-community">Apartment/community name <span class="optional-label">(optional)</span></label>
+            <input id="promo-community" name="community" autocomplete="organization" aria-describedby="promo-community-help" />
+            <p id="promo-community-help" class="promo-field-hint">Optional. Many customers leave this blank.</p>
           </div>
           <label class="promo-check">
             <input type="checkbox" name="phoneVerificationConsent" required />
@@ -655,7 +663,7 @@
   <!-- JAVASCRIPT -->
   <script type="module" src="assets/js/site-analytics.js"></script>
   <script src="assets/js/availability-widget.js" defer></script>
-  <script src="assets/js/promo-signup.js?v=20260530-2" defer></script>
+  <script src="assets/js/promo-signup.js?v=20260531" defer></script>
   <script src="script.js?v=20260527"></script>
 </body>
 
