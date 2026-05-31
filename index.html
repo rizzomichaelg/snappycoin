@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260527" />
+  <link rel="stylesheet" href="styles.css?v=20260530-2" />
 
   <script src="assets/js/promo-config.js?v=20260527"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -72,18 +72,19 @@
   <section id="hero" class="hero-section coming-soon">
     <div class="hero-inner">
       <div class="hero-content">
-        <div class="hero-badge">
-          <span class="material-icons" aria-hidden="true">celebration</span>
-          Now Open in Maryland Heights
-        </div>
         <h2>Wash &amp; Dry in a Snap! 🫰</h2>
         <div class="hero-ctas" role="group" aria-label="Primary actions">
-          <a href="#contact-section" class="btn-cta primary">Plan Your Visit</a>
-          <a href="#free-weekday-wash" class="btn-cta ghost">Claim Free Wash</a>
+          <a href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
+          <a href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
         </div>
+        <a class="hero-wdf-callout" href="#services" aria-label="Wash Dry Fold service details">
+          <span class="hero-wdf-title">Wash/Dry/Fold</span>
+          <span>$1.50 per pound</span>
+          <span>FREE pickup &amp; delivery!</span>
+          <span class="hero-wdf-action">See details below.</span>
+        </a>
         <ul class="hero-highlights" aria-label="Key amenities">
           <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
-          <li><strong>Free Wi-Fi</strong> &amp; flat-screen TVs</li>
           <li class="hero-highlight-link-item">
             <a href="#dexterpay" class="hero-highlight-link" aria-label="DexterPay cashless checkout, location number 12105. View setup instructions.">
               <strong>DexterPay</strong> cashless checkout · Location #12105
@@ -223,8 +224,11 @@
             <input id="promo-zip" name="zip" inputmode="numeric" autocomplete="postal-code" required />
           </div>
           <div class="promo-field promo-field-half">
-            <label for="promo-community">Apartment or community</label>
-            <input id="promo-community" name="community" autocomplete="organization" />
+            <label for="promo-community">Apartment or community <span class="optional-label">(optional)</span></label>
+            <input id="promo-community" name="community" autocomplete="organization" aria-describedby="promo-community-help" />
+            <p id="promo-community-help" class="promo-field-hint">
+              Apartment name, condo community, neighborhood, or subdivision, if applicable.
+            </p>
           </div>
           <label class="promo-check">
             <input type="checkbox" name="phoneVerificationConsent" required />
