@@ -154,7 +154,6 @@ async function runSignupScenario(fetchHandler, options = {}) {
     email: "ada@example.test",
     phone: "+15555550123",
     zip: "63043",
-    community: "Test Apartments",
     phoneVerificationConsent: "on",
     emailMarketingConsent: ""
   };
