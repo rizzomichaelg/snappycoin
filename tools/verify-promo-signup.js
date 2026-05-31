@@ -154,7 +154,6 @@ async function runSignupScenario(fetchHandler, options = {}) {
     email: "ada@example.test",
     phone: "+15555550123",
     zip: "63043",
-    community: "Test Apartments",
     phoneVerificationConsent: "on",
     emailMarketingConsent: ""
   };
@@ -276,7 +275,7 @@ async function verifySignupStartPayload() {
 
   const body = JSON.parse(claimCall.options.body);
   assert(body.turnstileToken === "turnstile-token", "Turnstile token was not included");
-  assert(body.community === "Test Apartments", "optional community field was not submitted");
+  assert(!Object.prototype.hasOwnProperty.call(body, "community"), "community should not be submitted");
   assert(body.phoneVerificationConsent === true, "phone verification consent was not included");
   assert(body.emailMarketingConsent === false, "email marketing consent should be separate and false here");
   assert(body.attribution && typeof body.attribution === "object", "attribution object is missing");
