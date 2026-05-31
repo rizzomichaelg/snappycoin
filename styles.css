@@ -493,6 +493,11 @@ section {
   min-width: 0;
 }
 
+.hero-cards > * {
+  min-width: 0;
+  width: 100%;
+}
+
 .hero-content {
   flex: 1 1 340px;
   min-width: 0;
@@ -1783,11 +1788,16 @@ form#contactForm {
 }
 
 @media (max-width: 992px) {
-  .hero-action-stack {
+  .hero-action-stack,
+  .hero-cards {
     width: min(100%, 360px);
   }
   .hero-inner {
     flex-direction: column;
+  }
+  .hero-cards {
+    flex: 0 1 auto;
+    grid-template-columns: 1fr;
   }
   .hero-ctas {
     grid-template-columns: 1fr;
@@ -1949,7 +1959,8 @@ form#contactForm {
   .why-reasons {
     grid-template-columns: 1fr;
   }
-  .hero-action-stack {
+  .hero-action-stack,
+  .hero-cards {
     width: 100%;
   }
   .hero-ctas .btn-cta {
