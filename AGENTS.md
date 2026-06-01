@@ -6,7 +6,7 @@ This repository contains the SnappyCoin Laundry static website and DexterLive ma
 
 The new feature is a promotional campaign system:
 - customers land on a promo page from paid ads
-  - customers submit name, email, mobile phone, ZIP, optional apartment / community
+  - customers submit name, email, mobile phone, ZIP
     - phone is verified before a code is issued
       - customer receives a unique code by email
         - staff redeem the code in person through a staff dashboard

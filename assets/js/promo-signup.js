@@ -6,6 +6,7 @@
   const apiBase = (config.apiBase || defaultApiBase).replace(/\/+$/, "");
   let resolvedTurnstileSiteKey = config.turnstileSiteKey || "";
   const turnstileLoadWarningMs = 8000;
+  const resendCooldownSeconds = 60;
   const attributionStorageKey = "snappyPromoFirstTouch";
   const attributionKeys = [
     "utm_source",
@@ -30,12 +31,33 @@
     verifyMessage: document.getElementById("promo-verify-message"),
     submit: document.getElementById("promo-submit"),
     verifySubmit: document.getElementById("promo-verify-submit"),
+    resend: document.getElementById("promo-resend"),
+    resendStatus: document.getElementById("promo-resend-status"),
     verificationPanel: document.getElementById("promo-verification"),
+    successPanel: document.getElementById("promo-success"),
+    successMessage: document.getElementById("promo-success-message"),
     claimId: document.getElementById("promo-claim-id"),
-    turnstile: document.getElementById("promo-turnstile")
+    phoneCode: document.getElementById("promo-phoneCode"),
+    turnstile: document.getElementById("promo-turnstile"),
+    promoSection: document.querySelector("[data-promo-section]"),
+    promoLayout: document.querySelector(".promo-embed-layout"),
+    promoPaused: document.getElementById("promo-paused"),
+    promoNavItem: document.getElementById("promo-nav-item"),
+    heroPromoCta: document.getElementById("hero-promo-cta"),
+    heroPlanCta: document.getElementById("hero-plan-cta"),
+    newsletterForm: document.getElementById("newsletter-signup-form"),
+    newsletterSubmit: document.getElementById("newsletter-submit"),
+    newsletterMessage: document.getElementById("newsletter-message"),
+    newsletterTurnstile: document.getElementById("newsletter-turnstile")
   };
 
-  if (!els.form && !els.verifyForm) return;
+  if (!els.form && !els.verifyForm && !els.newsletterForm) return;
+  let claimRequestInFlight = false;
+  let verifyRequestInFlight = false;
+  let resendRequestInFlight = false;
+  let newsletterRequestInFlight = false;
+  let resendTimerId = 0;
+  let promoIsActive = true;
 
   function showMessage(node, text, variant) {
     if (!node) return;
@@ -44,10 +66,69 @@
     node.hidden = !text;
   }
 
+  function showMessageInView(node, text, variant) {
+    showMessage(node, text, variant);
+    if (text && node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   function setBusy(button, busy, label) {
     if (!button) return;
     button.disabled = busy;
+    button.setAttribute("aria-busy", busy ? "true" : "false");
     if (label) button.textContent = label;
+  }
+
+  function setFormDisabled(form, disabled) {
+    if (!form || typeof form.querySelectorAll !== "function") return;
+    form.querySelectorAll("input, button, select, textarea").forEach((control) => {
+      control.disabled = disabled;
+    });
+    form.setAttribute("aria-busy", disabled ? "true" : "false");
+  }
+
+  function setResendState(remainingSeconds) {
+    if (!els.resend) return;
+    if (remainingSeconds > 0) {
+      els.resend.disabled = true;
+      els.resend.textContent = `Resend code in ${remainingSeconds}s`;
+      if (els.resendStatus) els.resendStatus.textContent = `Didn't get a text? You can resend in ${remainingSeconds}s.`;
+    } else {
+      els.resend.disabled = false;
+      els.resend.textContent = "Resend code";
+      if (els.resendStatus) els.resendStatus.textContent = "Didn't get a text? You can resend now.";
+    }
+  }
+
+  function stopResendCooldown() {
+    if (resendTimerId) {
+      window.clearInterval(resendTimerId);
+      resendTimerId = 0;
+    }
+  }
+
+  function startResendCooldown(seconds) {
+    let remaining = seconds || resendCooldownSeconds;
+    stopResendCooldown();
+    setResendState(remaining);
+    resendTimerId = window.setInterval(() => {
+      remaining -= 1;
+      setResendState(remaining);
+      if (remaining <= 0) stopResendCooldown();
+    }, 1000);
+  }
+
+  function returnToSignup(message, variant) {
+    stopResendCooldown();
+    if (els.verificationPanel) els.verificationPanel.hidden = true;
+    if (els.successPanel) els.successPanel.hidden = true;
+    if (els.form) {
+      els.form.hidden = false;
+      setFormDisabled(els.form, false);
+    }
+    if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId(els.turnstile) || els.turnstile);
+    showMessageInView(els.message, message, variant || "error");
   }
 
   function browserStorage(name) {
@@ -150,18 +231,18 @@
     };
   }
 
-  function turnstileWidgetId() {
-    if (!els.turnstile) return "";
-    return els.turnstile.dataset.turnstileWidgetId || "";
+  function turnstileWidgetId(node) {
+    if (!node) return "";
+    return node.dataset.turnstileWidgetId || "";
   }
 
   function turnstileSiteKey() {
     return resolvedTurnstileSiteKey || els.turnstile?.dataset.turnstileSiteKey || "";
   }
 
-  function turnstileToken() {
-    if (window.turnstile && els.turnstile) {
-      const response = window.turnstile.getResponse(turnstileWidgetId() || els.turnstile);
+  function turnstileToken(node) {
+    if (window.turnstile && node) {
+      const response = window.turnstile.getResponse(turnstileWidgetId(node) || node);
       if (response) return response;
     }
     const field = document.querySelector("[name='cf-turnstile-response']");
@@ -178,7 +259,10 @@
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.message || data.error || `Request failed with HTTP ${response.status}`);
+      const error = new Error(data.message || data.error || `Request failed with HTTP ${response.status}`);
+      error.code = data.error || "";
+      error.status = response.status;
+      throw error;
     }
     return data;
   }
@@ -188,7 +272,7 @@
   }
 
   function warnIfTurnstileMissing() {
-    if (turnstileToken() || turnstileWidgetId() || turnstileHasVisibleWidget()) return;
+    if (!promoIsActive || turnstileToken(els.turnstile) || turnstileWidgetId(els.turnstile) || turnstileHasVisibleWidget()) return;
     showMessage(
       els.message,
       "The security check did not load. Refresh the page or try a standard browser with content blockers disabled.",
@@ -196,31 +280,57 @@
     );
   }
 
-  function renderTurnstile() {
+  function renderTurnstile(node, messageNode, callback) {
     const sitekey = turnstileSiteKey();
-    if (!els.turnstile || !sitekey) {
-      showMessage(els.message, "The security check is not configured. Please try again later.", "error");
+    if (!node) return;
+    if (!sitekey) {
+      showMessage(messageNode, "The security check is not configured. Please try again later.", "error");
       return;
     }
-    if (turnstileWidgetId()) return;
+    if (turnstileWidgetId(node)) return;
     if (!window.turnstile) {
-      window.setTimeout(renderTurnstile, 200);
+      window.setTimeout(() => renderTurnstile(node, messageNode, callback), 200);
       return;
     }
-    const widgetId = window.turnstile.render(els.turnstile, {
+    const widgetId = window.turnstile.render(node, {
       sitekey,
       theme: "light",
       callback: function () {
-        showMessage(els.message, "", "info");
+        showMessage(messageNode, "", "info");
+        if (callback) callback();
       }
     });
-    els.turnstile.dataset.turnstileWidgetId = widgetId;
+    node.dataset.turnstileWidgetId = widgetId;
+  }
+
+  function renderConfiguredTurnstiles() {
+    if (promoIsActive) renderTurnstile(els.turnstile, els.message);
+    renderTurnstile(els.newsletterTurnstile, els.newsletterMessage);
+  }
+
+  function setPromoActiveState(active) {
+    promoIsActive = active;
+    document.querySelectorAll("[data-promo-active-content]").forEach((node) => {
+      node.hidden = !active;
+    });
+    if (els.promoPaused) els.promoPaused.hidden = active;
+    if (els.promoLayout) els.promoLayout.classList.toggle("is-promo-hidden", !active);
+    if (els.promoNavItem) els.promoNavItem.hidden = !active;
+    if (els.heroPromoCta) {
+      els.heroPromoCta.textContent = active ? "Claim Free Wash" : "Plan Your Visit";
+      els.heroPromoCta.setAttribute("href", active ? "#free-weekday-wash" : "#contact-section");
+    }
+    if (els.heroPlanCta) {
+      els.heroPlanCta.textContent = active ? "Plan Your Visit" : "Explore Services";
+      els.heroPlanCta.setAttribute("href", active ? "#contact-section" : "#services");
+    }
   }
 
   async function loadPromotion() {
     const data = await requestJson(`/api/promotions/${promotionSlug}/public`, { method: "GET" });
     const offer = document.getElementById("promo-offer");
     if (offer && data.offerLabel) offer.textContent = data.offerLabel;
+    setPromoActiveState(data.active !== false);
     if (!resolvedTurnstileSiteKey && data.turnstileSiteKey) {
       resolvedTurnstileSiteKey = String(data.turnstileSiteKey);
     }
@@ -228,11 +338,12 @@
 
   async function startClaim(event) {
     event.preventDefault();
+    if (claimRequestInFlight) return;
     showMessage(els.message, "", "info");
     if (els.form && !els.form.reportValidity()) return;
-    const token = turnstileToken();
+    const token = turnstileToken(els.turnstile);
     if (!token) {
-      showMessage(els.message, "Please complete the verification challenge before submitting.", "error");
+      showMessageInView(els.message, "Please complete the verification challenge before submitting.", "error");
       return;
     }
 
@@ -243,7 +354,6 @@
       email: String(formData.get("email") || ""),
       phone: String(formData.get("phone") || ""),
       zip: String(formData.get("zip") || ""),
-      community: String(formData.get("community") || ""),
       emailMarketingConsent: formData.get("emailMarketingConsent") === "on",
       phoneVerificationConsent: formData.get("phoneVerificationConsent") === "on",
       turnstileToken: token,
@@ -251,29 +361,40 @@
     };
 
     try {
+      claimRequestInFlight = true;
+      setFormDisabled(els.form, true);
       setBusy(els.submit, true, "Sending code...");
       const data = await requestJson(`/api/promotions/${promotionSlug}/claim/start`, {
         method: "POST",
         body: JSON.stringify(body)
       });
       els.claimId.value = data.claimId || "";
+      els.form.hidden = true;
       els.verificationPanel.hidden = false;
-      showMessage(els.message, data.message || "Verification code sent.", "success");
-      els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      showMessage(els.verifyMessage, data.message || "Verification code sent. Enter the code from your text message.", "success");
+      startResendCooldown(resendCooldownSeconds);
+      els.verificationPanel.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
-      showMessage(els.message, error.message, "error");
-      if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId() || els.turnstile);
+      showMessageInView(els.message, error.message, "error");
+      if (window.turnstile && els.turnstile) window.turnstile.reset(turnstileWidgetId(els.turnstile) || els.turnstile);
     } finally {
-      setBusy(els.submit, false, "Send verification code");
+      claimRequestInFlight = false;
+      if (els.form && !els.form.hidden) {
+        setFormDisabled(els.form, false);
+        setBusy(els.submit, false, "Send verification code");
+      }
     }
   }
 
   async function verifyClaim(event) {
     event.preventDefault();
+    if (verifyRequestInFlight) return;
     showMessage(els.verifyMessage, "", "info");
     if (els.verifyForm && !els.verifyForm.reportValidity()) return;
     const formData = new FormData(els.verifyForm);
     try {
+      verifyRequestInFlight = true;
+      setFormDisabled(els.verifyForm, true);
       setBusy(els.verifySubmit, true, "Verifying...");
       const data = await requestJson(`/api/promotions/${promotionSlug}/claim/verify-phone`, {
         method: "POST",
@@ -282,22 +403,108 @@
           phoneCode: String(formData.get("phoneCode") || "")
         })
       });
-      showMessage(els.verifyMessage, data.message || "Your coupon code was emailed.", "success");
+      if (els.successMessage) {
+        els.successMessage.textContent = data.message || "Your coupon code was emailed.";
+      }
       els.form.hidden = true;
-      els.verifyForm.hidden = true;
+      els.verificationPanel.hidden = true;
+      if (els.successPanel) {
+        els.successPanel.hidden = false;
+        els.successPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      stopResendCooldown();
     } catch (error) {
       showMessage(els.verifyMessage, error.message, "error");
     } finally {
-      setBusy(els.verifySubmit, false, "Verify and email coupon");
+      verifyRequestInFlight = false;
+      if (els.verificationPanel && !els.verificationPanel.hidden) {
+        setFormDisabled(els.verifyForm, false);
+        setBusy(els.verifySubmit, false, "Verify and email coupon");
+      }
+    }
+  }
+
+  async function resendVerification(event) {
+    event.preventDefault();
+    if (resendRequestInFlight || !els.claimId?.value || els.resend?.disabled) return;
+    try {
+      resendRequestInFlight = true;
+      setBusy(els.resend, true, "Sending...");
+      const data = await requestJson(`/api/promotions/${promotionSlug}/claim/resend`, {
+        method: "POST",
+        body: JSON.stringify({
+          claimId: String(els.claimId.value || "")
+        })
+      });
+      if (els.phoneCode) els.phoneCode.value = "";
+      showMessageInView(els.verifyMessage, data.message || "A new verification code was sent.", "success");
+      startResendCooldown(resendCooldownSeconds);
+    } catch (error) {
+      if (error.code === "verification_expired" || error.status === 410) {
+        returnToSignup(error.message || "Verification expired. Please submit the form again.", "error");
+        return;
+      }
+      showMessageInView(els.verifyMessage, error.message, "error");
+      setResendState(0);
+    } finally {
+      resendRequestInFlight = false;
+    }
+  }
+
+  async function joinNewsletter(event) {
+    event.preventDefault();
+    if (newsletterRequestInFlight) return;
+    showMessage(els.newsletterMessage, "", "info");
+    if (els.newsletterForm && !els.newsletterForm.reportValidity()) return;
+    const token = turnstileToken(els.newsletterTurnstile);
+    if (!token) {
+      showMessageInView(els.newsletterMessage, "Please complete the verification challenge before joining.", "error");
+      return;
+    }
+
+    const formData = new FormData(els.newsletterForm);
+    const body = {
+      firstName: String(formData.get("firstName") || ""),
+      email: String(formData.get("email") || ""),
+      source: "website_contact_section",
+      emailMarketingConsent: true,
+      turnstileToken: token,
+      attribution: attribution()
+    };
+
+    try {
+      newsletterRequestInFlight = true;
+      setFormDisabled(els.newsletterForm, true);
+      setBusy(els.newsletterSubmit, true, "Joining...");
+      const data = await requestJson("/api/marketing/signup", {
+        method: "POST",
+        body: JSON.stringify(body)
+      });
+      if (els.newsletterForm && typeof els.newsletterForm.reset === "function") els.newsletterForm.reset();
+      showMessageInView(els.newsletterMessage, data.message || "You're on the list.", "success");
+      if (window.turnstile && els.newsletterTurnstile) {
+        window.turnstile.reset(turnstileWidgetId(els.newsletterTurnstile) || els.newsletterTurnstile);
+      }
+    } catch (error) {
+      showMessageInView(els.newsletterMessage, error.message, "error");
+      if (window.turnstile && els.newsletterTurnstile) {
+        window.turnstile.reset(turnstileWidgetId(els.newsletterTurnstile) || els.newsletterTurnstile);
+      }
+    } finally {
+      newsletterRequestInFlight = false;
+      setFormDisabled(els.newsletterForm, false);
+      setBusy(els.newsletterSubmit, false, "Join email list");
     }
   }
 
   if (els.form) els.form.addEventListener("submit", startClaim);
   if (els.verifyForm) els.verifyForm.addEventListener("submit", verifyClaim);
+  if (els.resend) els.resend.addEventListener("click", resendVerification);
+  if (els.newsletterForm) els.newsletterForm.addEventListener("submit", joinNewsletter);
   loadPromotion()
     .catch((error) => {
       if (!turnstileSiteKey()) showMessage(els.message, error.message, "error");
     })
-    .finally(renderTurnstile);
+    .finally(renderConfiguredTurnstiles);
   window.setTimeout(warnIfTurnstileMissing, turnstileLoadWarningMs);
 })();

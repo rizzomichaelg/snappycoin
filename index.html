@@ -21,9 +21,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260527" />
+  <link rel="stylesheet" href="styles.css?v=20260531-2" />
 
-  <script src="assets/js/promo-config.js?v=20260527"></script>
+  <script src="assets/js/promo-config.js?v=20260531"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <!-- (Optional) Web App Manifest -->
@@ -47,9 +47,9 @@
       <button class="hamburger"><span class="material-icons">menu</span></button>
       <ul class="nav-links">
         <li><a href="#hero" class="nav-link">Home</a></li>
+        <li id="promo-nav-item"><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
         <li><a href="#about" class="nav-link">About</a></li>
         <li><a href="#services" class="nav-link">Services</a></li>
-        <li><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
         <li><a href="#why-choose-us" class="nav-link">Why Choose Us</a></li>
         <li><a href="#faq" class="nav-link">FAQ</a></li>
         <li><a href="#contact-section" class="nav-link">Contact</a></li>
@@ -72,37 +72,41 @@
   <section id="hero" class="hero-section coming-soon">
     <div class="hero-inner">
       <div class="hero-content">
-        <div class="hero-badge">
-          <span class="material-icons" aria-hidden="true">celebration</span>
-          Now Open in Maryland Heights
-        </div>
         <h2>Wash &amp; Dry in a Snap! 🫰</h2>
-        <div class="hero-ctas" role="group" aria-label="Primary actions">
-          <a href="#contact-section" class="btn-cta primary">Plan Your Visit</a>
-          <a href="#free-weekday-wash" class="btn-cta ghost">Claim Free Wash</a>
+        <div class="hero-action-stack">
+          <div class="hero-ctas" role="group" aria-label="Primary actions">
+            <a id="hero-promo-cta" href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
+            <a id="hero-plan-cta" href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
+          </div>
+          <a class="hero-wdf-callout" href="#services" aria-label="Wash Dry Fold service details">
+            <span class="hero-wdf-title">Wash/Dry/Fold</span>
+            <span>$1.50 per pound</span>
+            <span>FREE pickup &amp; delivery!</span>
+            <span class="hero-wdf-action">See details below.</span>
+          </a>
+          <a class="hero-services-link" href="#services">Explore services</a>
+          <ul class="hero-highlights" aria-label="Key amenities">
+            <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
+            <li class="hero-highlight-link-item">
+              <a href="#dexterpay" class="hero-highlight-link" aria-label="DexterPay cashless checkout, location number 12105. View setup instructions.">
+                <strong>DexterPay</strong> cashless checkout · Location #12105
+              </a>
+            </li>
+          </ul>
+          <a href="#mending-alterations" class="hero-spotlight-link">
+            <span class="hero-spotlight-icon">
+              <span class="material-icons" aria-hidden="true">content_cut</span>
+            </span>
+            <span class="hero-spotlight-copy">
+              <span class="hero-spotlight-eyebrow">New service available</span>
+              <span class="hero-spotlight-title">Mending &amp; Simple Alterations</span>
+            </span>
+            <span class="hero-spotlight-action">
+              See details
+              <span class="material-icons" aria-hidden="true">south_east</span>
+            </span>
+          </a>
         </div>
-        <ul class="hero-highlights" aria-label="Key amenities">
-          <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
-          <li><strong>Free Wi-Fi</strong> &amp; flat-screen TVs</li>
-          <li class="hero-highlight-link-item">
-            <a href="#dexterpay" class="hero-highlight-link" aria-label="DexterPay cashless checkout, location number 12105. View setup instructions.">
-              <strong>DexterPay</strong> cashless checkout · Location #12105
-            </a>
-          </li>
-        </ul>
-        <a href="#mending-alterations" class="hero-spotlight-link">
-          <span class="hero-spotlight-icon">
-            <span class="material-icons" aria-hidden="true">content_cut</span>
-          </span>
-          <span class="hero-spotlight-copy">
-            <span class="hero-spotlight-eyebrow">New service available</span>
-            <span class="hero-spotlight-title">Mending &amp; Simple Alterations</span>
-          </span>
-          <span class="hero-spotlight-action">
-            See details
-            <span class="material-icons" aria-hidden="true">south_east</span>
-          </span>
-        </a>
       </div>
       <div class="hero-cards">
         <div class="hero-card info-card" aria-label="Hours and quick facts">
@@ -184,9 +188,9 @@
   </section>
 
   <!-- PROMO SIGNUP SECTION -->
-  <section id="free-weekday-wash" class="content-section promo-embed-section">
+  <section id="free-weekday-wash" class="content-section promo-embed-section" data-promo-section>
     <div class="section-inner promo-embed-layout">
-      <div class="promo-embed-copy">
+      <div class="promo-embed-copy" data-promo-active-content>
         <p class="eyebrow">Weekday offer</p>
         <h2>Claim a free weekday washer load.</h2>
         <p id="promo-offer" class="section-lead promo-offer-copy">One free 20- or 30-pound washer load</p>
@@ -194,51 +198,33 @@
           <li><span class="material-icons" aria-hidden="true">calendar_month</span>Valid Monday through Thursday</li>
           <li><span class="material-icons" aria-hidden="true">schedule</span>Redeem between 9 AM and 7 PM</li>
           <li><span class="material-icons" aria-hidden="true">local_laundry_service</span>Use in person at Snappy Coin Laundry</li>
+          <li><span class="material-icons" aria-hidden="true">filter_1</span>Limit one promo claim per customer</li>
         </ul>
-        <div class="promo-detail-grid">
-          <article class="promo-detail">
-            <h3>Offer</h3>
-            <p>One free 20- or 30-pound washer load for qualifying first-time promo claims.</p>
-          </article>
-          <article class="promo-detail">
-            <h3>When</h3>
-            <p>Valid Monday through Thursday, 9 AM to 7 PM Central Time.</p>
-          </article>
-          <article class="promo-detail">
-            <h3>Where</h3>
-            <p>Redeem in person with staff at Snappy Coin Laundry in Maryland Heights.</p>
-          </article>
-        </div>
       </div>
 
-      <section class="promo-card promo-signup-card" aria-label="Claim form">
+      <section class="promo-card promo-signup-card" aria-label="Claim form" data-promo-active-content>
         <h2>Get your code</h2>
         <p>Verify your phone, then we&apos;ll email your coupon code.</p>
-        <div id="promo-message" class="promo-alert" role="alert" hidden></div>
         <form id="promo-signup-form" class="promo-form" novalidate>
-          <div class="promo-field">
+          <div class="promo-field promo-field-half">
             <label for="promo-firstName">First name</label>
             <input id="promo-firstName" name="firstName" autocomplete="given-name" required />
           </div>
-          <div class="promo-field">
+          <div class="promo-field promo-field-half">
             <label for="promo-lastName">Last name</label>
             <input id="promo-lastName" name="lastName" autocomplete="family-name" required />
           </div>
-          <div class="promo-field">
+          <div class="promo-field promo-field-half">
             <label for="promo-email">Email</label>
             <input id="promo-email" name="email" type="email" autocomplete="email" required />
           </div>
-          <div class="promo-field">
+          <div class="promo-field promo-field-half">
             <label for="promo-phone">Mobile phone</label>
             <input id="promo-phone" name="phone" type="tel" autocomplete="tel" required />
           </div>
-          <div class="promo-field">
+          <div class="promo-field promo-field-half">
             <label for="promo-zip">ZIP code</label>
             <input id="promo-zip" name="zip" inputmode="numeric" autocomplete="postal-code" required />
-          </div>
-          <div class="promo-field">
-            <label for="promo-community">Apartment or community</label>
-            <input id="promo-community" name="community" autocomplete="organization" />
           </div>
           <label class="promo-check">
             <input type="checkbox" name="phoneVerificationConsent" required />
@@ -246,12 +232,13 @@
           </label>
           <label class="promo-check">
             <input type="checkbox" name="emailMarketingConsent" />
-            <span>I&apos;d like to receive Snappy Coin Laundry offers by email.</span>
+            <span>Send me future Snappy Coin Laundry deals, discounts, and updates by email.</span>
           </label>
           <div id="promo-turnstile"></div>
           <div class="promo-actions">
             <button id="promo-submit" class="promo-submit" type="submit">Send verification code</button>
           </div>
+          <div id="promo-message" class="promo-alert" role="alert" hidden></div>
         </form>
 
         <section id="promo-verification" class="promo-verification-panel" hidden>
@@ -264,8 +251,36 @@
               <input id="promo-phoneCode" name="phoneCode" inputmode="numeric" autocomplete="one-time-code" required />
             </div>
             <button id="promo-verify-submit" class="promo-submit" type="submit">Verify and email coupon</button>
+            <div class="promo-resend-row">
+              <p id="promo-resend-status">Didn&apos;t get a text? You can resend in 60s.</p>
+              <button id="promo-resend" class="promo-secondary-action" type="button" disabled>Resend code in 60s</button>
+            </div>
           </form>
         </section>
+
+        <section id="promo-success" class="promo-success-panel" aria-live="polite" hidden>
+          <span class="material-icons promo-success-icon" aria-hidden="true">check_circle</span>
+          <h2>Coupon emailed</h2>
+          <p id="promo-success-message">Your coupon code was emailed.</p>
+        </section>
+      </section>
+
+      <section id="promo-paused" class="promo-card promo-paused-panel" hidden>
+        <p class="eyebrow">Promotions</p>
+        <h2>More ways to save are coming.</h2>
+        <p>
+          No current promos are open right now. Stop in for fast machines, friendly attendants, and
+          convenient wash, dry, and fold service.
+        </p>
+        <ul class="promo-facts" aria-label="Snappy Coin Laundry highlights">
+          <li><span class="material-icons" aria-hidden="true">schedule</span>Open 6:00 AM to 1:30 AM every day</li>
+          <li><span class="material-icons" aria-hidden="true">local_laundry_service</span>Large Dexter washers for bulky loads</li>
+          <li><span class="material-icons" aria-hidden="true">local_shipping</span>Wash/Dry/Fold with free pickup and delivery</li>
+        </ul>
+        <div class="promo-paused-actions">
+          <a class="btn-cta primary" href="#contact-section">Plan Your Visit</a>
+          <a class="btn-cta ghost" href="#services">Explore Services</a>
+        </div>
       </section>
     </div>
   </section>
@@ -620,6 +635,25 @@
           </p>
         </article>
       </div>
+      <section class="newsletter-card" aria-labelledby="newsletter-heading">
+        <div class="newsletter-copy">
+          <p class="eyebrow">Deals &amp; updates</p>
+          <h3 id="newsletter-heading">Get future Snappy Coin Laundry offers.</h3>
+          <p>Join the email list for promotions, service updates, and local laundry tips.</p>
+        </div>
+        <form id="newsletter-signup-form" class="newsletter-form" novalidate>
+          <div class="newsletter-fields">
+            <label class="sr-only" for="newsletter-firstName">First name</label>
+            <input id="newsletter-firstName" name="firstName" autocomplete="given-name" placeholder="First name" />
+            <label class="sr-only" for="newsletter-email">Email address</label>
+            <input id="newsletter-email" name="email" type="email" autocomplete="email" placeholder="Email address" required />
+            <button id="newsletter-submit" class="promo-submit" type="submit">Join email list</button>
+          </div>
+          <p class="newsletter-note">By joining, you agree to receive marketing emails from Snappy Coin Laundry. Unsubscribe anytime.</p>
+          <div id="newsletter-turnstile"></div>
+          <div id="newsletter-message" class="promo-alert" role="alert" hidden></div>
+        </form>
+      </section>
       <!-- Updated map container for responsiveness -->
       <div class="map-container">
         <iframe title="Snappy Coin Laundry Map"
@@ -661,7 +695,7 @@
   <!-- JAVASCRIPT -->
   <script type="module" src="assets/js/site-analytics.js"></script>
   <script src="assets/js/availability-widget.js" defer></script>
-  <script src="assets/js/promo-signup.js?v=20260527" defer></script>
+  <script src="assets/js/promo-signup.js?v=20260531-3" defer></script>
   <script src="script.js?v=20260527"></script>
 </body>
 
