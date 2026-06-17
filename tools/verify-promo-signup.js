@@ -284,6 +284,9 @@ function verifyStaticPage() {
   assert(!html.includes("data-turnstile-site-key"), "HTML must not hardcode the staging Turnstile key");
   assert(html.includes('name="phoneVerificationConsent" required'), "phone verification consent must remain required");
   assert(html.includes('name="emailMarketingConsent"'), "email marketing consent must remain separate");
+  assert(html.includes("July 6-30, 2026; Monday-Thursday"), "promo date range is missing");
+  assert(html.includes("Redeem between 9 AM and 6 PM"), "promo redemption hours are missing");
+  assert(!html.includes("Redeem between 9 AM and 7 PM"), "old promo redemption hours are still present");
   assert(html.includes("Send me future Snappy Coin Laundry deals"), "email marketing consent wording is missing");
   assert(html.includes('id="newsletter-signup-form"'), "newsletter signup form is missing");
   assert(!/name=["']attribution/i.test(html), "attribution must not be exposed as a hidden field");

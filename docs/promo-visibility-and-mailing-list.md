@@ -29,6 +29,22 @@ SET active = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 WHERE slug = 'free-weekday-wash';
 ```
 
+Current July 2026 offer schedule:
+
+```sql
+UPDATE promo_campaigns
+SET
+  valid_days_json = '[1,2,3,4]',
+  valid_start_minute = 540,
+  valid_end_minute = 1080,
+  starts_at = '2026-07-06T05:00:00.000Z',
+  ends_at = '2026-07-31T04:59:59.000Z',
+  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+WHERE slug = 'free-weekday-wash';
+```
+
+This represents July 6-30, 2026, Monday-Thursday, 9 AM-6 PM in America/Chicago.
+
 ## Mailing list signup endpoint
 
 The website posts standalone email signups to:
