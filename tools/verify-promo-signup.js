@@ -13,6 +13,16 @@ const attributionKeys = [
   "utm_content",
   "utm_term",
   "utm_id",
+  "campaign_id",
+  "campaign_name",
+  "adset_id",
+  "adset_name",
+  "ad_id",
+  "ad_name",
+  "placement",
+  "site_source_name",
+  "fb_source",
+  "fb_ref",
   "gclid",
   "gbraid",
   "wbraid",
@@ -20,6 +30,14 @@ const attributionKeys = [
   "ttclid",
   "msclkid",
   "li_fat_id"
+];
+
+const metaAttributionKeys = [
+  "meta_click_id",
+  "meta_fbp",
+  "meta_fbc",
+  "meta_optional_cookie_consent",
+  "meta_pixel_loaded"
 ];
 
 function assert(condition, message) {
@@ -182,7 +200,7 @@ function runConfigForHost(hostname) {
 
 async function runSignupScenario(fetchHandler, options = {}) {
   const signupCode = fs.readFileSync("assets/js/promo-signup.js", "utf8");
-  const firstUrl = "http://127.0.0.1:5500/?utm_source=google&utm_medium=cpc&utm_campaign=freewash&utm_content=ad1&utm_term=laundry&utm_id=utm-1&gclid=gclid-1&gbraid=gbraid-1&wbraid=wbraid-1&fbclid=fbclid-1&ttclid=ttclid-1&msclkid=msclkid-1&li_fat_id=li-1#free-weekday-wash";
+  const firstUrl = "http://127.0.0.1:5500/?utm_source=facebook&utm_medium=paid_social&utm_campaign=freewash&utm_content=ad1&utm_term=laundry&utm_id=utm-1&campaign_id=meta-campaign-1&campaign_name=Launch%20Campaign&adset_id=meta-adset-1&adset_name=Launch%20Adset&ad_id=meta-ad-1&ad_name=Launch%20Ad&placement=instagram_stories&site_source_name=ig&fb_source=ads&fb_ref=promo-ref&gclid=gclid-1&gbraid=gbraid-1&wbraid=wbraid-1&fbclid=fbclid-1&ttclid=ttclid-1&msclkid=msclkid-1&li_fat_id=li-1#free-weekday-wash";
   const currentUrl = options.currentUrl || firstUrl;
   const localStorage = options.localStorage || new StorageMock();
   const sessionStorage = options.sessionStorage || new StorageMock();
@@ -202,6 +220,7 @@ async function runSignupScenario(fetchHandler, options = {}) {
     emailMarketingConsent: ""
   };
   const document = makeDocument(formFields);
+  document.cookie = options.cookie || "_fbp=fb.1.1781897000000.111222333; _fbc=fb.1.1781897000000.fbclid-1";
   const timers = [];
   const intervals = [];
   const window = {
@@ -219,6 +238,9 @@ async function runSignupScenario(fetchHandler, options = {}) {
     localStorage,
     sessionStorage,
     SnappyAnalytics: options.SnappyAnalytics || {
+      hasOptionalCookieConsent() {
+        return true;
+      },
       trackCouponClaimSuccess(details) {
         analyticsCalls.push(details);
       }
@@ -486,10 +508,26 @@ async function verifySignupStartPayload() {
   for (const key of attributionKeys) {
     assert(Object.prototype.hasOwnProperty.call(body.attribution, key), `missing attribution key ${key}`);
   }
-  assert(body.attribution.utm_source === "google", "first-touch utm_source was not captured");
-  assert(body.attribution.utm_medium === "cpc", "first-touch utm_medium was not captured");
+  for (const key of metaAttributionKeys) {
+    assert(Object.prototype.hasOwnProperty.call(body.attribution, key), `missing Meta attribution key ${key}`);
+  }
+  assert(body.attribution.utm_source === "facebook", "first-touch utm_source was not captured");
+  assert(body.attribution.utm_medium === "paid_social", "first-touch utm_medium was not captured");
   assert(body.attribution.utm_campaign === "freewash", "first-touch utm_campaign was not captured");
+  assert(body.attribution.campaign_id === "meta-campaign-1", "Meta campaign ID was not captured");
+  assert(body.attribution.campaign_name === "Launch Campaign", "Meta campaign name was not captured");
+  assert(body.attribution.adset_id === "meta-adset-1", "Meta ad set ID was not captured");
+  assert(body.attribution.ad_id === "meta-ad-1", "Meta ad ID was not captured");
+  assert(body.attribution.placement === "instagram_stories", "Meta placement was not captured");
+  assert(body.attribution.site_source_name === "ig", "Meta site source was not captured");
+  assert(body.attribution.fb_source === "ads", "Meta fb_source was not captured");
   assert(body.attribution.gclid === "gclid-1", "first-touch gclid was not captured");
+  assert(body.attribution.fbclid === "fbclid-1", "first-touch fbclid was not captured");
+  assert(body.attribution.meta_click_id === "fbclid-1", "Meta click ID alias was not captured");
+  assert(body.attribution.meta_fbp === "fb.1.1781897000000.111222333", "Meta _fbp cookie was not captured");
+  assert(body.attribution.meta_fbc === "fb.1.1781897000000.fbclid-1", "Meta _fbc cookie was not captured");
+  assert(body.attribution.meta_optional_cookie_consent === true, "Meta cookie consent state was not captured");
+  assert(body.attribution.meta_pixel_loaded === false, "Meta pixel loaded state should be captured as false in this mock");
   assert(body.attribution.referrer_domain === "ads.example", "first-touch referrer domain was not captured");
   assert(body.attribution.current_url.includes("127.0.0.1:5500"), "current URL was not captured at submit");
   assert(localStorage.getItem("snappyPromoFirstTouch"), "first-touch attribution was not persisted to localStorage");

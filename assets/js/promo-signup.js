@@ -15,6 +15,16 @@
     "utm_content",
     "utm_term",
     "utm_id",
+    "campaign_id",
+    "campaign_name",
+    "adset_id",
+    "adset_name",
+    "ad_id",
+    "ad_name",
+    "placement",
+    "site_source_name",
+    "fb_source",
+    "fb_ref",
     "gclid",
     "gbraid",
     "wbraid",
@@ -170,6 +180,21 @@
     return `${url.pathname}${url.search}`;
   }
 
+  function cookieValue(name) {
+    const cookieText = document.cookie || "";
+    const prefix = `${encodeURIComponent(name)}=`;
+    const pair = cookieText
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.indexOf(prefix) === 0);
+    if (!pair) return "";
+    try {
+      return decodeURIComponent(pair.slice(prefix.length));
+    } catch (error) {
+      return pair.slice(prefix.length);
+    }
+  }
+
   function captureAttributionSnapshot() {
     const url = new URL(window.location.href);
     const referrer = document.referrer || "";
@@ -216,13 +241,31 @@
 
   const firstTouchAttribution = storedFirstTouchAttribution();
 
+  function metaAttribution(currentSnapshot) {
+    const analytics = window.SnappyAnalytics || {};
+    const optionalCookieConsent =
+      typeof analytics.hasOptionalCookieConsent === "function"
+        ? analytics.hasOptionalCookieConsent()
+        : false;
+
+    return {
+      meta_click_id: firstTouchAttribution.fbclid || currentSnapshot.fbclid || "",
+      meta_fbp: cookieValue("_fbp"),
+      meta_fbc: cookieValue("_fbc"),
+      meta_optional_cookie_consent: optionalCookieConsent,
+      meta_pixel_loaded: typeof window.fbq === "function"
+    };
+  }
+
   function attribution() {
     const currentUrl = new URL(window.location.href);
     const referrer = document.referrer || "";
+    const currentSnapshot = captureAttributionSnapshot();
 
     return {
-      ...captureAttributionSnapshot(),
+      ...currentSnapshot,
       ...firstTouchAttribution,
+      ...metaAttribution(currentSnapshot),
       current_url: currentUrl.href,
       current_path: pagePath(currentUrl),
       current_referrer: referrer,
