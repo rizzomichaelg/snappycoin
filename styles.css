@@ -1865,6 +1865,91 @@ form#contactForm {
   color: #ffd740;
 }
 
+.footer-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem 1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.footer-policy-links a {
+  color: var(--secondary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-policy-links a:hover {
+  color: #ffd740;
+}
+
+.policy-page {
+  background: var(--light-bg);
+  color: var(--text-color);
+}
+
+.policy-shell {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem 1rem 4rem;
+}
+
+.policy-back-link {
+  color: var(--primary-color);
+  display: inline-block;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  text-decoration: none;
+}
+
+.policy-back-link:hover {
+  color: var(--accent-color);
+}
+
+.policy-document {
+  background: var(--white);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  padding: clamp(1.25rem, 4vw, 3rem);
+}
+
+.policy-document h1 {
+  color: var(--primary-color);
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+.policy-document h2 {
+  color: var(--primary-color);
+  font-size: 1.35rem;
+  margin: 2rem 0 0.75rem;
+  text-align: left;
+}
+
+.policy-document p,
+.policy-document li {
+  color: var(--text-color);
+  line-height: 1.7;
+}
+
+.policy-document ul {
+  margin: 0.75rem 0 1rem 1.25rem;
+  padding: 0;
+}
+
+.policy-document a {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.policy-updated {
+  color: var(--muted-text);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
 /* Mobile Navigation: Hamburger & Accordion */
 .hamburger {
   display: none;

@@ -356,6 +356,9 @@ function jsonResponse(status, body) {
 function verifyStaticPage() {
   const html = fs.readFileSync("index.html", "utf8");
   const redirectHtml = fs.readFileSync("promos/free-weekday-wash/index.html", "utf8");
+  const privacyHtml = fs.readFileSync("privacy.html", "utf8");
+  const termsHtml = fs.readFileSync("terms.html", "utf8");
+  const cookiesHtml = fs.readFileSync("cookies.html", "utf8");
   const configIndex = html.indexOf("assets/js/promo-config.js");
   const turnstileIndex = html.indexOf("challenges.cloudflare.com/turnstile/v0/api.js");
   const signupIndex = html.indexOf("assets/js/promo-signup.js");
@@ -380,6 +383,23 @@ function verifyStaticPage() {
   assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260619"), "global analytics script is missing from promo redirect page");
   assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
   assert(redirectHtml.includes("1554256442781789"), "promo redirect Meta Pixel noscript fallback is missing");
+  assert(html.includes('href="privacy.html"'), "footer privacy policy link is missing");
+  assert(html.includes('href="terms.html"'), "footer terms link is missing");
+  assert(html.includes('href="cookies.html"'), "footer cookie statement link is missing");
+  assert(html.includes("styles.css?v=20260619"), "main stylesheet cache buster was not updated");
+  assert(privacyHtml.includes("Privacy Policy"), "privacy page heading is missing");
+  assert(privacyHtml.includes("SMS verification is used only to confirm"), "privacy page must explain SMS verification");
+  assert(privacyHtml.includes("We do not send your name, email"), "privacy page must describe Meta Lead privacy limits");
+  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20260619"), "privacy page must load global analytics");
+  assert(privacyHtml.includes("1554256442781789"), "privacy page Meta Pixel fallback is missing");
+  assert(termsHtml.includes("Terms of Use"), "terms page heading is missing");
+  assert(termsHtml.includes("limited to one per"), "terms page must describe promo claim limit");
+  assert(termsHtml.includes("not integrated with DexterPay"), "terms page must preserve manual redemption boundary");
+  assert(termsHtml.includes("assets/js/site-analytics.js?v=20260619"), "terms page must load global analytics");
+  assert(cookiesHtml.includes("Cookie Statement"), "cookie statement heading is missing");
+  assert(cookiesHtml.includes("Meta Pixel"), "cookie statement must describe Meta Pixel");
+  assert(cookiesHtml.includes("It does not include your name, email address, phone number"), "cookie statement must describe Lead event PII limits");
+  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20260619"), "cookie page must load global analytics");
 }
 
 async function verifySignupStartPayload() {
