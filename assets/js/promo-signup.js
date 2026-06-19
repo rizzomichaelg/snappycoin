@@ -267,6 +267,28 @@
     return data;
   }
 
+  function trackCouponClaimSuccess(data, formData) {
+    const analytics = window.SnappyAnalytics;
+    if (!analytics || typeof analytics.trackCouponClaimSuccess !== "function") return;
+
+    const claimId = String(
+      data.claimId ||
+        formData.get("claimId") ||
+        els.claimId?.value ||
+        ""
+    ).trim();
+
+    try {
+      analytics.trackCouponClaimSuccess({
+        promotionSlug,
+        claimId,
+        successMarker: "coupon-claim-success"
+      });
+    } catch (_error) {
+      // Tracking must never block a completed coupon claim.
+    }
+  }
+
   function turnstileHasVisibleWidget() {
     return !!document.querySelector("iframe[src*='challenges.cloudflare.com'], iframe[title*='Widget'], iframe[title*='Turnstile']");
   }
@@ -413,6 +435,7 @@
         els.successPanel.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       stopResendCooldown();
+      trackCouponClaimSuccess(data, formData);
     } catch (error) {
       showMessage(els.verifyMessage, error.message, "error");
     } finally {

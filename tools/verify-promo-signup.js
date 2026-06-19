@@ -182,6 +182,7 @@ async function runSignupScenario(fetchHandler, options = {}) {
   const currentUrl = options.currentUrl || firstUrl;
   const localStorage = options.localStorage || new StorageMock();
   const sessionStorage = options.sessionStorage || new StorageMock();
+  const analyticsCalls = [];
   if (options.firstTouch) {
     const serialized = JSON.stringify(options.firstTouch);
     localStorage.setItem("snappyPromoFirstTouch", serialized);
@@ -213,6 +214,11 @@ async function runSignupScenario(fetchHandler, options = {}) {
     },
     localStorage,
     sessionStorage,
+    SnappyAnalytics: options.SnappyAnalytics || {
+      trackCouponClaimSuccess(details) {
+        analyticsCalls.push(details);
+      }
+    },
     setTimeout(fn) {
       timers.push(fn);
       return timers.length;
@@ -260,7 +266,83 @@ async function runSignupScenario(fetchHandler, options = {}) {
 
   await Promise.resolve();
 
-  return { document, fetchCalls, localStorage, sessionStorage };
+  return { document, fetchCalls, localStorage, sessionStorage, analyticsCalls };
+}
+
+async function runSiteAnalyticsScenario() {
+  const analyticsCode = fs.readFileSync("assets/js/site-analytics.js", "utf8");
+  const localStorage = new StorageMock();
+  const sessionStorage = new StorageMock();
+  const scripts = [];
+  const bodyListeners = {};
+  const document = {
+    readyState: "complete",
+    title: "Snappy Coin Laundry",
+    body: {
+      addEventListener(type, handler) {
+        bodyListeners[type] = handler;
+      }
+    },
+    head: {
+      appendChild(script) {
+        scripts.push(script);
+        if (typeof script.onload === "function") script.onload();
+        return script;
+      }
+    },
+    createElement(tagName) {
+      return {
+        tagName: String(tagName || "").toUpperCase(),
+        async: false,
+        src: "",
+        onload: null,
+        onerror: null,
+        addEventListener(type, handler) {
+          if (type === "load") this.onload = handler;
+          if (type === "error") this.onerror = handler;
+        }
+      };
+    },
+    querySelector(selector) {
+      if (selector.includes("connect.facebook.net/en_US/fbevents.js")) {
+        return scripts.find((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js") || null;
+      }
+      if (selector.includes("googletagmanager.com/gtag/js")) {
+        return scripts.find((script) => script.src.includes("googletagmanager.com/gtag/js")) || null;
+      }
+      return null;
+    },
+    getElementsByTagName(tagName) {
+      if (String(tagName).toLowerCase() !== "script") return [];
+      return [
+        {
+          parentNode: {
+            insertBefore(script) {
+              scripts.unshift(script);
+              if (typeof script.onload === "function") script.onload();
+            }
+          }
+        }
+      ];
+    },
+    addEventListener() {}
+  };
+  const window = {
+    location: {
+      protocol: "https:",
+      href: "https://snappycoinlaundry.com/#free-weekday-wash"
+    },
+    localStorage,
+    sessionStorage
+  };
+  const context = {
+    document,
+    window
+  };
+  vm.createContext(context);
+  vm.runInContext(analyticsCode, context);
+  for (let i = 0; i < 10; i += 1) await Promise.resolve();
+  return { bodyListeners, document, localStorage, scripts, sessionStorage, window };
 }
 
 function jsonResponse(status, body) {
@@ -273,6 +355,7 @@ function jsonResponse(status, body) {
 
 function verifyStaticPage() {
   const html = fs.readFileSync("index.html", "utf8");
+  const redirectHtml = fs.readFileSync("promos/free-weekday-wash/index.html", "utf8");
   const configIndex = html.indexOf("assets/js/promo-config.js");
   const turnstileIndex = html.indexOf("challenges.cloudflare.com/turnstile/v0/api.js");
   const signupIndex = html.indexOf("assets/js/promo-signup.js");
@@ -290,10 +373,17 @@ function verifyStaticPage() {
   assert(html.includes("Send me future Snappy Coin Laundry deals"), "email marketing consent wording is missing");
   assert(html.includes('id="newsletter-signup-form"'), "newsletter signup form is missing");
   assert(!/name=["']attribution/i.test(html), "attribution must not be exposed as a hidden field");
+  assert(html.includes("assets/js/site-analytics.js?v=20260619"), "global analytics script is missing from main page");
+  assert(html.includes("connect.facebook.net"), "main page CSP must allow Meta Pixel script");
+  assert(html.includes("www.facebook.com"), "main page CSP must allow Meta Pixel beacon");
+  assert(html.includes("1554256442781789"), "main page Meta Pixel noscript fallback is missing");
+  assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260619"), "global analytics script is missing from promo redirect page");
+  assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
+  assert(redirectHtml.includes("1554256442781789"), "promo redirect Meta Pixel noscript fallback is missing");
 }
 
 async function verifySignupStartPayload() {
-  const { document, fetchCalls, localStorage, sessionStorage } = await runSignupScenario((url, options) => {
+  const { document, fetchCalls, localStorage, sessionStorage, analyticsCalls } = await runSignupScenario((url, options) => {
     if (url.endsWith("/public")) {
       return jsonResponse(200, {
         offerLabel: "One free 20- or 30-pound washer load",
@@ -339,10 +429,11 @@ async function verifySignupStartPayload() {
   assert(document.elements["promo-verify-message"].textContent === "Verification code sent.", "verification step did not show SMS sent message");
   assert(document.elements["promo-resend"].disabled === true, "resend button should start disabled");
   assert(document.elements["promo-resend"].textContent === "Resend code in 60s", "resend button did not show cooldown");
+  assert(analyticsCalls.length === 0, "Lead tracking must not fire when only an SMS verification code is sent");
 }
 
 async function verifyPhoneVerificationPayload() {
-  const { document, fetchCalls } = await runSignupScenario((url) => {
+  const { document, fetchCalls, analyticsCalls } = await runSignupScenario((url) => {
     if (url.endsWith("/public")) return jsonResponse(200, {});
     if (url.endsWith("/claim/start")) {
       return jsonResponse(200, {
@@ -376,6 +467,40 @@ async function verifyPhoneVerificationPayload() {
   assert(document.elements["promo-success-message"].textContent === "Your coupon code was emailed.", "verify success message was not displayed");
   assert(document.elements["promo-signup-form"].hidden === true, "signup form did not hide after verification");
   assert(document.elements["promo-verification"].hidden === true, "verification panel did not hide after verification");
+  assert(analyticsCalls.length === 1, "Lead tracking must fire once after backend-confirmed verification success");
+  assert(analyticsCalls[0].promotionSlug === "free-weekday-wash", "Lead tracking promotion slug is incorrect");
+  assert(analyticsCalls[0].claimId === "claim_test", "Lead tracking should use the backend claim ID");
+  assert(!Object.prototype.hasOwnProperty.call(analyticsCalls[0], "email"), "Lead tracking must not receive email");
+  assert(!Object.prototype.hasOwnProperty.call(analyticsCalls[0], "phone"), "Lead tracking must not receive phone");
+  assert(!Object.prototype.hasOwnProperty.call(analyticsCalls[0], "phoneCode"), "Lead tracking must not receive verification code");
+}
+
+async function verifyPhoneVerificationFailureDoesNotTrack() {
+  const { document, analyticsCalls } = await runSignupScenario((url) => {
+    if (url.endsWith("/public")) return jsonResponse(200, {});
+    if (url.endsWith("/claim/start")) {
+      return jsonResponse(200, {
+        claimId: "claim_test",
+        message: "Verification code sent."
+      });
+    }
+    if (url.endsWith("/claim/verify-phone")) {
+      return jsonResponse(400, {
+        ok: false,
+        error: "invalid_verification_code",
+        message: "Invalid verification code."
+      });
+    }
+    throw new Error(`Unexpected fetch URL ${url}`);
+  });
+
+  await document.elements["promo-verify-form"].listeners.submit({
+    preventDefault() {}
+  });
+
+  assert(document.elements["promo-success"].hidden === true, "success panel must not open after failed verification");
+  assert(document.elements["promo-verify-message"].textContent === "Invalid verification code.", "failed verification message was not displayed");
+  assert(analyticsCalls.length === 0, "Lead tracking must not fire after failed verification");
 }
 
 async function verifyFirstTouchPersistence() {
@@ -565,7 +690,7 @@ async function verifyPhoneVerificationSubmitGuard() {
   const verifyResponse = new Promise((resolve) => {
     resolveVerify = resolve;
   });
-  const { document } = await runSignupScenario(async (url) => {
+  const { document, analyticsCalls } = await runSignupScenario(async (url) => {
     if (url.endsWith("/public")) return jsonResponse(200, {});
     if (url.endsWith("/claim/start")) return jsonResponse(200, { claimId: "claim_test", message: "Verification code sent." });
     if (url.endsWith("/claim/verify-phone")) {
@@ -583,6 +708,54 @@ async function verifyPhoneVerificationSubmitGuard() {
   resolveVerify(jsonResponse(200, { message: "Your coupon code was emailed." }));
   await firstSubmit;
   await secondSubmit;
+  assert(analyticsCalls.length === 1, "Lead tracking must fire once for duplicate verify submissions sharing one backend success");
+}
+
+async function verifySiteAnalyticsMetaPixel() {
+  const { localStorage, scripts, sessionStorage, window } = await runSiteAnalyticsScenario();
+  assert(typeof window.fbq === "function", "Meta Pixel fbq function was not initialized");
+  assert(
+    scripts.some((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js"),
+    "Meta Pixel script was not loaded"
+  );
+
+  const queuedCalls = () => window.fbq.queue.map((args) => Array.from(args));
+  assert(
+    queuedCalls().some((call) => call[0] === "init" && call[1] === "1554256442781789"),
+    "Meta Pixel was not initialized with the expected pixel ID"
+  );
+  assert(
+    queuedCalls().some((call) => call[0] === "track" && call[1] === "PageView"),
+    "Meta Pixel PageView was not queued"
+  );
+
+  const firstTracked = window.SnappyAnalytics.trackCouponClaimSuccess({
+    promotionSlug: "free-weekday-wash",
+    claimId: "claim_test",
+    successMarker: "Your coupon code was emailed."
+  });
+  const secondTracked = window.SnappyAnalytics.trackCouponClaimSuccess({
+    promotionSlug: "free-weekday-wash",
+    claimId: "claim_test",
+    successMarker: "Your coupon code was emailed."
+  });
+  const leadCalls = queuedCalls().filter((call) => call[0] === "track" && call[1] === "Lead");
+
+  assert(firstTracked === true, "first successful claim should track a Meta Lead");
+  assert(secondTracked === false, "duplicate successful claim should not track a second Meta Lead");
+  assert(leadCalls.length === 1, "Meta Lead should be queued once per claim ID");
+  assert(
+    JSON.stringify(leadCalls[0][2]) === JSON.stringify({ content_name: "Snappy Promo Coupon Claim" }),
+    "Meta Lead payload must contain only generic metadata"
+  );
+  assert(
+    localStorage.getItem("snappyMetaLeadFired:free-weekday-wash:claim:claim_test") === "1",
+    "durable Meta Lead guard was not stored in localStorage"
+  );
+  assert(
+    sessionStorage.getItem("snappyMetaLeadFired:free-weekday-wash:claim:claim_test") === "1",
+    "Meta Lead guard was not stored in sessionStorage"
+  );
 }
 
 function verifyHostConfig() {
@@ -625,6 +798,7 @@ function verifyHostConfig() {
   verifyHostConfig();
   await verifySignupStartPayload();
   await verifyPhoneVerificationPayload();
+  await verifyPhoneVerificationFailureDoesNotTrack();
   await verifyFirstTouchPersistence();
   await verifyDuplicateMessagePassthrough();
   await verifyResendPayload();
@@ -632,6 +806,7 @@ function verifyHostConfig() {
   await verifyNewsletterSignupPayload();
   await verifyStartSubmitGuard();
   await verifyPhoneVerificationSubmitGuard();
+  await verifySiteAnalyticsMetaPixel();
   console.log("promo signup verification passed");
 })().catch((error) => {
   console.error(error.message);
