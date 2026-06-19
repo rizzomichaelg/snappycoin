@@ -13,8 +13,14 @@
   const META_SRC = "https://connect.facebook.net/en_US/fbevents.js";
   const META_LEAD_STORAGE_PREFIX = "snappyMetaLeadFired";
   const META_LEAD_CONTENT_NAME = "Snappy Promo Coupon Claim";
+  const COOKIE_CONSENT_STORAGE_KEY = "snappyCookieConsent:v1";
+  const COOKIE_CONSENT_ACCEPTED = "accepted";
+  const COOKIE_CONSENT_DECLINED = "declined";
+  const PENDING_META_LEAD_KEY = "snappyPendingMetaLead:v1";
 
 let initialized = false;
+let optionalAnalyticsStarted = false;
+let ctaTrackingAttached = false;
 let usingFirebase = false;
 let firebaseTrack = null;
 
@@ -44,7 +50,96 @@ function storageSet(storage, key, value) {
   }
 }
 
+function storageRemove(storage, key) {
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch (_error) {
+    // Storage may be unavailable in private browsing or strict privacy modes.
+  }
+}
+
+function cookieConsentValue() {
+  const localStore = browserStorage("localStorage");
+  const sessionStore = browserStorage("sessionStorage");
+  return (
+    storageGet(localStore, COOKIE_CONSENT_STORAGE_KEY) ||
+    storageGet(sessionStore, COOKIE_CONSENT_STORAGE_KEY)
+  );
+}
+
+function hasOptionalCookieConsent() {
+  return cookieConsentValue() === COOKIE_CONSENT_ACCEPTED;
+}
+
+function hasCookieConsentChoice() {
+  const value = cookieConsentValue();
+  return value === COOKIE_CONSENT_ACCEPTED || value === COOKIE_CONSENT_DECLINED;
+}
+
+function setCookieConsent(value) {
+  const localStore = browserStorage("localStorage");
+  const sessionStore = browserStorage("sessionStorage");
+  storageSet(localStore, COOKIE_CONSENT_STORAGE_KEY, value);
+  storageSet(sessionStore, COOKIE_CONSENT_STORAGE_KEY, value);
+}
+
+function removeCookieBanner() {
+  const banner = document.querySelector(".cookie-consent-banner");
+  if (banner && typeof banner.remove === "function") {
+    banner.remove();
+  }
+}
+
+function renderCookieBanner() {
+  if (hasCookieConsentChoice() || document.querySelector(".cookie-consent-banner")) {
+    return;
+  }
+
+  const banner = document.createElement("section");
+  banner.className = "cookie-consent-banner";
+  banner.setAttribute("role", "dialog");
+  banner.setAttribute("aria-live", "polite");
+  banner.setAttribute("aria-label", "Cookie consent");
+  banner.innerHTML = `
+    <div class="cookie-consent-copy">
+      <strong>Cookie choices</strong>
+      <p>
+        We use optional analytics and advertising cookies to measure visits and promo claims.
+        Essential security and form tools still run either way.
+        <a href="cookies.html">Cookie Statement</a>
+      </p>
+    </div>
+    <div class="cookie-consent-actions">
+      <button class="cookie-consent-button secondary" type="button" data-cookie-consent="decline">Decline optional</button>
+      <button class="cookie-consent-button primary" type="button" data-cookie-consent="accept">Accept optional cookies</button>
+    </div>
+  `;
+
+  const accept = banner.querySelector("[data-cookie-consent='accept']");
+  const decline = banner.querySelector("[data-cookie-consent='decline']");
+  if (accept) {
+    accept.addEventListener("click", () => {
+      setCookieConsent(COOKIE_CONSENT_ACCEPTED);
+      removeCookieBanner();
+      initOptionalAnalytics();
+    });
+  }
+  if (decline) {
+    decline.addEventListener("click", () => {
+      setCookieConsent(COOKIE_CONSENT_DECLINED);
+      removeCookieBanner();
+    });
+  }
+
+  document.body.appendChild(banner);
+}
+
 function bootstrapMetaPixel() {
+  if (!hasOptionalCookieConsent()) {
+    return;
+  }
+
   if (window.__SNAPPY_META_PIXEL_INITIALIZED__) {
     return;
   }
@@ -81,6 +176,8 @@ function bootstrapMetaPixel() {
 }
 
 function trackMetaLead() {
+  if (!hasOptionalCookieConsent()) return false;
+  if (typeof window.fbq !== "function") bootstrapMetaPixel();
   if (typeof window.fbq !== "function") return false;
   window.fbq("track", "Lead", {
     content_name: META_LEAD_CONTENT_NAME
@@ -112,6 +209,44 @@ function claimSuccessTrackingTarget(details = {}) {
   };
 }
 
+function pendingCouponClaimDetails(details = {}) {
+  const promotionSlug = String(details.promotionSlug || "promo").trim() || "promo";
+  const claimId = String(
+    details.claimId ||
+      details.couponClaimId ||
+      details.redemptionId ||
+      details.successId ||
+      ""
+  ).trim();
+  return {
+    promotionSlug,
+    claimId,
+    successMarker: String(details.successMarker || "coupon-claim-success").trim()
+  };
+}
+
+function storePendingCouponClaimSuccess(details) {
+  const sessionStore = browserStorage("sessionStorage");
+  storageSet(sessionStore, PENDING_META_LEAD_KEY, JSON.stringify(pendingCouponClaimDetails(details)));
+}
+
+function processPendingCouponClaimSuccess() {
+  if (!hasOptionalCookieConsent()) return;
+  const sessionStore = browserStorage("sessionStorage");
+  const pending = storageGet(sessionStore, PENDING_META_LEAD_KEY);
+  if (!pending) return;
+
+  storageRemove(sessionStore, PENDING_META_LEAD_KEY);
+  try {
+    const parsed = JSON.parse(pending);
+    if (parsed && typeof parsed === "object") {
+      trackCouponClaimSuccess(parsed);
+    }
+  } catch (_error) {
+    // Ignore malformed pending tracking data.
+  }
+}
+
 function trackCouponClaimSuccess(details = {}) {
   const target = claimSuccessTrackingTarget(details);
   const localStore = browserStorage("localStorage");
@@ -121,6 +256,11 @@ function trackCouponClaimSuccess(details = {}) {
     (target.durable && storageGet(localStore, target.key) === "1");
 
   if (alreadyTracked) return false;
+
+  if (!hasOptionalCookieConsent()) {
+    if (!hasCookieConsentChoice()) storePendingCouponClaimSuccess(details);
+    return false;
+  }
 
   if (!trackMetaLead()) return false;
 
@@ -132,7 +272,8 @@ function trackCouponClaimSuccess(details = {}) {
 window.SnappyAnalytics = {
   ...(window.SnappyAnalytics || {}),
   trackMetaLead,
-  trackCouponClaimSuccess
+  trackCouponClaimSuccess,
+  hasOptionalCookieConsent
 };
 
 function bootstrapGtag() {
@@ -207,6 +348,8 @@ function trackEvent(name, params = {}) {
 }
 
 function trackCtaClicks() {
+  if (ctaTrackingAttached) return;
+  ctaTrackingAttached = true;
   document.body.addEventListener("click", (event) => {
     const target = event.target.closest(".btn-cta");
     if (!target) return;
@@ -218,7 +361,12 @@ function trackCtaClicks() {
   });
 }
 
-async function init() {
+async function initOptionalAnalytics() {
+  if (optionalAnalyticsStarted || !hasOptionalCookieConsent()) {
+    return;
+  }
+
+  optionalAnalyticsStarted = true;
   bootstrapMetaPixel();
 
   const firebaseConfigured = await tryInitFirebase();
@@ -235,6 +383,12 @@ async function init() {
     page_title: document.title,
     page_location: window.location.href,
   });
+  processPendingCouponClaimSuccess();
+}
+
+function init() {
+  renderCookieBanner();
+  initOptionalAnalytics();
 }
 
 if (document.readyState === "loading") {

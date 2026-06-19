@@ -1950,6 +1950,95 @@ form#contactForm {
   margin-bottom: 1.5rem;
 }
 
+.cookie-consent-banner {
+  align-items: center;
+  background: rgba(16, 24, 40, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  bottom: 1rem;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.32);
+  color: var(--white);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  left: 50%;
+  max-width: min(960px, calc(100vw - 2rem));
+  padding: 1rem;
+  position: fixed;
+  transform: translateX(-50%);
+  width: 100%;
+  z-index: 2000;
+}
+
+.cookie-consent-copy {
+  max-width: 680px;
+}
+
+.cookie-consent-copy strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.cookie-consent-copy p {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cookie-consent-copy a {
+  color: var(--secondary-color);
+  font-weight: 700;
+}
+
+.cookie-consent-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.6rem;
+}
+
+.cookie-consent-button {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0.65rem 0.9rem;
+  white-space: nowrap;
+}
+
+.cookie-consent-button.primary {
+  background: var(--secondary-color);
+  color: var(--dark-bg);
+}
+
+.cookie-consent-button.secondary {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--white);
+}
+
+.cookie-consent-button:hover,
+.cookie-consent-button:focus-visible {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 700px) {
+  .cookie-consent-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cookie-consent-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cookie-consent-button {
+    width: 100%;
+  }
+}
+
 /* Mobile Navigation: Hamburger & Accordion */
 .hamburger {
   display: none;

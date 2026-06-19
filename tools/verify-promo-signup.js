@@ -38,6 +38,10 @@ class StorageMock {
   setItem(key, value) {
     this.items.set(key, String(value));
   }
+
+  removeItem(key) {
+    this.items.delete(key);
+  }
 }
 
 class ElementMock {
@@ -275,12 +279,60 @@ async function runSiteAnalyticsScenario() {
   const sessionStorage = new StorageMock();
   const scripts = [];
   const bodyListeners = {};
+  const bodyChildren = [];
+  const makeNode = (tagName) => {
+    const node = {
+      tagName: String(tagName || "").toUpperCase(),
+      async: false,
+      src: "",
+      className: "",
+      parentNode: null,
+      attributes: {},
+      listeners: {},
+      childrenBySelector: {},
+      onload: null,
+      onerror: null,
+      setAttribute(name, value) {
+        this.attributes[name] = String(value);
+      },
+      addEventListener(type, handler) {
+        this.listeners[type] = handler;
+        if (type === "load") this.onload = handler;
+        if (type === "error") this.onerror = handler;
+      },
+      remove() {
+        const index = bodyChildren.indexOf(this);
+        if (index >= 0) bodyChildren.splice(index, 1);
+      },
+      querySelector(selector) {
+        return this.childrenBySelector[selector] || null;
+      },
+      set innerHTML(value) {
+        this.html = String(value);
+        if (this.html.includes("data-cookie-consent=\"accept\"")) {
+          this.childrenBySelector["[data-cookie-consent='accept']"] = makeNode("button");
+        }
+        if (this.html.includes("data-cookie-consent=\"decline\"")) {
+          this.childrenBySelector["[data-cookie-consent='decline']"] = makeNode("button");
+        }
+      },
+      get innerHTML() {
+        return this.html || "";
+      }
+    };
+    return node;
+  };
   const document = {
     readyState: "complete",
     title: "Snappy Coin Laundry",
     body: {
       addEventListener(type, handler) {
         bodyListeners[type] = handler;
+      },
+      appendChild(node) {
+        node.parentNode = this;
+        bodyChildren.push(node);
+        return node;
       }
     },
     head: {
@@ -291,19 +343,12 @@ async function runSiteAnalyticsScenario() {
       }
     },
     createElement(tagName) {
-      return {
-        tagName: String(tagName || "").toUpperCase(),
-        async: false,
-        src: "",
-        onload: null,
-        onerror: null,
-        addEventListener(type, handler) {
-          if (type === "load") this.onload = handler;
-          if (type === "error") this.onerror = handler;
-        }
-      };
+      return makeNode(tagName);
     },
     querySelector(selector) {
+      if (selector === ".cookie-consent-banner") {
+        return bodyChildren.find((node) => node.className === "cookie-consent-banner") || null;
+      }
       if (selector.includes("connect.facebook.net/en_US/fbevents.js")) {
         return scripts.find((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js") || null;
       }
@@ -342,7 +387,7 @@ async function runSiteAnalyticsScenario() {
   vm.createContext(context);
   vm.runInContext(analyticsCode, context);
   for (let i = 0; i < 10; i += 1) await Promise.resolve();
-  return { bodyListeners, document, localStorage, scripts, sessionStorage, window };
+  return { bodyChildren, bodyListeners, document, localStorage, scripts, sessionStorage, window };
 }
 
 function jsonResponse(status, body) {
@@ -359,6 +404,7 @@ function verifyStaticPage() {
   const privacyHtml = fs.readFileSync("privacy.html", "utf8");
   const termsHtml = fs.readFileSync("terms.html", "utf8");
   const cookiesHtml = fs.readFileSync("cookies.html", "utf8");
+  const cookiesText = cookiesHtml.replace(/\s+/g, " ");
   const configIndex = html.indexOf("assets/js/promo-config.js");
   const turnstileIndex = html.indexOf("challenges.cloudflare.com/turnstile/v0/api.js");
   const signupIndex = html.indexOf("assets/js/promo-signup.js");
@@ -376,30 +422,35 @@ function verifyStaticPage() {
   assert(html.includes("Send me future Snappy Coin Laundry deals"), "email marketing consent wording is missing");
   assert(html.includes('id="newsletter-signup-form"'), "newsletter signup form is missing");
   assert(!/name=["']attribution/i.test(html), "attribution must not be exposed as a hidden field");
-  assert(html.includes("assets/js/site-analytics.js?v=20260619"), "global analytics script is missing from main page");
+  assert(html.includes("assets/js/site-analytics.js?v=20260619-2"), "global analytics script is missing from main page");
   assert(html.includes("connect.facebook.net"), "main page CSP must allow Meta Pixel script");
   assert(html.includes("www.facebook.com"), "main page CSP must allow Meta Pixel beacon");
-  assert(html.includes("1554256442781789"), "main page Meta Pixel noscript fallback is missing");
-  assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260619"), "global analytics script is missing from promo redirect page");
+  assert(!html.includes("noscript=1"), "main page must not bypass consent with a noscript Meta Pixel");
+  assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260619-2"), "global analytics script is missing from promo redirect page");
   assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
-  assert(redirectHtml.includes("1554256442781789"), "promo redirect Meta Pixel noscript fallback is missing");
+  assert(!redirectHtml.includes("noscript=1"), "promo redirect must not bypass consent with a noscript Meta Pixel");
   assert(html.includes('href="privacy.html"'), "footer privacy policy link is missing");
   assert(html.includes('href="terms.html"'), "footer terms link is missing");
   assert(html.includes('href="cookies.html"'), "footer cookie statement link is missing");
-  assert(html.includes("styles.css?v=20260619"), "main stylesheet cache buster was not updated");
+  assert(html.includes("styles.css?v=20260619-2"), "main stylesheet cache buster was not updated");
+  assert(!privacyHtml.includes("noscript=1"), "privacy page must not bypass consent with a noscript Meta Pixel");
   assert(privacyHtml.includes("Privacy Policy"), "privacy page heading is missing");
   assert(privacyHtml.includes("SMS verification is used only to confirm"), "privacy page must explain SMS verification");
   assert(privacyHtml.includes("We do not send your name, email"), "privacy page must describe Meta Lead privacy limits");
-  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20260619"), "privacy page must load global analytics");
-  assert(privacyHtml.includes("1554256442781789"), "privacy page Meta Pixel fallback is missing");
+  assert(privacyHtml.includes("optional cookies are accepted"), "privacy page must describe optional cookie consent");
+  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20260619-2"), "privacy page must load global analytics");
+  assert(!termsHtml.includes("noscript=1"), "terms page must not bypass consent with a noscript Meta Pixel");
   assert(termsHtml.includes("Terms of Use"), "terms page heading is missing");
   assert(termsHtml.includes("limited to one per"), "terms page must describe promo claim limit");
   assert(termsHtml.includes("not integrated with DexterPay"), "terms page must preserve manual redemption boundary");
-  assert(termsHtml.includes("assets/js/site-analytics.js?v=20260619"), "terms page must load global analytics");
+  assert(termsHtml.includes("assets/js/site-analytics.js?v=20260619-2"), "terms page must load global analytics");
+  assert(!cookiesHtml.includes("noscript=1"), "cookie page must not bypass consent with a noscript Meta Pixel");
   assert(cookiesHtml.includes("Cookie Statement"), "cookie statement heading is missing");
+  assert(cookiesText.includes("accept or decline optional analytics"), "cookie statement must describe banner choices");
+  assert(cookiesText.includes("loaded only after optional cookies are accepted"), "cookie statement must describe consent-gated analytics");
   assert(cookiesHtml.includes("Meta Pixel"), "cookie statement must describe Meta Pixel");
   assert(cookiesHtml.includes("It does not include your name, email address, phone number"), "cookie statement must describe Lead event PII limits");
-  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20260619"), "cookie page must load global analytics");
+  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20260619-2"), "cookie page must load global analytics");
 }
 
 async function verifySignupStartPayload() {
@@ -732,11 +783,35 @@ async function verifyPhoneVerificationSubmitGuard() {
 }
 
 async function verifySiteAnalyticsMetaPixel() {
-  const { localStorage, scripts, sessionStorage, window } = await runSiteAnalyticsScenario();
-  assert(typeof window.fbq === "function", "Meta Pixel fbq function was not initialized");
+  const { document, localStorage, scripts, sessionStorage, window } = await runSiteAnalyticsScenario();
+  const banner = document.querySelector(".cookie-consent-banner");
+  assert(banner, "cookie consent banner should render before a consent choice");
+  assert(typeof window.fbq !== "function", "Meta Pixel must not initialize before optional cookie consent");
+  assert(
+    !scripts.some((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js"),
+    "Meta Pixel script must not load before optional cookie consent"
+  );
+
+  const pendingTracked = window.SnappyAnalytics.trackCouponClaimSuccess({
+    promotionSlug: "free-weekday-wash",
+    claimId: "pending_claim_test",
+    successMarker: "coupon-claim-success"
+  });
+  assert(pendingTracked === false, "pre-consent claim success should not immediately track a Meta Lead");
+  assert(
+    sessionStorage.getItem("snappyPendingMetaLead:v1"),
+    "pre-consent claim success should be queued in sessionStorage"
+  );
+
+  banner.querySelector("[data-cookie-consent='accept']").listeners.click();
+  for (let i = 0; i < 10; i += 1) await Promise.resolve();
+
+  assert(localStorage.getItem("snappyCookieConsent:v1") === "accepted", "accepted cookie consent was not stored");
+  assert(!document.querySelector(".cookie-consent-banner"), "cookie consent banner should hide after accept");
+  assert(typeof window.fbq === "function", "Meta Pixel fbq function was not initialized after accept");
   assert(
     scripts.some((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js"),
-    "Meta Pixel script was not loaded"
+    "Meta Pixel script was not loaded after accept"
   );
 
   const queuedCalls = () => window.fbq.queue.map((args) => Array.from(args));
@@ -747,6 +822,16 @@ async function verifySiteAnalyticsMetaPixel() {
   assert(
     queuedCalls().some((call) => call[0] === "track" && call[1] === "PageView"),
     "Meta Pixel PageView was not queued"
+  );
+  assert(
+    queuedCalls().some((call) => call[0] === "track" && call[1] === "Lead"),
+    "pending Meta Lead was not queued after accept"
+  );
+  const pendingLeadCount = queuedCalls().filter((call) => call[0] === "track" && call[1] === "Lead").length;
+  assert(pendingLeadCount === 1, "pending Meta Lead should queue exactly once after accept");
+  assert(
+    !sessionStorage.getItem("snappyPendingMetaLead:v1"),
+    "pending Meta Lead queue should clear after accept"
   );
 
   const firstTracked = window.SnappyAnalytics.trackCouponClaimSuccess({
@@ -763,9 +848,9 @@ async function verifySiteAnalyticsMetaPixel() {
 
   assert(firstTracked === true, "first successful claim should track a Meta Lead");
   assert(secondTracked === false, "duplicate successful claim should not track a second Meta Lead");
-  assert(leadCalls.length === 1, "Meta Lead should be queued once per claim ID");
+  assert(leadCalls.length === 2, "Meta Lead should be queued once for each distinct claim ID");
   assert(
-    JSON.stringify(leadCalls[0][2]) === JSON.stringify({ content_name: "Snappy Promo Coupon Claim" }),
+    leadCalls.every((call) => JSON.stringify(call[2]) === JSON.stringify({ content_name: "Snappy Promo Coupon Claim" })),
     "Meta Lead payload must contain only generic metadata"
   );
   assert(
@@ -775,6 +860,25 @@ async function verifySiteAnalyticsMetaPixel() {
   assert(
     sessionStorage.getItem("snappyMetaLeadFired:free-weekday-wash:claim:claim_test") === "1",
     "Meta Lead guard was not stored in sessionStorage"
+  );
+
+  const declined = await runSiteAnalyticsScenario();
+  const declinedBanner = declined.document.querySelector(".cookie-consent-banner");
+  assert(declinedBanner, "cookie consent banner should render for a fresh visitor");
+  declinedBanner.querySelector("[data-cookie-consent='decline']").listeners.click();
+  for (let i = 0; i < 10; i += 1) await Promise.resolve();
+  assert(declined.localStorage.getItem("snappyCookieConsent:v1") === "declined", "declined cookie consent was not stored");
+  assert(typeof declined.window.fbq !== "function", "Meta Pixel must not initialize after decline");
+  assert(
+    !declined.scripts.some((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js"),
+    "Meta Pixel script must not load after decline"
+  );
+  assert(
+    declined.window.SnappyAnalytics.trackCouponClaimSuccess({
+      promotionSlug: "free-weekday-wash",
+      claimId: "declined_claim_test"
+    }) === false,
+    "declined optional cookies should block Meta Lead tracking"
   );
 }
 
