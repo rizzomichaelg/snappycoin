@@ -444,12 +444,16 @@ function verifyStaticPage() {
   assert(html.includes("Send me future Snappy Coin Laundry deals"), "email marketing consent wording is missing");
   assert(html.includes('id="newsletter-signup-form"'), "newsletter signup form is missing");
   assert(!/name=["']attribution/i.test(html), "attribution must not be exposed as a hidden field");
-  assert(html.includes("assets/js/site-analytics.js?v=20260619-2"), "global analytics script is missing from main page");
+  assert(html.includes("assets/js/site-analytics.js?v=20260620-2"), "global analytics script is missing from main page");
   assert(html.includes("connect.facebook.net"), "main page CSP must allow Meta Pixel script");
   assert(html.includes("www.facebook.com"), "main page CSP must allow Meta Pixel beacon");
+  assert(html.includes("www.googletagmanager.com"), "main page CSP must allow Google tag script");
+  assert(html.includes("www.googleadservices.com"), "main page CSP must allow Google Ads measurement");
+  assert(html.includes("googleads.g.doubleclick.net"), "main page CSP must allow Google Ads doubleclick endpoint");
   assert(!html.includes("noscript=1"), "main page must not bypass consent with a noscript Meta Pixel");
-  assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260619-2"), "global analytics script is missing from promo redirect page");
+  assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260620-2"), "global analytics script is missing from promo redirect page");
   assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
+  assert(redirectHtml.includes("www.googleadservices.com"), "promo redirect CSP must allow Google Ads measurement");
   assert(!redirectHtml.includes("noscript=1"), "promo redirect must not bypass consent with a noscript Meta Pixel");
   assert(html.includes('href="privacy.html"'), "footer privacy policy link is missing");
   assert(html.includes('href="terms.html"'), "footer terms link is missing");
@@ -460,19 +464,21 @@ function verifyStaticPage() {
   assert(privacyHtml.includes("SMS verification is used only to confirm"), "privacy page must explain SMS verification");
   assert(privacyHtml.includes("We do not send your name, email"), "privacy page must describe Meta Lead privacy limits");
   assert(privacyHtml.includes("optional cookies are accepted"), "privacy page must describe optional cookie consent");
-  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20260619-2"), "privacy page must load global analytics");
+  assert(privacyHtml.includes("Google Ads"), "privacy page must describe Google Ads measurement");
+  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20260620-2"), "privacy page must load global analytics");
   assert(!termsHtml.includes("noscript=1"), "terms page must not bypass consent with a noscript Meta Pixel");
   assert(termsHtml.includes("Terms of Use"), "terms page heading is missing");
   assert(termsHtml.includes("limited to one per"), "terms page must describe promo claim limit");
   assert(termsHtml.includes("not integrated with DexterPay"), "terms page must preserve manual redemption boundary");
-  assert(termsHtml.includes("assets/js/site-analytics.js?v=20260619-2"), "terms page must load global analytics");
+  assert(termsHtml.includes("assets/js/site-analytics.js?v=20260620-2"), "terms page must load global analytics");
   assert(!cookiesHtml.includes("noscript=1"), "cookie page must not bypass consent with a noscript Meta Pixel");
   assert(cookiesHtml.includes("Cookie Statement"), "cookie statement heading is missing");
   assert(cookiesText.includes("accept or decline optional analytics"), "cookie statement must describe banner choices");
   assert(cookiesText.includes("loaded only after optional cookies are accepted"), "cookie statement must describe consent-gated analytics");
   assert(cookiesHtml.includes("Meta Pixel"), "cookie statement must describe Meta Pixel");
   assert(cookiesHtml.includes("It does not include your name, email address, phone number"), "cookie statement must describe Lead event PII limits");
-  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20260619-2"), "cookie page must load global analytics");
+  assert(cookiesHtml.includes("Google Ads"), "cookie page must describe Google Ads measurement");
+  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20260620-2"), "cookie page must load global analytics");
 }
 
 async function verifySignupStartPayload() {
@@ -864,6 +870,20 @@ async function verifySiteAnalyticsMetaPixel() {
   assert(
     queuedCalls().some((call) => call[0] === "track" && call[1] === "Lead"),
     "pending Meta Lead was not queued after accept"
+  );
+  const googleTagScripts = scripts.filter((script) => script.src.includes("googletagmanager.com/gtag/js"));
+  assert(googleTagScripts.length === 1, "Google tag loader should be installed only once");
+  assert(
+    googleTagScripts[0].src.includes("id=G-W0E4GHV24B"),
+    "Google tag loader should reuse the existing GA4 tag ID"
+  );
+  assert(
+    window.dataLayer.some((call) => call[0] === "config" && call[1] === "G-W0E4GHV24B"),
+    "GA4 config was not queued after optional cookie consent"
+  );
+  assert(
+    window.dataLayer.some((call) => call[0] === "config" && call[1] === "AW-18256973572"),
+    "Google Ads config was not queued after optional cookie consent"
   );
   const pendingLeadCount = queuedCalls().filter((call) => call[0] === "track" && call[1] === "Lead").length;
   assert(pendingLeadCount === 1, "pending Meta Lead should queue exactly once after accept");

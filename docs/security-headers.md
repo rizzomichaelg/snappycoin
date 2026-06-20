@@ -10,7 +10,7 @@ The public site is currently static HTML on GitHub Pages. Static meta CSP tags a
 - `form-action 'self'`
 - `script-src 'self' https://challenges.cloudflare.com https://connect.facebook.net https://www.googletagmanager.com`
 - `frame-src https://challenges.cloudflare.com https://www.google.com`
-- `connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://dexterlive-status.snappycoinlaundry.workers.dev https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com`
+- `connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://dexterlive-status.snappycoinlaundry.workers.dev https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://stats.g.doubleclick.net`
 - `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`
 - `font-src https://fonts.gstatic.com`
 

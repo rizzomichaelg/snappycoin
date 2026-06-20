@@ -8,6 +8,7 @@
   }
 
   const GA_MEASUREMENT_ID = "G-W0E4GHV24B";
+  const GOOGLE_ADS_ID = "AW-18256973572";
   const GA_SRC = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
   const META_PIXEL_ID = "1554256442781789";
   const META_SRC = "https://connect.facebook.net/en_US/fbevents.js";
@@ -307,6 +308,7 @@ function initGoogleAnalytics() {
     .then(() => {
       window.gtag("js", new Date());
       window.gtag("config", GA_MEASUREMENT_ID);
+      window.gtag("config", GOOGLE_ADS_ID);
       initialized = true;
     })
     .catch(() => {
