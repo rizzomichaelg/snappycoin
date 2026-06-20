@@ -454,7 +454,7 @@ function verifyStaticPage() {
   assert(html.includes('href="privacy.html"'), "footer privacy policy link is missing");
   assert(html.includes('href="terms.html"'), "footer terms link is missing");
   assert(html.includes('href="cookies.html"'), "footer cookie statement link is missing");
-  assert(html.includes("styles.css?v=20260619-2"), "main stylesheet cache buster was not updated");
+  assert(html.includes("styles.css?v=20260620-1"), "main stylesheet cache buster was not updated");
   assert(!privacyHtml.includes("noscript=1"), "privacy page must not bypass consent with a noscript Meta Pixel");
   assert(privacyHtml.includes("Privacy Policy"), "privacy page heading is missing");
   assert(privacyHtml.includes("SMS verification is used only to confirm"), "privacy page must explain SMS verification");
