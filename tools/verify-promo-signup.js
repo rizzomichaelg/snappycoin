@@ -450,6 +450,7 @@ function verifyStaticPage() {
   assert(html.includes("www.googletagmanager.com"), "main page CSP must allow Google tag script");
   assert(html.includes("www.googleadservices.com"), "main page CSP must allow Google Ads measurement");
   assert(html.includes("googleads.g.doubleclick.net"), "main page CSP must allow Google Ads doubleclick endpoint");
+  assert(html.includes("ad.doubleclick.net"), "main page CSP must allow Google Ads collect endpoint");
   assert(!html.includes("noscript=1"), "main page must not bypass consent with a noscript Meta Pixel");
   assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260620-2"), "global analytics script is missing from promo redirect page");
   assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
