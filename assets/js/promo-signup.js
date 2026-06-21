@@ -15,6 +15,26 @@
     "utm_content",
     "utm_term",
     "utm_id",
+    "gclsrc",
+    "gad_source",
+    "gad_campaignid",
+    "gad_adgroupid",
+    "campaignid",
+    "adgroupid",
+    "creative",
+    "keyword",
+    "matchtype",
+    "device",
+    "network",
+    "targetid",
+    "loc_physical_ms",
+    "loc_interest_ms",
+    "adposition",
+    "feeditemid",
+    "extensionid",
+    "ifmobile",
+    "ifnotmobile",
+    "devicemodel",
     "campaign_id",
     "campaign_name",
     "adset_id",
@@ -257,6 +277,39 @@
     };
   }
 
+  function googleAdsAttribution(currentSnapshot) {
+    const analytics = window.SnappyAnalytics || {};
+    const optionalCookieConsent =
+      typeof analytics.hasOptionalCookieConsent === "function"
+        ? analytics.hasOptionalCookieConsent()
+        : false;
+
+    return {
+      google_click_id: firstTouchAttribution.gclid || currentSnapshot.gclid || "",
+      google_gbraid: firstTouchAttribution.gbraid || currentSnapshot.gbraid || "",
+      google_wbraid: firstTouchAttribution.wbraid || currentSnapshot.wbraid || "",
+      google_gclsrc: firstTouchAttribution.gclsrc || currentSnapshot.gclsrc || "",
+      google_ads_source: firstTouchAttribution.gad_source || currentSnapshot.gad_source || "",
+      google_ads_campaign_id:
+        firstTouchAttribution.gad_campaignid ||
+        firstTouchAttribution.campaignid ||
+        currentSnapshot.gad_campaignid ||
+        currentSnapshot.campaignid ||
+        "",
+      google_ads_ad_group_id:
+        firstTouchAttribution.gad_adgroupid ||
+        firstTouchAttribution.adgroupid ||
+        currentSnapshot.gad_adgroupid ||
+        currentSnapshot.adgroupid ||
+        "",
+      google_gcl_aw: optionalCookieConsent ? cookieValue("_gcl_aw") : "",
+      google_gcl_dc: optionalCookieConsent ? cookieValue("_gcl_dc") : "",
+      google_gcl_au: optionalCookieConsent ? cookieValue("_gcl_au") : "",
+      google_optional_cookie_consent: optionalCookieConsent,
+      google_ads_loaded: typeof window.gtag === "function"
+    };
+  }
+
   function attribution() {
     const currentUrl = new URL(window.location.href);
     const referrer = document.referrer || "";
@@ -266,6 +319,7 @@
       ...currentSnapshot,
       ...firstTouchAttribution,
       ...metaAttribution(currentSnapshot),
+      ...googleAdsAttribution(currentSnapshot),
       current_url: currentUrl.href,
       current_path: pagePath(currentUrl),
       current_referrer: referrer,
@@ -465,7 +519,8 @@
         method: "POST",
         body: JSON.stringify({
           claimId: String(formData.get("claimId") || ""),
-          phoneCode: String(formData.get("phoneCode") || "")
+          phoneCode: String(formData.get("phoneCode") || ""),
+          attribution: attribution()
         })
       });
       if (els.successMessage) {

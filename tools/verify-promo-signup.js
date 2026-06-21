@@ -13,6 +13,26 @@ const attributionKeys = [
   "utm_content",
   "utm_term",
   "utm_id",
+  "gclsrc",
+  "gad_source",
+  "gad_campaignid",
+  "gad_adgroupid",
+  "campaignid",
+  "adgroupid",
+  "creative",
+  "keyword",
+  "matchtype",
+  "device",
+  "network",
+  "targetid",
+  "loc_physical_ms",
+  "loc_interest_ms",
+  "adposition",
+  "feeditemid",
+  "extensionid",
+  "ifmobile",
+  "ifnotmobile",
+  "devicemodel",
   "campaign_id",
   "campaign_name",
   "adset_id",
@@ -38,6 +58,21 @@ const metaAttributionKeys = [
   "meta_fbc",
   "meta_optional_cookie_consent",
   "meta_pixel_loaded"
+];
+
+const googleAdsAttributionKeys = [
+  "google_click_id",
+  "google_gbraid",
+  "google_wbraid",
+  "google_gclsrc",
+  "google_ads_source",
+  "google_ads_campaign_id",
+  "google_ads_ad_group_id",
+  "google_gcl_aw",
+  "google_gcl_dc",
+  "google_gcl_au",
+  "google_optional_cookie_consent",
+  "google_ads_loaded"
 ];
 
 function assert(condition, message) {
@@ -200,7 +235,7 @@ function runConfigForHost(hostname) {
 
 async function runSignupScenario(fetchHandler, options = {}) {
   const signupCode = fs.readFileSync("assets/js/promo-signup.js", "utf8");
-  const firstUrl = "http://127.0.0.1:5500/?utm_source=facebook&utm_medium=paid_social&utm_campaign=freewash&utm_content=ad1&utm_term=laundry&utm_id=utm-1&campaign_id=meta-campaign-1&campaign_name=Launch%20Campaign&adset_id=meta-adset-1&adset_name=Launch%20Adset&ad_id=meta-ad-1&ad_name=Launch%20Ad&placement=instagram_stories&site_source_name=ig&fb_source=ads&fb_ref=promo-ref&gclid=gclid-1&gbraid=gbraid-1&wbraid=wbraid-1&fbclid=fbclid-1&ttclid=ttclid-1&msclkid=msclkid-1&li_fat_id=li-1#free-weekday-wash";
+  const firstUrl = "http://127.0.0.1:5500/?utm_source=facebook&utm_medium=paid_social&utm_campaign=freewash&utm_content=ad1&utm_term=laundry&utm_id=utm-1&campaign_id=meta-campaign-1&campaign_name=Launch%20Campaign&adset_id=meta-adset-1&adset_name=Launch%20Adset&ad_id=meta-ad-1&ad_name=Launch%20Ad&placement=instagram_stories&site_source_name=ig&fb_source=ads&fb_ref=promo-ref&gclid=gclid-1&gclsrc=aw.ds&gbraid=gbraid-1&wbraid=wbraid-1&gad_source=1&gad_campaignid=google-campaign-1&gad_adgroupid=google-adgroup-1&campaignid=value-track-campaign&adgroupid=value-track-adgroup&creative=creative-1&keyword=laundry%20near%20me&matchtype=e&device=m&network=g&targetid=kwd-123&loc_physical_ms=9022860&loc_interest_ms=9022861&adposition=1t1&feeditemid=feed-1&extensionid=ext-1&ifmobile=mobile&ifnotmobile=&devicemodel=iphone&fbclid=fbclid-1&ttclid=ttclid-1&msclkid=msclkid-1&li_fat_id=li-1#free-weekday-wash";
   const currentUrl = options.currentUrl || firstUrl;
   const localStorage = options.localStorage || new StorageMock();
   const sessionStorage = options.sessionStorage || new StorageMock();
@@ -220,7 +255,9 @@ async function runSignupScenario(fetchHandler, options = {}) {
     emailMarketingConsent: ""
   };
   const document = makeDocument(formFields);
-  document.cookie = options.cookie || "_fbp=fb.1.1781897000000.111222333; _fbc=fb.1.1781897000000.fbclid-1";
+  document.cookie =
+    options.cookie ||
+    "_fbp=fb.1.1781897000000.111222333; _fbc=fb.1.1781897000000.fbclid-1; _gcl_aw=GCL.1781897000.gclid-1; _gcl_dc=GCL.1781897000.dc-1; _gcl_au=1.1.123456789.1781897000";
   const timers = [];
   const intervals = [];
   const window = {
@@ -245,6 +282,7 @@ async function runSignupScenario(fetchHandler, options = {}) {
         analyticsCalls.push(details);
       }
     },
+    gtag() {},
     setTimeout(fn) {
       timers.push(fn);
       return timers.length;
@@ -518,6 +556,9 @@ async function verifySignupStartPayload() {
   for (const key of metaAttributionKeys) {
     assert(Object.prototype.hasOwnProperty.call(body.attribution, key), `missing Meta attribution key ${key}`);
   }
+  for (const key of googleAdsAttributionKeys) {
+    assert(Object.prototype.hasOwnProperty.call(body.attribution, key), `missing Google Ads attribution key ${key}`);
+  }
   assert(body.attribution.utm_source === "facebook", "first-touch utm_source was not captured");
   assert(body.attribution.utm_medium === "paid_social", "first-touch utm_medium was not captured");
   assert(body.attribution.utm_campaign === "freewash", "first-touch utm_campaign was not captured");
@@ -529,6 +570,32 @@ async function verifySignupStartPayload() {
   assert(body.attribution.site_source_name === "ig", "Meta site source was not captured");
   assert(body.attribution.fb_source === "ads", "Meta fb_source was not captured");
   assert(body.attribution.gclid === "gclid-1", "first-touch gclid was not captured");
+  assert(body.attribution.gclsrc === "aw.ds", "first-touch gclsrc was not captured");
+  assert(body.attribution.gad_source === "1", "Google Ads source parameter was not captured");
+  assert(body.attribution.gad_campaignid === "google-campaign-1", "Google Ads campaign ID was not captured");
+  assert(body.attribution.gad_adgroupid === "google-adgroup-1", "Google Ads ad group ID was not captured");
+  assert(body.attribution.campaignid === "value-track-campaign", "Google ValueTrack campaignid was not captured");
+  assert(body.attribution.adgroupid === "value-track-adgroup", "Google ValueTrack adgroupid was not captured");
+  assert(body.attribution.creative === "creative-1", "Google creative ID was not captured");
+  assert(body.attribution.keyword === "laundry near me", "Google keyword was not captured");
+  assert(body.attribution.matchtype === "e", "Google matchtype was not captured");
+  assert(body.attribution.device === "m", "Google device was not captured");
+  assert(body.attribution.network === "g", "Google network was not captured");
+  assert(body.attribution.targetid === "kwd-123", "Google targetid was not captured");
+  assert(body.attribution.loc_physical_ms === "9022860", "Google physical location ID was not captured");
+  assert(body.attribution.loc_interest_ms === "9022861", "Google interest location ID was not captured");
+  assert(body.attribution.google_click_id === "gclid-1", "Google click ID alias was not captured");
+  assert(body.attribution.google_gbraid === "gbraid-1", "Google gbraid alias was not captured");
+  assert(body.attribution.google_wbraid === "wbraid-1", "Google wbraid alias was not captured");
+  assert(body.attribution.google_gclsrc === "aw.ds", "Google gclsrc alias was not captured");
+  assert(body.attribution.google_ads_source === "1", "Google Ads source alias was not captured");
+  assert(body.attribution.google_ads_campaign_id === "google-campaign-1", "Google Ads campaign alias was not captured");
+  assert(body.attribution.google_ads_ad_group_id === "google-adgroup-1", "Google Ads ad group alias was not captured");
+  assert(body.attribution.google_gcl_aw === "GCL.1781897000.gclid-1", "Google _gcl_aw cookie was not captured");
+  assert(body.attribution.google_gcl_dc === "GCL.1781897000.dc-1", "Google _gcl_dc cookie was not captured");
+  assert(body.attribution.google_gcl_au === "1.1.123456789.1781897000", "Google _gcl_au cookie was not captured");
+  assert(body.attribution.google_optional_cookie_consent === true, "Google cookie consent state was not captured");
+  assert(body.attribution.google_ads_loaded === true, "Google Ads loaded state was not captured");
   assert(body.attribution.fbclid === "fbclid-1", "first-touch fbclid was not captured");
   assert(body.attribution.meta_click_id === "fbclid-1", "Meta click ID alias was not captured");
   assert(body.attribution.meta_fbp === "fb.1.1781897000000.111222333", "Meta _fbp cookie was not captured");
@@ -579,6 +646,14 @@ async function verifyPhoneVerificationPayload() {
   const body = JSON.parse(verifyCall.options.body);
   assert(body.claimId === "claim_test", "verify-phone claim ID was not included");
   assert(body.phoneCode === "123456", "verify-phone SMS code was not included");
+  assert(body.attribution && typeof body.attribution === "object", "verify-phone attribution object is missing");
+  assert(body.attribution.gclid === "gclid-1", "verify-phone first-touch gclid was not captured");
+  assert(body.attribution.gclsrc === "aw.ds", "verify-phone first-touch gclsrc was not captured");
+  assert(body.attribution.google_click_id === "gclid-1", "verify-phone Google click ID alias was not captured");
+  assert(body.attribution.google_ads_campaign_id === "google-campaign-1", "verify-phone Google Ads campaign alias was not captured");
+  assert(body.attribution.google_ads_ad_group_id === "google-adgroup-1", "verify-phone Google Ads ad group alias was not captured");
+  assert(body.attribution.google_gcl_aw === "GCL.1781897000.gclid-1", "verify-phone Google _gcl_aw cookie was not captured");
+  assert(body.attribution.google_optional_cookie_consent === true, "verify-phone Google cookie consent state was not captured");
   assert(document.elements["promo-success"].hidden === false, "success panel did not open after verification");
   assert(document.elements["promo-success-message"].textContent === "Your coupon code was emailed.", "verify success message was not displayed");
   assert(document.elements["promo-signup-form"].hidden === true, "signup form did not hide after verification");
