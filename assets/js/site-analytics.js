@@ -9,6 +9,7 @@
 
   const GA_MEASUREMENT_ID = "G-W0E4GHV24B";
   const GOOGLE_ADS_ID = "AW-18256973572";
+  const GOOGLE_ADS_SIGNUP_SEND_TO = "AW-18256973572/JyFnCPXZx8IcEISezYFE";
   const GA_SRC = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
   const META_PIXEL_ID = "1554256442781789";
   const META_SRC = "https://connect.facebook.net/en_US/fbevents.js";
@@ -186,6 +187,29 @@ function trackMetaLead() {
   return true;
 }
 
+function trackGoogleAdsSignupConversion() {
+  if (!hasOptionalCookieConsent()) return false;
+
+  const sendConversion = () => {
+    if (typeof window.gtag !== "function") return;
+    window.gtag("event", "conversion", {
+      send_to: GOOGLE_ADS_SIGNUP_SEND_TO,
+      value: 1.0,
+      currency: "USD"
+    });
+  };
+
+  if (typeof window.gtag === "function") {
+    sendConversion();
+    return true;
+  }
+
+  bootstrapGtag()
+    .then(sendConversion)
+    .catch(() => {});
+  return true;
+}
+
 function claimSuccessTrackingTarget(details = {}) {
   const promotionSlug = String(details.promotionSlug || "promo").trim() || "promo";
   const stableClaimId = String(
@@ -263,7 +287,10 @@ function trackCouponClaimSuccess(details = {}) {
     return false;
   }
 
-  if (!trackMetaLead()) return false;
+  const metaTracked = trackMetaLead();
+  const googleAdsTracked = trackGoogleAdsSignupConversion();
+
+  if (!metaTracked && !googleAdsTracked) return false;
 
   storageSet(sessionStore, target.key, "1");
   if (target.durable) storageSet(localStore, target.key, "1");
@@ -273,6 +300,7 @@ function trackCouponClaimSuccess(details = {}) {
 window.SnappyAnalytics = {
   ...(window.SnappyAnalytics || {}),
   trackMetaLead,
+  trackGoogleAdsSignupConversion,
   trackCouponClaimSuccess,
   hasOptionalCookieConsent
 };
