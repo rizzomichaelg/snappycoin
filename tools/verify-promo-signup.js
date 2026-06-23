@@ -13,6 +13,11 @@ const attributionKeys = [
   "utm_content",
   "utm_term",
   "utm_id",
+  "meta_source",
+  "meta_placement",
+  "meta_campaign_id",
+  "meta_adset_id",
+  "meta_ad_id",
   "gclsrc",
   "gad_source",
   "gad_campaignid",
@@ -235,7 +240,7 @@ function runConfigForHost(hostname) {
 
 async function runSignupScenario(fetchHandler, options = {}) {
   const signupCode = fs.readFileSync("assets/js/promo-signup.js", "utf8");
-  const firstUrl = "http://127.0.0.1:5500/?utm_source=facebook&utm_medium=paid_social&utm_campaign=freewash&utm_content=ad1&utm_term=laundry&utm_id=utm-1&campaign_id=meta-campaign-1&campaign_name=Launch%20Campaign&adset_id=meta-adset-1&adset_name=Launch%20Adset&ad_id=meta-ad-1&ad_name=Launch%20Ad&placement=instagram_stories&site_source_name=ig&fb_source=ads&fb_ref=promo-ref&gclid=gclid-1&gclsrc=aw.ds&gbraid=gbraid-1&wbraid=wbraid-1&gad_source=1&gad_campaignid=google-campaign-1&gad_adgroupid=google-adgroup-1&campaignid=value-track-campaign&adgroupid=value-track-adgroup&creative=creative-1&keyword=laundry%20near%20me&matchtype=e&device=m&network=g&targetid=kwd-123&loc_physical_ms=9022860&loc_interest_ms=9022861&adposition=1t1&feeditemid=feed-1&extensionid=ext-1&ifmobile=mobile&ifnotmobile=&devicemodel=iphone&fbclid=fbclid-1&ttclid=ttclid-1&msclkid=msclkid-1&li_fat_id=li-1#free-weekday-wash";
+  const firstUrl = "http://127.0.0.1:5500/?utm_source=facebook&utm_medium=paid_social&utm_campaign=freewash&utm_content=ad1&utm_term=laundry&utm_id=utm-1&meta_source=ig&meta_placement=instagram_stories&meta_campaign_id=meta-dynamic-campaign-1&meta_adset_id=meta-dynamic-adset-1&meta_ad_id=meta-dynamic-ad-1&campaign_id=meta-campaign-1&campaign_name=Launch%20Campaign&adset_id=meta-adset-1&adset_name=Launch%20Adset&ad_id=meta-ad-1&ad_name=Launch%20Ad&placement=instagram_stories&site_source_name=ig&fb_source=ads&fb_ref=promo-ref&gclid=gclid-1&gclsrc=aw.ds&gbraid=gbraid-1&wbraid=wbraid-1&gad_source=1&gad_campaignid=google-campaign-1&gad_adgroupid=google-adgroup-1&campaignid=value-track-campaign&adgroupid=value-track-adgroup&creative=creative-1&keyword=laundry%20near%20me&matchtype=e&device=m&network=g&targetid=kwd-123&loc_physical_ms=9022860&loc_interest_ms=9022861&adposition=1t1&feeditemid=feed-1&extensionid=ext-1&ifmobile=mobile&ifnotmobile=&devicemodel=iphone&fbclid=fbclid-1&ttclid=ttclid-1&msclkid=msclkid-1&li_fat_id=li-1#free-weekday-wash";
   const currentUrl = options.currentUrl || firstUrl;
   const localStorage = options.localStorage || new StorageMock();
   const sessionStorage = options.sessionStorage || new StorageMock();
@@ -562,6 +567,11 @@ async function verifySignupStartPayload() {
   assert(body.attribution.utm_source === "facebook", "first-touch utm_source was not captured");
   assert(body.attribution.utm_medium === "paid_social", "first-touch utm_medium was not captured");
   assert(body.attribution.utm_campaign === "freewash", "first-touch utm_campaign was not captured");
+  assert(body.attribution.meta_source === "ig", "dynamic Meta source was not captured");
+  assert(body.attribution.meta_placement === "instagram_stories", "dynamic Meta placement was not captured");
+  assert(body.attribution.meta_campaign_id === "meta-dynamic-campaign-1", "dynamic Meta campaign ID was not captured");
+  assert(body.attribution.meta_adset_id === "meta-dynamic-adset-1", "dynamic Meta ad set ID was not captured");
+  assert(body.attribution.meta_ad_id === "meta-dynamic-ad-1", "dynamic Meta ad ID was not captured");
   assert(body.attribution.campaign_id === "meta-campaign-1", "Meta campaign ID was not captured");
   assert(body.attribution.campaign_name === "Launch Campaign", "Meta campaign name was not captured");
   assert(body.attribution.adset_id === "meta-adset-1", "Meta ad set ID was not captured");
