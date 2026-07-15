@@ -10,6 +10,9 @@ const required = [
   "assets/js/pud-contract.js", "assets/js/pud-address.js", "assets/js/pud-attribution.js", "assets/js/pud-booking.js",
   "assets/js/pud-payment.js", "assets/js/pud-phone.js", "assets/js/pud-scheduling.js", "assets/js/pud-status.js",
   "assets/js/pud-claims.js",
+  "assets/js/pud-claim-capability.js",
+  "assets/js/pud-claim-evidence.js",
+  "assets/js/pud-preference-attempt.js",
   "assets/js/pud-idempotency.js", "assets/js/pud-reorder.js", "assets/js/pud-waitlist-continuation.js",
 ];
 await Promise.all(required.map((file) => access(resolve(root, file))));
@@ -28,6 +31,9 @@ const contractJs = await source("assets/js/pud-contract.js");
 const paymentJs = await source("assets/js/pud-payment.js");
 const reorderJs = await source("assets/js/pud-reorder.js");
 const claimsJs = await source("assets/js/pud-claims.js");
+const claimCapabilityJs = await source("assets/js/pud-claim-capability.js");
+const claimEvidenceJs = await source("assets/js/pud-claim-evidence.js");
+const preferenceAttemptJs = await source("assets/js/pud-preference-attempt.js");
 const idempotencyJs = await source("assets/js/pud-idempotency.js");
 const attributionJs = await source("assets/js/pud-attribution.js");
 const waitlistBootstrapJs = await source("assets/js/pud-waitlist-continuation.js");
@@ -46,7 +52,11 @@ if (status.includes("data-contract-disabled")) throw new Error("The obsolete hid
 
 for (const marker of [
   "pud-reschedule-form", "pud-payment-method-form", "pud-tip-form", "pud-recurring-create-form",
+  "pud-step-up-phone-form", "pud-step-up-code-form", "data-receipt-weight-charge",
+  "pud-preferences-form", "data-history-list", 'data-action="history-more"',
   'data-action="payment-replace"', 'data-action="reorder"', 'data-action="cancel"',
+  'data-action="open-claim"', 'data-action="rotate-status-token"', 'data-action="revoke-status-token"',
+  "data-loyalty-panel", "data-loyalty-balance", "data-loyalty-history",
 ]) {
   if (!status.includes(marker)) throw new Error(`Advanced status control missing: ${marker}`);
 }
@@ -58,7 +68,13 @@ if (!statusJs.includes("window.top !== window.self") || !bookingJs.includes("win
 }
 
 for (const callback of ['"error-callback"', '"expired-callback"', '"timeout-callback"']) {
-  if (!bookingJs.includes(callback)) throw new Error(`Turnstile callback missing: ${callback}`);
+  if (!bookingJs.includes(callback) || !statusJs.includes(callback)) throw new Error(`Booking/status Turnstile callback missing: ${callback}`);
+}
+for (const directive of ["script-src", "connect-src", "frame-src"]) {
+  const csp = status.match(/Content-Security-Policy[^>]+content="([^"]+)"/)?.[1] || status;
+  if (!new RegExp(`${directive}[^;]*https://challenges\\.cloudflare\\.com`).test(csp)) {
+    throw new Error(`Status CSP must allow Turnstile in ${directive}.`);
+  }
 }
 for (const marker of ['utm_source: "utmSource"', "selfReportedSource", "currentPath"]) {
   if (!attributionJs.includes(marker)) throw new Error(`Attribution contract marker missing: ${marker}`);
@@ -74,7 +90,12 @@ for (const marker of ["safePath", "safeReferrerOrigin", "safeCampaignValue", "co
 if (statusJs.includes("location.search") || claimsJs.includes("location.search")) throw new Error("Private pages must strip URL query strings.");
 if (/trackFunnel|SnappyAnalytics|gtag\(/.test(statusJs + claimsJs)) throw new Error("Private pages must not invoke analytics.");
 if (/innerHTML|insertAdjacentHTML|document\.write/.test(statusJs)) throw new Error("Status controls must construct safe DOM nodes.");
-if (!statusJs.includes("history.replaceState") || !claimsJs.includes("history.replaceState")) throw new Error("Private pages must normalize tokens to a fragment-only URL.");
+if (!statusJs.includes("history.replaceState") || !claimsJs.includes("history.replaceState")) throw new Error("Private pages must normalize private URL fragments.");
+if (!claimsJs.includes('history.replaceState(null, "", location.pathname)')) throw new Error("Claim page must remove the status bearer fragment immediately.");
+if (!claims.includes('name="description" rows="7" maxlength="4000"')) throw new Error("Claim description limit must match the backend contract.");
+if (!claims.includes('name="evidence"') || !claims.includes("multiple") || !claims.includes("5 MB")) {
+  throw new Error("Claim page must offer up to five bounded optional evidence files.");
+}
 if (!apiJs.includes('postContract("/api/pud/orders/status", { token })')) throw new Error("Status token must be sent in a JSON request body.");
 if (/apiUrl\([^\n]*(?:token|clientSecret|setupIntentClientSecret)/.test(apiJs + statusJs)) throw new Error("Tokens or client secrets must not enter an API URL.");
 if (!statusJs.includes("PUD_VERSION_CONFLICT") || !statusJs.includes("await refresh()")) throw new Error("Status actions must recover version conflicts with a server refresh.");
@@ -82,8 +103,82 @@ if (!statusJs.includes("actionInFlight") || !claimsJs.includes("submitting") || 
   throw new Error("Booking and private actions need double-submit protection.");
 }
 
-for (const scope of ["cancel", "reschedule", "payment-method", "tip", "recurring-create"]) {
+for (const scope of ["cancel", "reschedule", "payment-method", "tip", "recurring-create", "preferences"]) {
   if (!statusJs.includes(`stableActionKey("${scope}"`)) throw new Error(`Stable action key missing: ${scope}`);
+}
+for (const purpose of [
+  "cancel_order", "reschedule_order", "payment_session", "replace_payment_method", "reorder", "add_tip",
+  "open_claim", "create_recurring", "pause_recurring", "skip_recurring", "resume_recurring",
+  "update_preferences", "rotate_status_token", "revoke_status_token",
+  "upload_claim_evidence",
+]) {
+  if (!statusJs.includes(`"${purpose}"`)) throw new Error(`Protected action is missing a purpose-bound capability: ${purpose}`);
+}
+for (const marker of ["createStatusSession", "issueActionCapability", "verifiedSession", "sessionExpiryTimer", "PUD_STATUS_SESSION_INVALID"]) {
+  if (!statusJs.includes(marker)) throw new Error(`In-memory step-up marker missing: ${marker}`);
+}
+for (const marker of ["pendingRotation", "pending.actionCapability", "error?.status !== 0"]) {
+  if (!statusJs.includes(marker)) throw new Error(`Rotation response-loss recovery missing: ${marker}`);
+}
+if (/\b(?:localStorage|sessionStorage)\b/.test(statusJs)) {
+  throw new Error("Status page must keep its status token, phone proof, and verified session out of browser storage.");
+}
+if (!claimCapabilityJs.includes("sessionStorage.setItem") || !claimCapabilityJs.includes("sessionStorage.removeItem")) {
+  throw new Error("Claim capability handoff must use one-time session storage.");
+}
+if (!claimCapabilityJs.includes("getOrCreateClaimAttemptId") || !claimsJs.includes('stableActionKey("claim", attemptId)')) {
+  throw new Error("Claim retry identity must remain stable across capability/session renewal.");
+}
+if (!preferenceAttemptJs.includes("getOrCreatePreferenceAttemptId") || !preferenceAttemptJs.includes("sessionStorage.setItem")) {
+  throw new Error("Preference retry identity must remain stable across capability/session renewal.");
+}
+if (/statusSession|phoneProof|statusToken|actionCapability|detergent|softenerPref|specialInstructions/.test(preferenceAttemptJs.replace(/\*[^]*?\*\//g, ""))) {
+  throw new Error("Preference attempt storage must contain no credential or preference value.");
+}
+for (const forbidden of ["statusSession", "phoneProof", "statusToken"]) {
+  const persisted = new RegExp(`sessionStorage\\.setItem\\([^\\n]+${forbidden}`, "i");
+  if (persisted.test(claimCapabilityJs + claimsJs)) throw new Error(`${forbidden} must not be persisted during claim navigation.`);
+}
+if (!claimsJs.includes("takeClaimCapabilities") || !claimsJs.includes("createClaim(token, capabilities.claimActionCapability")) {
+  throw new Error("Claim page must consume the purpose-bound capabilities and send the claim capability with the in-memory status token.");
+}
+for (const marker of [
+  "Array.from({ length: 5 }", "issueClaimEvidenceCapability", "evidenceCapabilities",
+  "validateClaimEvidenceFiles", "prepareClaimEvidence", "createClaimEvidenceGrant",
+  "uploadClaimEvidence", "claimEvidenceReference", "evidence: uploadedEvidence",
+]) {
+  if (!statusJs.includes(marker) && !claimsJs.includes(marker) && !claimEvidenceJs.includes(marker)) {
+    throw new Error(`Claim evidence integration missing: ${marker}`);
+  }
+}
+if (!claimsJs.includes("uploadedEvidence = await uploadEvidenceFiles(evidenceFiles)")) {
+  throw new Error("Evidence must finish before the single idempotent claim request.");
+}
+if (!claimsJs.includes("!uploadedEvidence.length") || !claimsJs.includes("same in-memory references will be reused")) {
+  throw new Error("A claim retry must reuse finalized evidence references without duplicate uploads.");
+}
+if (!claimsJs.includes("!error?.retryable") || !claimsJs.includes("evidence: uploadedEvidence")) {
+  throw new Error("Retryable claim failures must retain the same in-memory evidence references.");
+}
+if (!claimsJs.includes("pendingClaimInput = Object.freeze") || !claimsJs.includes("...pendingClaimInput")) {
+  throw new Error("An ambiguous claim retry must also reuse the exact original claim fields.");
+}
+if (!claimEvidenceJs.includes('digest("SHA-256"') || !claimEvidenceJs.includes("CLAIM_EVIDENCE_MAX_BYTES") ||
+    !claimEvidenceJs.includes("CLAIM_EVIDENCE_MAX_FILES")) {
+  throw new Error("Claim evidence needs client-side hashing and count/size bounds before network use.");
+}
+for (const marker of ["portalHistory", "updatePreferences", "renderPortalDetails", "renderPreferences", "prior.nextCursor", "append: true"]) {
+  if (!statusJs.includes(marker)) throw new Error(`Verified portal integration missing: ${marker}`);
+}
+for (const marker of ["loyaltySummary", "loadLoyaltySummary", "renderLoyaltySummary", "clearLoyaltySummary", "loyaltyEnabled"]) {
+  if (!statusJs.includes(marker)) throw new Error(`Verified loyalty portal integration missing: ${marker}`);
+}
+if (!statusJs.includes('addEventListener("pagehide", clearMemoryCredentials);') ||
+    !statusJs.includes("clearVerifiedSession();") || !statusJs.includes("clearLoyaltySummary();")) {
+  throw new Error("Verified loyalty data must be cleared on every page exit and credential reset.");
+}
+for (const marker of ['option[data-pud-dynamic]', '[data-preferences-source]', '[data-preferences-note]']) {
+  if (!statusJs.includes(marker)) throw new Error(`Expired portal preference DOM cleanup missing: ${marker}`);
 }
 if (!claimsJs.includes('stableActionKey("claim"') || !bookingJs.includes('stableActionKey("order"')) {
   throw new Error("Claim and booking actions need retry-stable idempotency keys.");
@@ -128,7 +223,7 @@ if (!contractJs.includes('"waitlistContinuationToken"') || !paymentJs.includes("
 if (/trackFunnel\([^)]*waitlistContinuation/i.test(bookingJs)) {
   throw new Error("Waitlist continuation tokens must never enter analytics.");
 }
-if (!contractJs.includes('["token", "cadence", "preferredRouteRule"') || contractJs.includes('["token", "addressId", "cadence"')) {
+if (!contractJs.includes('["token", "actionCapability", "cadence", "preferredRouteRule"') || contractJs.includes('["token", "addressId", "cadence"')) {
   throw new Error("Recurring create must use safe server defaults without exposing an address ID.");
 }
 
@@ -163,7 +258,33 @@ if (memoryKey !== await stableActionKey("memory-fallback", "retry-intent")) {
   throw new Error("Idempotency keys were unstable when browser storage was unavailable.");
 }
 
-const { requestJson } = await import("../assets/js/pud-api.js");
+const { requestJson, requestRaw } = await import("../assets/js/pud-api.js");
+let rawUploadOptions;
+globalThis.fetch = async (_url, options) => {
+  rawUploadOptions = options;
+  return new Response(JSON.stringify({
+    ok: true,
+    data: {
+      assetId: "asset_reference_1234",
+      sha256: "a".repeat(64),
+      mimeType: "image/png",
+      byteSize: 3,
+      retentionUntil: "2027-07-15T00:00:00Z",
+    },
+  }), { status: 201, headers: { "content-type": "application/json" } });
+};
+const rawBytes = new Uint8Array([1, 2, 3]);
+await requestRaw("/api/pud/orders/claim-evidence/upload", {
+  body: rawBytes,
+  contentType: "image/png",
+  headers: { "x-pud-upload-grant": "upload-grant-at-least-sixteen" },
+  timeoutMs: 100,
+});
+if (rawUploadOptions?.credentials !== "omit" || rawUploadOptions?.cache !== "no-store" ||
+    rawUploadOptions?.referrerPolicy !== "no-referrer" || rawUploadOptions?.body !== rawBytes ||
+    rawUploadOptions?.headers?.["x-pud-upload-grant"] !== "upload-grant-at-least-sixteen") {
+  throw new Error("Raw evidence upload did not preserve the private request policy, grant header, and exact bytes.");
+}
 globalThis.fetch = (_url, options = {}) => new Promise((_resolve, reject) => {
   const abort = () => {
     const error = new Error("aborted");

@@ -56,6 +56,134 @@
   margin: 0 0 .4rem;
 }
 
+.pud-session-state {
+  border-left: 4px solid var(--line);
+  color: var(--muted);
+  margin: 1rem 0 0;
+  padding: .5rem .75rem;
+}
+
+.pud-session-state[data-active="true"] {
+  border-color: var(--green);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+.pud-receipt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.5rem;
+  margin: 1rem 0;
+}
+
+.pud-receipt-grid > div {
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: .6rem 0;
+}
+
+.pud-receipt-grid dt {
+  color: var(--muted);
+}
+
+.pud-receipt-grid dd {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  margin: 0;
+  text-align: right;
+}
+
+.pud-receipt-grid .pud-receipt-total {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.pud-receipt-grid .pud-receipt-total dt {
+  color: inherit;
+  font-weight: 800;
+}
+
+.pud-history-card {
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.pud-history-card > header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.pud-history-card h4,
+.pud-history-card h5 {
+  margin: 0;
+}
+
+.pud-history-summary {
+  margin: .75rem 0;
+}
+
+.pud-history-receipt {
+  border-top: 1px solid var(--line);
+  padding-top: .75rem;
+}
+
+.pud-history-receipt summary {
+  color: var(--green-dark);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.pud-history-claims {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
+}
+
+.pud-preferences {
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+}
+
+.pud-loyalty-balance {
+  align-items: baseline;
+  background: #f1f8f3;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.pud-loyalty-balance span {
+  color: var(--muted);
+}
+
+.pud-loyalty-balance strong {
+  color: var(--green-dark);
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pud-loyalty-history {
+  display: grid;
+  gap: .65rem;
+  margin: .75rem 0;
+  padding-left: 1.5rem;
+}
+
+.pud-loyalty-history li {
+  padding-left: .25rem;
+}
+
 .pud-inline-form {
   max-width: 660px;
   margin-top: 1rem;
@@ -122,7 +250,8 @@
 
 @media (max-width: 600px) {
   .pud-token-form,
-  .pud-status-grid {
+  .pud-status-grid,
+  .pud-receipt-grid {
     grid-template-columns: 1fr;
   }
 

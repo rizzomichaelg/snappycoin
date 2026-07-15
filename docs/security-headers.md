@@ -18,7 +18,13 @@ The public site is currently static HTML on GitHub Pages. Static meta CSP tags a
 
 ## Third-Party Scripts
 
-Cloudflare Turnstile is the only third-party script needed by the promo form. It cannot be pinned with Subresource Integrity because Cloudflare serves a changing challenge script. Keep it limited through `script-src` and `frame-src`.
+Cloudflare Turnstile is used by the promo form, pickup booking, and private-status phone step-up. It cannot be pinned with Subresource Integrity because Cloudflare serves a changing challenge script. Keep it limited through `script-src`, `connect-src`, and `frame-src`. The private status page separately permits Stripe.js for payment remediation and does not load analytics.
+
+Private status and claim pages use `no-referrer`, `noindex`, and `no-store` metadata. The status token remains in the private status-link fragment and is never copied into Web Storage. A verified phone proof, status session, portal history, saved-preference view, and loyalty summary remain in JavaScript/page memory only and are cleared on expiry, link rotation or revocation, and page exit.
+
+Claim navigation is the narrow credential exception: one short-lived `open_claim` capability and no more than five short-lived `upload_claim_evidence` capabilities cross the same-tab navigation in `sessionStorage`. Each is already purpose-bound, and the claim module removes the complete bundle during initialization, before any submission. The status token fragment is also removed immediately on the claim page. The bundle contains only those action capabilities, their expiries, and a random attempt ID—never the status token, status session, phone proof, customer data, or form values. The optional claim picker accepts at most five JPEG, PNG, or PDF files of at most 5 MB each. The browser hashes each file, the backend quarantines/scans/sanitizes it, and only returned immutable `{assetId, sha256, mimeType}` references are included in the single idempotent claim request. Those references remain page-memory-only and are reused without re-upload after an ambiguous claim response. If an upload fails, the frontend does not open a claim and does not imply that evidence was attached.
+
+Non-secret random claim and preference attempt IDs may remain in same-tab storage for up to 24 hours so an authorized retry keeps the original idempotency identity; they contain no token, session, proof, capability, customer data, form value, evidence reference, or preference value.
 
 Promo runtime config should stay in same-origin JavaScript or data attributes. The current page loads `assets/js/promo-config.js` before Turnstile and the signup script so production hosts use the production API while local/non-production hosts use staging. Do not add inline JavaScript.
 

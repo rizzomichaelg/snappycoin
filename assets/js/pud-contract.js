@@ -33,63 +33,97 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
     { idempotent: true },
   ),
   "/api/pud/orders/status": define("StatusTokenRequest", ["token"]),
+  "/api/pud/orders/status-session": define("StatusSessionRequest", ["token", "phoneProof"]),
+  "/api/pud/orders/history": define("PortalHistoryRequest", ["token", "statusSession"], ["cursor", "limit"]),
+  "/api/pud/loyalty": define("LoyaltyCustomerRequest", ["token", "statusSession"], ["limit"]),
+  "/api/pud/orders/action-capability": define("ActionCapabilityRequest", ["token", "statusSession", "purpose"]),
+  "/api/pud/orders/claim-evidence/capability": define("ClaimEvidenceCapabilityRequest", ["token", "statusSession"]),
+  "/api/pud/orders/claim-evidence/grant": define(
+    "ClaimEvidenceGrantRequest",
+    ["token", "actionCapability", "sha256", "byteSize", "mimeType"],
+  ),
   "/api/pud/orders/cancel": define(
     "CancelOrderRequest",
-    ["token", "reason", "expectedVersion", "idempotencyKey"],
+    ["token", "actionCapability", "reason", "expectedVersion", "idempotencyKey"],
     [],
     { idempotent: true },
   ),
   "/api/pud/orders/reschedule-request": define(
     "RescheduleRequest",
-    ["token", "routeProof", "expectedVersion", "idempotencyKey"],
+    ["token", "actionCapability", "routeProof", "expectedVersion", "idempotencyKey"],
     ["reason"],
     { idempotent: true },
   ),
-  "/api/pud/orders/payment-session": define("StatusTokenRequest", ["token"]),
+  "/api/pud/orders/payment-session": define("PaymentSessionRequest", ["token", "actionCapability"]),
   "/api/pud/orders/payment-method": define(
     "PaymentMethodRequest",
-    ["token", "setupIntentId", "idempotencyKey"],
+    ["token", "actionCapability", "setupIntentId", "idempotencyKey"],
     [],
     { idempotent: true },
   ),
-  "/api/pud/orders/reorder": define("ReorderRequest", ["token"], ["proposalId"]),
+  "/api/pud/orders/preferences": define(
+    "PreferencesUpdateRequest",
+    ["token", "actionCapability", "expectedVersion", "detergent", "softenerPref", "idempotencyKey"],
+    ["specialInstructions"],
+    { idempotent: true },
+  ),
+  "/api/pud/orders/reorder": define("ReorderRequest", ["token", "actionCapability"], ["proposalId"]),
   "/api/pud/orders/tip": define(
     "TipRequest",
-    ["token", "amountCents", "idempotencyKey"],
+    ["token", "actionCapability", "amountCents", "idempotencyKey"],
     [],
     { idempotent: true },
   ),
   "/api/pud/orders/claim": define(
     "ClaimRequest",
-    ["token", "claimType", "description", "idempotencyKey"],
+    ["token", "actionCapability", "claimType", "description", "idempotencyKey"],
     ["requestedAmountCents", "evidence"],
     { idempotent: true },
   ),
   "/api/pud/recurring": define(
     "RecurringCreateRequest",
-    ["token", "cadence", "preferredRouteRule", "preferredBags", "detergent", "softenerPref", "idempotencyKey"],
+    ["token", "actionCapability", "cadence", "preferredRouteRule", "preferredBags", "detergent", "softenerPref", "idempotencyKey"],
     ["specialInstructions"],
     { idempotent: true },
   ),
   "/api/pud/recurring/pause": define(
     "RecurringActionRequest",
-    ["token", "scheduleId", "expectedVersion", "idempotencyKey"],
+    ["token", "actionCapability", "scheduleId", "expectedVersion", "idempotencyKey"],
     ["proposalId", "reason"],
     { idempotent: true },
   ),
   "/api/pud/recurring/skip": define(
     "RecurringActionRequest",
-    ["token", "scheduleId", "expectedVersion", "idempotencyKey"],
+    ["token", "actionCapability", "scheduleId", "expectedVersion", "idempotencyKey"],
     ["proposalId", "reason"],
     { idempotent: true },
   ),
   "/api/pud/recurring/resume": define(
     "RecurringActionRequest",
-    ["token", "scheduleId", "expectedVersion", "idempotencyKey"],
+    ["token", "actionCapability", "scheduleId", "expectedVersion", "idempotencyKey"],
     ["proposalId", "reason"],
     { idempotent: true },
   ),
+  "/api/pud/orders/status-token/rotate": define(
+    "StatusTokenMutationRequest",
+    ["token", "actionCapability", "expectedVersion", "idempotencyKey"],
+    [],
+    { idempotent: true },
+  ),
+  "/api/pud/orders/status-token/revoke": define(
+    "StatusTokenMutationRequest",
+    ["token", "actionCapability", "expectedVersion", "idempotencyKey"],
+    [],
+    { idempotent: true },
+  ),
 });
+
+export const PUD_ACTION_PURPOSES = Object.freeze([
+  "cancel_order", "reschedule_order", "payment_session", "replace_payment_method",
+  "reorder", "add_tip", "open_claim", "create_recurring", "pause_recurring",
+  "skip_recurring", "resume_recurring", "update_preferences", "rotate_status_token",
+  "revoke_status_token", "upload_claim_evidence",
+]);
 
 export function contractBody(path, input) {
   const contract = PUD_PUBLIC_REQUEST_CONTRACTS[path];
@@ -107,7 +141,10 @@ export function contractBody(path, input) {
 
 export function assertPublicConfig(value) {
   const result = object(value, "PublicConfig");
-  for (const field of ["publicEnabled", "bookingEnabled", "recurringEnabled", "tipsEnabled", "referralsEnabled", "claimsEnabled"]) {
+  for (const field of [
+    "publicEnabled", "bookingEnabled", "recurringEnabled", "tipsEnabled", "referralsEnabled",
+    "claimsEnabled", "loyaltyEnabled", "claimEvidenceEnabled",
+  ]) {
     boolean(result[field], `PublicConfig.${field}`);
   }
   if (result.stripePublishableKey !== null && result.stripePublishableKey !== undefined) string(result.stripePublishableKey, "PublicConfig.stripePublishableKey");
@@ -117,6 +154,29 @@ export function assertPublicConfig(value) {
   for (const field of ["pricePerLbCents", "minimumCents", "deliveryFeeCents"]) nonnegativeInteger(pricing[field], `PublicConfig.pricing.${field}`);
   string(pricing.version, "PublicConfig.pricing.version");
   object(result.consentVersions, "PublicConfig.consentVersions");
+  return result;
+}
+
+export function assertPhoneStart(value) {
+  const result = object(value, "PhoneStartData");
+  string(result.verificationId, "PhoneStartData.verificationId");
+  if (!/^\d{4}$/.test(string(result.phoneLast4, "PhoneStartData.phoneLast4"))) {
+    throw new TypeError("PhoneStartData.phoneLast4 must contain four digits.");
+  }
+  timestamp(result.expiresAt, "PhoneStartData.expiresAt");
+  return result;
+}
+
+export function assertPhoneResend(value) {
+  const result = object(value, "PhoneResendData");
+  timestamp(result.expiresAt, "PhoneResendData.expiresAt");
+  return result;
+}
+
+export function assertPhoneVerify(value) {
+  const result = object(value, "PhoneVerifyData");
+  string(result.phoneProof, "PhoneVerifyData.phoneProof");
+  timestamp(result.expiresAt, "PhoneVerifyData.expiresAt");
   return result;
 }
 
@@ -132,6 +192,7 @@ export function assertOrderStatus(value) {
   }
   boolean(result.canCreateRecurring, "SafeOrderStatus.canCreateRecurring");
   for (const field of ["totalCents", "refundedCents"]) nonnegativeInteger(result[field], `SafeOrderStatus.${field}`);
+  assertItemizedReceipt(result.receipt);
   if (!Array.isArray(result.rescheduleOptions)) throw new TypeError("SafeOrderStatus.rescheduleOptions must be an array.");
   if (!Array.isArray(result.recurringSchedules)) throw new TypeError("SafeOrderStatus.recurringSchedules must be an array.");
   result.rescheduleOptions.forEach(assertRouteOption);
@@ -143,6 +204,182 @@ export function assertOrderStatus(value) {
     throw new TypeError("SafeOrderStatus contains a private implementation field.");
   }
   return result;
+}
+
+export function assertStatusSession(value) {
+  const result = object(value, "StatusSessionData");
+  string(result.statusSession, "StatusSessionData.statusSession");
+  timestamp(result.expiresAt, "StatusSessionData.expiresAt");
+  timestamp(result.phoneVerifiedAt, "StatusSessionData.phoneVerifiedAt");
+  positiveInteger(result.orderVersion, "StatusSessionData.orderVersion");
+  return result;
+}
+
+export function assertActionCapability(value) {
+  const result = object(value, "ActionCapabilityData");
+  string(result.actionCapability, "ActionCapabilityData.actionCapability");
+  oneOf(result.purpose, PUD_ACTION_PURPOSES, "ActionCapabilityData.purpose");
+  timestamp(result.expiresAt, "ActionCapabilityData.expiresAt");
+  positiveInteger(result.orderVersion, "ActionCapabilityData.orderVersion");
+  return result;
+}
+
+export function assertClaimEvidenceCapability(value) {
+  const result = assertActionCapability(value);
+  if (result.purpose !== "upload_claim_evidence") {
+    throw new TypeError("ClaimEvidenceCapabilityData.purpose must be upload_claim_evidence.");
+  }
+  return result;
+}
+
+export function assertClaimEvidenceGrant(value) {
+  const result = object(value, "ClaimEvidenceGrantData");
+  string(result.uploadGrant, "ClaimEvidenceGrantData.uploadGrant");
+  timestamp(result.expiresAt, "ClaimEvidenceGrantData.expiresAt");
+  if (result.maxBytes !== 5 * 1024 * 1024) {
+    throw new TypeError("ClaimEvidenceGrantData.maxBytes must match the 5 MB public contract.");
+  }
+  if (!Array.isArray(result.acceptedMimeTypes) || result.acceptedMimeTypes.length !== 3 ||
+      new Set(result.acceptedMimeTypes).size !== 3) {
+    throw new TypeError("ClaimEvidenceGrantData.acceptedMimeTypes must contain the three unique supported types.");
+  }
+  result.acceptedMimeTypes.forEach((mimeType) => oneOf(
+    mimeType,
+    ["image/jpeg", "image/png", "application/pdf"],
+    "ClaimEvidenceGrantData.acceptedMimeTypes",
+  ));
+  return result;
+}
+
+export function assertClaimEvidenceAsset(value) {
+  const result = object(value, "ClaimEvidenceAssetData");
+  string(result.assetId, "ClaimEvidenceAssetData.assetId");
+  if (!/^[a-f0-9]{64}$/.test(string(result.sha256, "ClaimEvidenceAssetData.sha256"))) {
+    throw new TypeError("ClaimEvidenceAssetData.sha256 must be a lowercase SHA-256 digest.");
+  }
+  oneOf(result.mimeType, ["image/jpeg", "image/png", "application/pdf"], "ClaimEvidenceAssetData.mimeType");
+  positiveInteger(result.byteSize, "ClaimEvidenceAssetData.byteSize");
+  if (result.byteSize > 5 * 1024 * 1024) throw new TypeError("ClaimEvidenceAssetData.byteSize exceeds 5 MB.");
+  timestamp(result.retentionUntil, "ClaimEvidenceAssetData.retentionUntil");
+  return result;
+}
+
+export function assertLoyaltySummary(value) {
+  const result = object(value, "LoyaltySummaryData");
+  oneOf(result.currency, ["USD"], "LoyaltySummaryData.currency");
+  nonnegativeInteger(result.balanceCents, "LoyaltySummaryData.balanceCents");
+  oneOf(result.status, ["not_enrolled", "active", "review_required", "suspended", "closed"], "LoyaltySummaryData.status");
+  if (!Array.isArray(result.history)) throw new TypeError("LoyaltySummaryData.history must be an array.");
+  result.history.forEach((value) => {
+    const entry = object(value, "LoyaltyHistoryEntry");
+    string(entry.transactionId, "LoyaltyHistoryEntry.transactionId");
+    oneOf(entry.type, [
+      "earn", "redeem", "reverse_earn", "reverse_redeem", "expire", "manual_credit", "manual_debit",
+    ], "LoyaltyHistoryEntry.type");
+    signedInteger(entry.amountCents, "LoyaltyHistoryEntry.amountCents");
+    nonnegativeInteger(entry.balanceAfterCents, "LoyaltyHistoryEntry.balanceAfterCents");
+    nullableString(entry.orderNumber, "LoyaltyHistoryEntry.orderNumber");
+    nullableTimestamp(entry.expiresAt, "LoyaltyHistoryEntry.expiresAt");
+    timestamp(entry.createdAt, "LoyaltyHistoryEntry.createdAt");
+  });
+  return result;
+}
+
+export function assertPortalHistory(value) {
+  const result = object(value, "PortalHistoryData");
+  string(result.anchorOrderNumber, "PortalHistoryData.anchorOrderNumber");
+  boolean(result.hasMore, "PortalHistoryData.hasMore");
+  if (result.nextCursor !== undefined) string(result.nextCursor, "PortalHistoryData.nextCursor");
+  if (result.hasMore && !result.nextCursor) throw new TypeError("PortalHistoryData.nextCursor is required when more history exists.");
+  if (!result.hasMore && result.nextCursor !== undefined) throw new TypeError("PortalHistoryData.nextCursor must be omitted on the final page.");
+  if (!Array.isArray(result.orders)) throw new TypeError("PortalHistoryData.orders must be an array.");
+  result.orders.forEach((value) => {
+    const order = object(value, "PortalHistoryOrder");
+    string(order.orderNumber, "PortalHistoryOrder.orderNumber");
+    oneOf(order.serviceMode, ["pickup_delivery", "walk_in"], "PortalHistoryOrder.serviceMode");
+    oneOf(order.fulfillmentStatus, ["submitted", "confirmed", "picked_up", "weighed", "ready", "out_for_delivery", "delivered", "canceled"], "PortalHistoryOrder.fulfillmentStatus");
+    paymentStatus(order.paymentStatus, "PortalHistoryOrder.paymentStatus");
+    timestamp(order.createdAt, "PortalHistoryOrder.createdAt");
+    nullableTimestamp(order.deliveredAt, "PortalHistoryOrder.deliveredAt");
+    timestamp(order.updatedAt, "PortalHistoryOrder.updatedAt");
+    assertItemizedReceipt(order.receipt);
+    if (!Array.isArray(order.claims)) throw new TypeError("PortalHistoryOrder.claims must be an array.");
+    order.claims.forEach(assertPortalClaim);
+  });
+  assertPortalPreferences(result.preferences);
+  return result;
+}
+
+export function assertPreferencesUpdate(value) {
+  const result = object(value, "PreferencesUpdateData");
+  assertPortalPreferences(result.preferences);
+  assertOrderStatus(result.status);
+  boolean(result.duplicate, "PreferencesUpdateData.duplicate");
+  return result;
+}
+
+export function assertStatusTokenRotation(value) {
+  const result = object(value, "StatusTokenRotationData");
+  string(result.statusToken, "StatusTokenRotationData.statusToken");
+  assertOrderStatus(result.status);
+  return result;
+}
+
+export function assertStatusTokenRevocation(value) {
+  const result = object(value, "StatusTokenRevocationData");
+  if (result.revoked !== true) throw new TypeError("StatusTokenRevocationData.revoked must be true.");
+  string(result.orderNumber, "StatusTokenRevocationData.orderNumber");
+  positiveInteger(result.version, "StatusTokenRevocationData.version");
+  return result;
+}
+
+export function assertClaimResult(value) {
+  const result = object(value, "ClaimOpenData");
+  string(result.claimId, "ClaimOpenData.claimId");
+  string(result.claimType, "ClaimOpenData.claimType");
+  oneOf(result.status, ["open", "investigating", "approved", "denied", "resolved", "withdrawn"], "ClaimOpenData.status");
+  if (result.requestedAmountCents !== null) nonnegativeInteger(result.requestedAmountCents, "ClaimOpenData.requestedAmountCents");
+  timestamp(result.openedAt, "ClaimOpenData.openedAt");
+  positiveInteger(result.version, "ClaimOpenData.version");
+  boolean(result.duplicate, "ClaimOpenData.duplicate");
+  return result;
+}
+
+function assertItemizedReceipt(value) {
+  const receipt = object(value, "ItemizedReceipt");
+  oneOf(receipt.currency, ["usd"], "ItemizedReceipt.currency");
+  if (receipt.weightTenths !== null) nonnegativeInteger(receipt.weightTenths, "ItemizedReceipt.weightTenths");
+  for (const field of [
+    "pricePerLbCents", "weightChargeCents", "minimumCents", "minimumAdjustmentCents",
+    "baseChargeCents", "deliveryFeeCents", "discountCents", "taxCents", "tipCents",
+    "totalCents", "amountCapturedCents", "refundedCents", "netPaidCents",
+  ]) nonnegativeInteger(receipt[field], `ItemizedReceipt.${field}`);
+  string(receipt.pricingVersion, "ItemizedReceipt.pricingVersion");
+  string(receipt.taxRuleVersion, "ItemizedReceipt.taxRuleVersion");
+  return receipt;
+}
+
+function assertPortalClaim(value) {
+  const claim = object(value, "PortalClaimSummary");
+  string(claim.claimId, "PortalClaimSummary.claimId");
+  string(claim.claimType, "PortalClaimSummary.claimType");
+  oneOf(claim.status, ["open", "investigating", "approved", "denied", "resolved", "withdrawn"], "PortalClaimSummary.status");
+  nullableMoney(claim.requestedAmountCents, "PortalClaimSummary.requestedAmountCents");
+  nullableMoney(claim.approvedAmountCents, "PortalClaimSummary.approvedAmountCents");
+  timestamp(claim.openedAt, "PortalClaimSummary.openedAt");
+  nullableTimestamp(claim.resolvedAt, "PortalClaimSummary.resolvedAt");
+  return claim;
+}
+
+function assertPortalPreferences(value) {
+  const preferences = object(value, "PortalPreferences");
+  string(preferences.sourceOrderNumber, "PortalPreferences.sourceOrderNumber");
+  string(preferences.detergent, "PortalPreferences.detergent");
+  string(preferences.softenerPref, "PortalPreferences.softenerPref");
+  optionalString(preferences.specialInstructions, "PortalPreferences.specialInstructions");
+  boolean(preferences.canUpdate, "PortalPreferences.canUpdate");
+  positiveInteger(preferences.orderVersion, "PortalPreferences.orderVersion");
+  return preferences;
 }
 
 export function assertPaymentSession(value) {
@@ -258,6 +495,22 @@ function string(value, label) {
   return value;
 }
 
+function timestamp(value, label) {
+  string(value, label);
+  if (!value.endsWith("Z") || Number.isNaN(Date.parse(value))) throw new TypeError(`${label} must be a UTC timestamp.`);
+  return value;
+}
+
+function nullableTimestamp(value, label) {
+  if (value === null) return null;
+  return timestamp(value, label);
+}
+
+function nullableMoney(value, label) {
+  if (value === null) return null;
+  return nonnegativeInteger(value, label);
+}
+
 function oneOf(value, allowed, label) {
   string(value, label);
   if (!allowed.includes(value)) throw new TypeError(`${label} is not supported.`);
@@ -290,5 +543,10 @@ function positiveInteger(value, label) {
 
 function nonnegativeInteger(value, label) {
   if (!Number.isSafeInteger(value) || value < 0) throw new TypeError(`${label} must be a nonnegative integer.`);
+  return value;
+}
+
+function signedInteger(value, label) {
+  if (!Number.isSafeInteger(value)) throw new TypeError(`${label} must be an integer.`);
   return value;
 }

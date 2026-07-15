@@ -1,16 +1,26 @@
 import {
   cancelOrder,
   createRecurring,
+  createStatusSession,
   getPublicConfig,
+  issueActionCapability,
+  issueClaimEvidenceCapability,
+  loyaltySummary,
   paymentSession,
+  portalHistory,
   recurringAction,
   reorderOrder,
   replacePaymentMethod,
   requestReschedule,
+  revokeStatusToken,
+  rotateStatusToken,
   statusOrder,
   tipOrder,
+  updatePreferences,
 } from "./pud-api.js";
-import { stableActionKey } from "./pud-idempotency.js";
+import { getOrCreateClaimAttemptId, storeClaimCapabilities } from "./pud-claim-capability.js";
+import { retireActionKey, stableActionKey } from "./pud-idempotency.js";
+import { completePreferenceAttempt, getOrCreatePreferenceAttemptId } from "./pud-preference-attempt.js";
 import {
   confirmPaymentMethodReplacement,
   confirmPaymentRemediation,
@@ -18,16 +28,38 @@ import {
   preparePaymentMethodReplacement,
 } from "./pud-payment.js";
 import { PUD_CONFIG } from "./pud-config.js";
+import {
+  beginPhoneVerification,
+  confirmPhoneVerification,
+  normalizeUsPhone,
+  resendPhoneVerification,
+} from "./pud-phone.js";
 import { storeReorderBootstrap } from "./pud-reorder.js";
 import { formatRoute } from "./pud-scheduling.js";
 
 const root = document.querySelector("[data-pud-status]");
 const $ = (selector) => root.querySelector(selector);
+const authorizationErrors = new Set([
+  "PUD_STATUS_STEP_UP_INVALID",
+  "PUD_STATUS_SESSION_INVALID",
+  "PUD_PHONE_PROOF_INVALID",
+  "PUD_PHONE_PROOF_REPLAYED",
+]);
+
 let token = "";
 let order = null;
 let publicConfig = null;
 let actionInFlight = false;
 let recoverySetupIntentId = "";
+let confirmedReplacementSetupIntentId = "";
+let verificationId = "";
+let verifiedSession = null;
+let sessionExpiryTimer = 0;
+let turnstileSiteKey = "";
+let portalDetails = null;
+let portalPreferences = null;
+let portalLoyalty = null;
+let pendingRotation = null;
 
 if (root && window.top !== window.self) {
   root.replaceChildren(Object.assign(document.createElement("p"), {
@@ -42,6 +74,7 @@ async function boot() {
   token = fragmentToken();
   replacePrivateLocation(token);
   bind();
+  renderStepUpState();
   if (!token) return message("Open the private status link from your confirmation message.");
   await refresh();
 }
@@ -49,6 +82,14 @@ async function boot() {
 function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
+  // Keep this listener for every navigation. A page restored from the
+  // back-forward cache may be verified again before a later pagehide.
+  window.addEventListener("pagehide", clearMemoryCredentials);
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    clearMemoryCredentials();
+    renderStepUpState("Fresh phone verification is required after returning to this page.");
+  });
 }
 
 async function onSubmit(event) {
@@ -58,6 +99,10 @@ async function onSubmit(event) {
   if (form.id === "pud-status-form") {
     const submitted = String(new FormData(form).get("token") || "").trim().replace(/^#/, "");
     if (!submitted) return message("Enter the private token from your confirmation message.");
+    clearVerifiedSession();
+    clearStepUpVerification();
+    closePaymentReplacement();
+    pendingRotation = null;
     token = submitted;
     replacePrivateLocation(token);
     publicConfig = null;
@@ -65,6 +110,9 @@ async function onSubmit(event) {
     return;
   }
   if (!token || !order) return message("Refresh the private order before using this control.");
+  if (form.id === "pud-step-up-phone-form") return runAction(() => submitStepUpPhone(form));
+  if (form.id === "pud-step-up-code-form") return runAction(() => submitStepUpCode(form));
+  if (form.id === "pud-preferences-form") return runAction(() => submitPreferences(form));
   if (form.id === "pud-reschedule-form") await runAction(() => submitReschedule(form));
   if (form.id === "pud-payment-method-form") await runAction(submitPaymentMethod);
   if (form.id === "pud-tip-form") await runAction(() => submitTip(form));
@@ -73,19 +121,35 @@ async function onSubmit(event) {
 
 async function onClick(event) {
   const button = event.target.closest("[data-action]");
-  if (!button || actionInFlight || !token) return;
+  if (!button || actionInFlight) return;
   const action = button.dataset.action;
   if (action === "refresh") return runAction(refresh);
-  if (!order) return message("Refresh the private order before using this control.");
+  if (action === "history-more") return runAction(() => loadPortalHistory({ append: true }));
+  if (action === "step-up-restart") {
+    clearVerifiedSession();
+    clearStepUpVerification();
+    renderStepUpState();
+    $("#pud-step-up-phone-form input[name=phone]")?.focus();
+    return;
+  }
+  if (action === "step-up-resend") return runAction(resendStepUpCode);
+  if (!token || !order) return message("Refresh the private order before using this control.");
 
   if (action === "cancel" && confirm("Cancel this order? This cannot be undone.")) {
     return runAction(cancelCurrentOrder);
   }
   if (action === "reorder") return runAction(() => beginBookingBootstrap());
+  if (action === "open-claim") return runAction(openClaimForm);
   if (action === "payment-replace") return runAction(startPaymentReplacement);
   if (action === "payment-replace-cancel") {
     closePaymentReplacement();
     return;
+  }
+  if (action === "rotate-status-token" && confirm("Rotate this private link now? The current link will stop working immediately.")) {
+    return runAction(rotatePrivateLink);
+  }
+  if (action === "revoke-status-token" && confirm("Revoke this private link permanently? You will lose online access from this page.")) {
+    return runAction(revokePrivateLink);
   }
   if (["recurring-pause", "recurring-resume", "recurring-skip"].includes(action)) {
     return runAction(() => updateRecurring(button));
@@ -99,15 +163,110 @@ async function onClick(event) {
 async function refresh() {
   try {
     const [config, status] = await Promise.all([
-      getPublicConfig(),
+      publicConfig ? Promise.resolve(publicConfig) : getPublicConfig(),
       statusOrder(token),
     ]);
     publicConfig = config;
     order = status;
     closePaymentReplacement();
     render(status);
+    try {
+      await setupTurnstile(config.turnstileSiteKey);
+      renderStepUpState();
+    } catch (_error) {
+      renderStepUpState("Read-only status is available, but protected actions cannot load phone verification right now.");
+    }
   } catch (error) {
+    if (["PUD_ORDER_TOKEN_INVALID", "PUD_ORDER_TOKEN_REVOKED"].includes(error?.code)) clearVerifiedSession();
     message(error?.message || "Order status could not be refreshed.");
+    throw error;
+  }
+}
+
+async function submitStepUpPhone(form) {
+  if (!publicConfig?.turnstileSiteKey) throw new Error("Phone verification protection is not configured.");
+  const phone = normalizeUsPhone(new FormData(form).get("phone"));
+  let result;
+  try {
+    result = await beginPhoneVerification(phone, turnstileValue(form));
+  } finally {
+    resetTurnstile(form);
+  }
+  verificationId = result.verificationId;
+  form.reset();
+  const codeForm = $("#pud-step-up-code-form");
+  codeForm.reset();
+  renderStepUpState(`A code was sent to the mobile number ending in ${result.phoneLast4 || phone.slice(-4)}.`);
+  ensureTurnstile(codeForm);
+  codeForm.querySelector("input[name=code]")?.focus();
+}
+
+async function submitStepUpCode(form) {
+  if (!verificationId) throw new Error("Request a new verification code first.");
+  const code = String(new FormData(form).get("code") || "").trim();
+  let verified;
+  let session;
+  try {
+    verified = await confirmPhoneVerification(verificationId, code);
+    session = await createStatusSession(token, verified.phoneProof);
+  } catch (error) {
+    if (["PUD_PHONE_VERIFICATION_EXPIRED", "PUD_PHONE_VERIFICATION_NOT_FOUND"].includes(error?.code)) {
+      clearStepUpVerification();
+      renderStepUpState("That code expired. Enter the mobile number to request a new one.");
+    }
+    throw error;
+  }
+  // phoneProof is never assigned to application state or browser storage.
+  verifiedSession = Object.freeze({
+    value: session.statusSession,
+    expiresAt: session.expiresAt,
+    orderVersion: session.orderVersion,
+  });
+  verificationId = "";
+  form.reset();
+  scheduleSessionExpiry();
+  renderStepUpState();
+  const failures = await loadVerifiedPortal();
+  if (!activeVerifiedSession()) {
+    renderStepUpState("Fresh phone verification is required before protected portal details can load.");
+    message("The phone check completed, but the protected session was rejected or expired. Verify again before making changes.");
+    return;
+  }
+  if (failures.length) {
+    message(`Phone verified. Protected actions are unlocked, but ${failures.join(" and ")} could not load. Try verifying again if the problem continues.`);
+  } else {
+    const loyaltyText = publicConfig?.loyaltyEnabled ? "rewards, " : "";
+    message(`Phone verified. Protected actions, ${loyaltyText}order history, receipts, claims, and preferences are unlocked for this short browser session.`, "success");
+  }
+}
+
+async function resendStepUpCode() {
+  if (!verificationId) throw new Error("Enter the mobile number again to request a code.");
+  const form = $("#pud-step-up-code-form");
+  let result;
+  try {
+    result = await resendPhoneVerification(verificationId, turnstileValue(form));
+  } finally {
+    resetTurnstile(form);
+  }
+  renderStepUpState(`A new code was sent to the mobile number ending in ${result.phoneLast4 || "••••"}.`);
+  form.querySelector("input[name=code]")?.focus();
+}
+
+async function issueCapability(purpose) {
+  const session = activeVerifiedSession();
+  if (!session) {
+    focusStepUp();
+    throw new Error("Verify the mobile number again before using this protected action.");
+  }
+  try {
+    const capability = await issueActionCapability(token, session.value, purpose);
+    if (capability.purpose !== purpose || Date.parse(capability.expiresAt) <= Date.now()) {
+      throw new Error("The action authorization expired before it could be used.");
+    }
+    return capability.actionCapability;
+  } catch (error) {
+    handleAuthorizationError(error);
     throw error;
   }
 }
@@ -116,7 +275,8 @@ async function cancelCurrentOrder() {
   const signature = `${order.orderNumber}:${order.version}:customer_request`;
   const key = await stableActionKey("cancel", signature);
   try {
-    order = await cancelOrder(token, order.version, "customer_request", key);
+    const actionCapability = await issueCapability("cancel_order");
+    order = await cancelOrder(token, actionCapability, order.version, "customer_request", key);
     render(order);
     message("Your order was canceled.", "success");
   } catch (error) {
@@ -133,7 +293,8 @@ async function submitReschedule(form) {
   const signature = `${order.orderNumber}:${order.version}:${route.routeId}:${reason}`;
   const key = await stableActionKey("reschedule", signature);
   try {
-    order = await requestReschedule(token, route.routeProof, order.version, reason, key);
+    const actionCapability = await issueCapability("reschedule_order");
+    order = await requestReschedule(token, actionCapability, route.routeProof, order.version, reason, key);
     render(order);
     message("Your pickup window was updated.", "success");
   } catch (error) {
@@ -142,8 +303,10 @@ async function submitReschedule(form) {
 }
 
 async function startPaymentReplacement() {
-  const session = await paymentSession(token);
+  const actionCapability = await issueCapability("payment_session");
+  const session = await paymentSession(token, actionCapability);
   recoverySetupIntentId = session.setupIntentId;
+  confirmedReplacementSetupIntentId = "";
   const form = $("#pud-payment-method-form");
   const mount = $("#pud-payment-method-element");
   mount.replaceChildren();
@@ -156,13 +319,17 @@ async function startPaymentReplacement() {
 
 async function submitPaymentMethod() {
   if (!recoverySetupIntentId) throw new Error("Start card replacement again before confirming.");
-  // The return URL deliberately omits the bearer fragment. A redirecting
-  // authentication flow can be reopened from the original private link.
-  const setupIntent = await confirmPaymentMethodReplacement(`${location.origin}${PUD_CONFIG.statusPath}`);
-  if (setupIntent.id !== recoverySetupIntentId) throw new Error("Stripe returned a different card setup session.");
-  const signature = `${order.orderNumber}:${setupIntent.id}`;
+  if (!confirmedReplacementSetupIntentId) {
+    // The return URL deliberately omits the bearer fragment. A redirecting
+    // authentication flow can be reopened from the original private link.
+    const setupIntent = await confirmPaymentMethodReplacement(`${location.origin}${PUD_CONFIG.statusPath}`);
+    if (setupIntent.id !== recoverySetupIntentId) throw new Error("Stripe returned a different card setup session.");
+    confirmedReplacementSetupIntentId = setupIntent.id;
+  }
+  const signature = `${order.orderNumber}:${confirmedReplacementSetupIntentId}`;
   const key = await stableActionKey("payment-method", signature);
-  order = await replacePaymentMethod(token, setupIntent.id, key);
+  const actionCapability = await issueCapability("replace_payment_method");
+  order = await replacePaymentMethod(token, actionCapability, confirmedReplacementSetupIntentId, key);
   closePaymentReplacement();
   render(order);
   message("The replacement card was saved and the original payment was retried. Refresh if payment is still processing.", "success");
@@ -178,7 +345,8 @@ async function submitTip(form) {
   if (!confirm(`Add a ${money(amountCents)} tip to ${order.orderNumber}?`)) return;
   const signature = `${order.orderNumber}:${amountCents}`;
   const key = await stableActionKey("tip", signature);
-  const result = await tipOrder(token, amountCents, key);
+  const actionCapability = await issueCapability("add_tip");
+  const result = await tipOrder(token, actionCapability, amountCents, key);
   const confirmed = result.clientSecret ? await confirmPaymentRemediation(publicConfig, result.clientSecret) : null;
   const finalStatus = confirmed?.status || result.status;
   if (!["succeeded", "processing"].includes(finalStatus)) {
@@ -202,9 +370,109 @@ async function submitRecurring(form) {
   };
   const signature = JSON.stringify([order.orderNumber, input]);
   const key = await stableActionKey("recurring-create", signature);
-  await createRecurring(token, input, key);
+  const actionCapability = await issueCapability("create_recurring");
+  await createRecurring(token, actionCapability, input, key);
   await refresh();
   message("Your recurring pickup schedule was created. Future proposals still require your confirmation.", "success");
+}
+
+async function loadPortalHistory({ append = false } = {}) {
+  const session = activeVerifiedSession();
+  if (!session) {
+    clearPortalDetails();
+    throw new Error("Verify the mobile number again before loading order history.");
+  }
+  try {
+    const prior = append ? portalDetails : null;
+    if (append && !prior?.nextCursor) return;
+    const page = await portalHistory(token, session.value, {
+      ...(prior?.nextCursor ? { cursor: prior.nextCursor } : {}),
+      limit: 10,
+    });
+    if (prior && page.anchorOrderNumber !== prior.anchorOrderNumber) {
+      throw new Error("The order-history session changed. Verify again before continuing.");
+    }
+    const known = new Set(prior?.orders.map((item) => item.orderNumber) || []);
+    portalDetails = prior ? {
+      ...page,
+      orders: [...prior.orders, ...page.orders.filter((item) => !known.has(item.orderNumber))],
+    } : page;
+    portalPreferences = portalDetails.preferences;
+    renderPortalDetails(portalDetails);
+    if (append) message("More order history loaded.", "success");
+  } catch (error) {
+    handleAuthorizationError(error);
+    throw error;
+  }
+}
+
+async function loadVerifiedPortal() {
+  const failures = [];
+  try {
+    await loadPortalHistory();
+  } catch (_error) {
+    failures.push("order history and preferences");
+  }
+  if (publicConfig?.loyaltyEnabled && activeVerifiedSession()) {
+    try {
+      await loadLoyaltySummary();
+    } catch (_error) {
+      failures.push("rewards");
+    }
+  } else {
+    clearLoyaltySummary();
+  }
+  return failures;
+}
+
+async function loadLoyaltySummary() {
+  const session = activeVerifiedSession();
+  if (!session) {
+    clearLoyaltySummary();
+    throw new Error("Verify the mobile number again before loading rewards.");
+  }
+  try {
+    portalLoyalty = await loyaltySummary(token, session.value, 25);
+    renderLoyaltySummary(portalLoyalty);
+  } catch (error) {
+    clearLoyaltySummary();
+    handleAuthorizationError(error);
+    throw error;
+  }
+}
+
+async function submitPreferences(form) {
+  const preferences = portalPreferences;
+  if (!preferences?.canUpdate) throw new Error("Saved preferences cannot be changed from this order.");
+  const data = new FormData(form);
+  const specialInstructions = String(data.get("specialInstructions") || "").trim();
+  const input = {
+    expectedVersion: preferences.orderVersion,
+    detergent: String(data.get("detergent") || "").trim(),
+    softenerPref: String(data.get("softenerPref") || "").trim(),
+    ...(specialInstructions ? { specialInstructions } : {}),
+  };
+  const attemptId = getOrCreatePreferenceAttemptId();
+  const key = await stableActionKey("preferences", attemptId);
+  try {
+    const actionCapability = await issueCapability("update_preferences");
+    const result = await updatePreferences(token, actionCapability, input, key);
+    completePreferenceAttempt(attemptId);
+    await retireActionKey("preferences", attemptId);
+    order = result.status;
+    portalPreferences = result.preferences;
+    render(order);
+    renderPreferences(result.preferences);
+    try { await loadPortalHistory(); } catch (_error) { /* the verified update receipt remains authoritative */ }
+    message(result.duplicate ? "These saved preferences were already updated." : "Your saved laundry preferences were updated.", "success");
+  } catch (error) {
+    if (error?.code === "PUD_IDEMPOTENCY_CONFLICT") {
+      completePreferenceAttempt(attemptId);
+      await retireActionKey("preferences", attemptId);
+      throw new Error("An earlier preference request used different details. Review the current preferences, then submit again with a new request.");
+    }
+    await handleVersionConflict(error);
+  }
 }
 
 async function updateRecurring(button) {
@@ -215,8 +483,10 @@ async function updateRecurring(button) {
   if (!schedule) throw new Error("That recurring schedule is no longer available.");
   const signature = `${action}:${scheduleId}:${schedule.version}:${proposalId}`;
   const key = await stableActionKey(`recurring-${action}`, signature);
+  const purpose = action === "pause" ? "pause_recurring" : action === "skip" ? "skip_recurring" : "resume_recurring";
   try {
-    await recurringAction(action, token, {
+    const actionCapability = await issueCapability(purpose);
+    await recurringAction(action, token, actionCapability, {
       scheduleId,
       expectedVersion: schedule.version,
       ...(proposalId ? { proposalId } : {}),
@@ -230,7 +500,8 @@ async function updateRecurring(button) {
 }
 
 async function beginBookingBootstrap(proposalId = "", preferredRouteId = "") {
-  const bootstrap = await reorderOrder(token, proposalId || undefined);
+  const actionCapability = await issueCapability("reorder");
+  const bootstrap = await reorderOrder(token, actionCapability, proposalId || undefined);
   if (bootstrap.bookingBlocked) return message("Resolve the payment hold before starting another pickup.");
   storeReorderBootstrap({
     ...bootstrap,
@@ -238,6 +509,122 @@ async function beginBookingBootstrap(proposalId = "", preferredRouteId = "") {
     ...(preferredRouteId ? { preferredRouteId } : {}),
   });
   location.assign(`${PUD_CONFIG.bookingPath}#${proposalId ? "proposal" : "reorder"}`);
+}
+
+async function openClaimForm() {
+  const session = activeVerifiedSession();
+  if (!session) {
+    focusStepUp();
+    throw new Error("Verify the mobile number again before opening a protected claim.");
+  }
+  const claimCapabilityPromise = issueActionCapabilityForTransit("open_claim");
+  const evidenceCapabilitiesPromise = publicConfig?.claimEvidenceEnabled
+    ? Promise.all(Array.from({ length: 5 }, () => issueClaimEvidenceCapabilityForTransit(session)))
+    : Promise.resolve([]);
+  const [claimCapability, evidenceCapabilities] = await Promise.all([
+    claimCapabilityPromise,
+    evidenceCapabilitiesPromise,
+  ]);
+  storeClaimCapabilities({
+    claimActionCapability: claimCapability.actionCapability,
+    claimExpiresAt: claimCapability.expiresAt,
+    evidenceCapabilities,
+    attemptId: getOrCreateClaimAttemptId(),
+  });
+  location.assign(`${PUD_CONFIG.claimPath}#${encodeURIComponent(token)}`);
+}
+
+async function issueActionCapabilityForTransit(purpose) {
+  const session = activeVerifiedSession();
+  if (!session) {
+    focusStepUp();
+    throw new Error("Verify the mobile number again before opening a protected claim.");
+  }
+  try {
+    const capability = await issueActionCapability(token, session.value, purpose);
+    if (capability.purpose !== purpose || Date.parse(capability.expiresAt) <= Date.now()) {
+      throw new Error("The claim authorization expired before the form could open.");
+    }
+    return capability;
+  } catch (error) {
+    handleAuthorizationError(error);
+    throw error;
+  }
+}
+
+async function issueClaimEvidenceCapabilityForTransit(session) {
+  try {
+    const capability = await issueClaimEvidenceCapability(token, session.value);
+    if (capability.purpose !== "upload_claim_evidence" || Date.parse(capability.expiresAt) <= Date.now()) {
+      throw new Error("An evidence authorization expired before the form could open.");
+    }
+    return Object.freeze({
+      actionCapability: capability.actionCapability,
+      expiresAt: capability.expiresAt,
+    });
+  } catch (error) {
+    handleAuthorizationError(error);
+    throw error;
+  }
+}
+
+async function rotatePrivateLink() {
+  const currentToken = token;
+  const expectedVersion = order.version;
+  let pending = pendingRotation;
+  if (!pending || pending.token !== currentToken || pending.expectedVersion !== expectedVersion) {
+    const signature = `${order.orderNumber}:${expectedVersion}:rotate`;
+    pending = {
+      token: currentToken,
+      expectedVersion,
+      key: await stableActionKey("status-token-rotate", signature),
+      actionCapability: await issueCapability("rotate_status_token"),
+    };
+    pendingRotation = pending;
+  }
+  try {
+    const result = await rotateStatusToken(
+      pending.token,
+      pending.actionCapability,
+      pending.expectedVersion,
+      pending.key,
+    );
+    pendingRotation = null;
+    token = result.statusToken;
+    order = result.status;
+    replacePrivateLocation(token);
+    clearVerifiedSession();
+    clearStepUpVerification();
+    closePaymentReplacement();
+    render(order);
+    renderStepUpState();
+    message("Your private link was rotated. This page now contains the replacement link; the old link no longer works.", "success");
+  } catch (error) {
+    // A network timeout is ambiguous: the Worker may have committed. Retain
+    // the exact in-memory capability/key so the recovery receipt can return
+    // the same replacement token. Definitive API responses clear the attempt.
+    if (error?.status !== 0) pendingRotation = null;
+    await handleVersionConflict(error);
+  }
+}
+
+async function revokePrivateLink() {
+  const orderNumber = order.orderNumber;
+  const signature = `${orderNumber}:${order.version}:revoke`;
+  const key = await stableActionKey("status-token-revoke", signature);
+  const actionCapability = await issueCapability("revoke_status_token");
+  try {
+    await revokeStatusToken(token, actionCapability, order.version, key);
+    clearMemoryCredentials();
+    token = "";
+    order = null;
+    replacePrivateLocation("");
+    $("#pud-status-form").reset();
+    $("[data-status-content]").hidden = true;
+    message(`The private link for ${orderNumber} was revoked.`, "success");
+  } catch (error) {
+    await handleVersionConflict(error);
+  }
 }
 
 function render(value) {
@@ -250,18 +637,159 @@ function render(value) {
   $("[data-bag-status]").textContent = value.actualBags == null ? "Confirmed after pickup" : `${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`;
   $("[data-total]").textContent = value.weightTenths == null ? "Calculated after weighing" : money(value.totalCents);
   $("[data-last-updated]").textContent = value.updatedAt ? `Server status updated ${formatDate(value.updatedAt)}.` : "";
-  $("[data-receipt]").hidden = !["succeeded", "partially_refunded", "refunded", "succeeded_external"].includes(value.paymentStatus);
 
+  renderReceipt(value.receipt, value.paymentStatus);
   const paymentVisible = value.paymentAttentionRequired && ["requires_action", "failed"].includes(value.paymentStatus) && Boolean(publicConfig?.stripePublishableKey);
   $("[data-payment-panel]").hidden = !paymentVisible;
   $("[data-cancel-action]").hidden = !value.canCancel;
   $("[data-reorder-action]").hidden = value.fulfillmentStatus !== "delivered" || !publicConfig?.bookingEnabled;
   $("[data-claim-link]").hidden = !publicConfig?.claimsEnabled || !value.canClaim;
-  $("[data-claim-link]").href = `/pickup-delivery/claims/#${encodeURIComponent(token)}`;
 
   renderReschedule(value.rescheduleOptions);
   renderTip(value);
   renderRecurring(value);
+}
+
+function renderReceipt(receipt, paymentStatus) {
+  $("[data-receipt-weight]").textContent = receipt.weightTenths === null ? "Pending" : `${(receipt.weightTenths / 10).toFixed(1)} lb`;
+  $("[data-receipt-rate]").textContent = `${money(receipt.pricePerLbCents)}/lb`;
+  $("[data-receipt-weight-charge]").textContent = money(receipt.weightChargeCents);
+  $("[data-receipt-minimum-adjustment]").textContent = money(receipt.minimumAdjustmentCents);
+  $("[data-receipt-base]").textContent = money(receipt.baseChargeCents);
+  $("[data-receipt-delivery]").textContent = money(receipt.deliveryFeeCents);
+  $("[data-receipt-discount]").textContent = `−${money(receipt.discountCents)}`;
+  $("[data-receipt-tax]").textContent = money(receipt.taxCents);
+  $("[data-receipt-tip]").textContent = money(receipt.tipCents);
+  $("[data-receipt-total]").textContent = money(receipt.totalCents);
+  $("[data-receipt-captured]").textContent = money(receipt.amountCapturedCents);
+  $("[data-receipt-refunded]").textContent = `−${money(receipt.refundedCents)}`;
+  $("[data-receipt-net]").textContent = money(receipt.netPaidCents);
+  setReceiptRow("minimum", receipt.minimumAdjustmentCents > 0);
+  setReceiptRow("delivery", receipt.deliveryFeeCents > 0);
+  setReceiptRow("discount", receipt.discountCents > 0);
+  setReceiptRow("tax", receipt.taxCents > 0);
+  setReceiptRow("tip", receipt.tipCents > 0);
+  setReceiptRow("refund", receipt.refundedCents > 0);
+  $("[data-receipt-summary]").textContent = receipt.weightTenths === null
+    ? "Weight-based charges are pending. Payment activity shown here is current."
+    : ["succeeded", "partially_refunded", "refunded", "succeeded_external"].includes(paymentStatus)
+      ? "This receipt reflects the order total and settled payment activity."
+      : "Charges are itemized; the payment state is shown above.";
+  $("[data-receipt-versions]").textContent = `Pricing ${receipt.pricingVersion} · tax rule ${receipt.taxRuleVersion} · minimum ${money(receipt.minimumCents)}.`;
+}
+
+function renderPortalDetails(details) {
+  const panel = $("[data-portal-details]");
+  const list = $("[data-history-list]");
+  panel.hidden = false;
+  list.replaceChildren();
+  details.orders.forEach((historyOrder) => list.append(historyOrderCard(historyOrder)));
+  if (!details.orders.length) list.append(textNode("p", "No order history is available yet."));
+  $("[data-history-more]").hidden = !details.hasMore;
+  renderPreferences(details.preferences);
+}
+
+function renderLoyaltySummary(summary) {
+  const panel = $("[data-loyalty-panel]");
+  const list = $("[data-loyalty-history]");
+  if (!panel || !list) return;
+  panel.hidden = false;
+  $("[data-loyalty-balance]").textContent = money(summary.balanceCents);
+  $("[data-loyalty-state]").textContent = summary.status === "not_enrolled"
+    ? "No rewards have been earned yet. Eligible activity will appear here after enrollment."
+    : `Rewards account: ${label(summary.status)}.`;
+  list.replaceChildren();
+  summary.history.forEach((entry) => {
+    const amount = entry.amountCents > 0 ? `+${money(entry.amountCents)}` : money(entry.amountCents);
+    const orderText = entry.orderNumber ? ` · order ${entry.orderNumber}` : "";
+    const expiryText = entry.expiresAt ? ` · expires ${formatDate(entry.expiresAt)}` : "";
+    list.append(textNode(
+      "li",
+      `${label(entry.type)} · ${amount} · balance ${money(entry.balanceAfterCents)}${orderText} · ${formatDate(entry.createdAt)}${expiryText}`,
+    ));
+  });
+  if (!summary.history.length) list.append(textNode("li", "No rewards activity yet."));
+}
+
+function historyOrderCard(historyOrder) {
+  const card = document.createElement("article");
+  card.className = "pud-history-card";
+  const header = document.createElement("header");
+  header.append(textNode("h4", historyOrder.orderNumber), statusPill(historyOrder.fulfillmentStatus));
+  card.append(header);
+  card.append(textNode("p", `${label(historyOrder.serviceMode)} · ordered ${formatDate(historyOrder.createdAt)}${historyOrder.deliveredAt ? ` · delivered ${formatDate(historyOrder.deliveredAt)}` : ""}`));
+
+  const summary = document.createElement("dl");
+  summary.className = "pud-status-grid pud-history-summary";
+  summary.append(
+    definitionRow("Payment", label(historyOrder.paymentStatus)),
+    definitionRow("Order charge", money(historyOrder.receipt.totalCents)),
+    definitionRow("Net paid including tip", money(historyOrder.receipt.netPaidCents)),
+    definitionRow("Weight", historyOrder.receipt.weightTenths === null ? "Pending" : `${(historyOrder.receipt.weightTenths / 10).toFixed(1)} lb`),
+  );
+  card.append(summary, historyReceiptDetails(historyOrder.receipt));
+
+  if (historyOrder.claims.length) {
+    card.append(textNode("h5", "Claims"));
+    const claims = document.createElement("ul");
+    claims.className = "pud-history-claims";
+    historyOrder.claims.forEach((claim) => {
+      const requested = claim.requestedAmountCents === null ? "No amount requested" : `${money(claim.requestedAmountCents)} requested`;
+      const approved = claim.approvedAmountCents === null ? "" : ` · ${money(claim.approvedAmountCents)} approved`;
+      const resolved = claim.resolvedAt ? ` · resolved ${formatDate(claim.resolvedAt)}` : "";
+      claims.append(textNode("li", `${label(claim.claimType)} · ${label(claim.status)} · ${requested}${approved} · opened ${formatDate(claim.openedAt)}${resolved}`));
+    });
+    card.append(claims);
+  }
+  return card;
+}
+
+function historyReceiptDetails(receipt) {
+  const details = document.createElement("details");
+  details.className = "pud-history-receipt";
+  const summary = textNode("summary", "View itemized receipt");
+  const list = document.createElement("dl");
+  list.className = "pud-receipt-grid";
+  const rows = [
+    ["Price per pound", `${money(receipt.pricePerLbCents)}/lb`, true],
+    ["Weight charge", money(receipt.weightChargeCents), true],
+    ["Minimum adjustment", money(receipt.minimumAdjustmentCents), receipt.minimumAdjustmentCents > 0],
+    ["Laundry subtotal", money(receipt.baseChargeCents), true],
+    ["Delivery fee", money(receipt.deliveryFeeCents), receipt.deliveryFeeCents > 0],
+    ["Discount", `−${money(receipt.discountCents)}`, receipt.discountCents > 0],
+    ["Tax", money(receipt.taxCents), receipt.taxCents > 0],
+    ["Laundry order charge", money(receipt.totalCents), true],
+    ["Order payment captured", money(receipt.amountCapturedCents), true],
+    ["Separate tip payment", money(receipt.tipCents), receipt.tipCents > 0],
+    ["Refunded", `−${money(receipt.refundedCents)}`, receipt.refundedCents > 0],
+    ["Net paid including tip", money(receipt.netPaidCents), true],
+  ];
+  rows.filter(([, , visible]) => visible).forEach(([term, value]) => list.append(definitionRow(term, value)));
+  details.append(summary, list, textNode("p", `Pricing ${receipt.pricingVersion} · tax rule ${receipt.taxRuleVersion} · minimum ${money(receipt.minimumCents)}.`));
+  return details;
+}
+
+function renderPreferences(preferences) {
+  const form = $("#pud-preferences-form");
+  const note = $("[data-preferences-note]");
+  $("[data-preferences-source]").textContent = `Defaults from ${preferences.sourceOrderNumber}.`;
+  setValue(form, "detergent", preferences.detergent);
+  setValue(form, "softenerPref", preferences.softenerPref);
+  setValue(form, "specialInstructions", preferences.specialInstructions || "");
+  form.hidden = !preferences.canUpdate;
+  note.hidden = preferences.canUpdate;
+  note.textContent = preferences.canUpdate ? "" : "These preferences are read-only because their source order is no longer eligible for customer updates.";
+}
+
+function definitionRow(term, value) {
+  const row = document.createElement("div");
+  row.append(textNode("dt", term), textNode("dd", value));
+  return row;
+}
+
+function setReceiptRow(name, visible) {
+  const node = $(`[data-receipt-${name}-row]`);
+  if (node) node.hidden = !visible;
 }
 
 function renderReschedule(options) {
@@ -345,15 +873,29 @@ function setValue(form, name, value) {
   const control = form.elements.namedItem(name);
   if (!control) return;
   if (control instanceof HTMLSelectElement && ![...control.options].some((option) => option.value === value)) {
-    control.add(new Option(label(value), value));
+    const option = new Option(label(value), value);
+    option.dataset.pudDynamic = "true";
+    control.add(option);
   }
   control.value = value;
 }
 
 async function handleVersionConflict(error) {
+  handleAuthorizationError(error);
   if (error?.code !== "PUD_VERSION_CONFLICT") throw error;
   await refresh();
+  if (activeVerifiedSession()) {
+    try { await loadVerifiedPortal(); } catch (_historyError) { /* refresh still recovered the public order state */ }
+  }
   message("This order changed on the server. We refreshed it; review the latest details before trying again.");
+}
+
+function handleAuthorizationError(error) {
+  if (!authorizationErrors.has(error?.code)) return;
+  clearVerifiedSession();
+  clearStepUpVerification();
+  renderStepUpState("Fresh phone verification is required before trying again.");
+  focusStepUp();
 }
 
 async function runAction(callback) {
@@ -363,6 +905,7 @@ async function runAction(callback) {
   try {
     await callback();
   } catch (error) {
+    handleAuthorizationError(error);
     message(error?.message || "We could not complete that action.");
   } finally {
     actionInFlight = false;
@@ -370,14 +913,111 @@ async function runAction(callback) {
   }
 }
 
+function activeVerifiedSession() {
+  if (!verifiedSession) return null;
+  if (Date.parse(verifiedSession.expiresAt) > Date.now() + 2_000) return verifiedSession;
+  clearVerifiedSession();
+  return null;
+}
+
+function scheduleSessionExpiry() {
+  globalThis.clearTimeout(sessionExpiryTimer);
+  if (!verifiedSession) return;
+  const delay = Math.max(0, Date.parse(verifiedSession.expiresAt) - Date.now());
+  sessionExpiryTimer = globalThis.setTimeout(() => {
+    clearVerifiedSession();
+    renderStepUpState("Your verified session expired. Verify the mobile number again.");
+  }, Math.min(delay + 100, 2_147_000_000));
+}
+
+function clearVerifiedSession() {
+  globalThis.clearTimeout(sessionExpiryTimer);
+  sessionExpiryTimer = 0;
+  verifiedSession = null;
+  clearPortalDetails();
+}
+
+function clearPortalDetails() {
+  portalDetails = null;
+  portalPreferences = null;
+  const panel = $("[data-portal-details]");
+  const list = $("[data-history-list]");
+  if (panel) panel.hidden = true;
+  list?.replaceChildren();
+  const form = $("#pud-preferences-form");
+  form?.reset();
+  form?.querySelectorAll("option[data-pud-dynamic]").forEach((option) => option.remove());
+  const source = $("[data-preferences-source]");
+  const note = $("[data-preferences-note]");
+  if (source) source.textContent = "";
+  if (note) {
+    note.textContent = "";
+    note.hidden = true;
+  }
+  clearLoyaltySummary();
+}
+
+function clearLoyaltySummary() {
+  portalLoyalty = null;
+  const panel = $("[data-loyalty-panel]");
+  if (panel) panel.hidden = true;
+  const balance = $("[data-loyalty-balance]");
+  const state = $("[data-loyalty-state]");
+  if (balance) balance.textContent = "";
+  if (state) state.textContent = "";
+  $("[data-loyalty-history]")?.replaceChildren();
+}
+
+function clearStepUpVerification() {
+  verificationId = "";
+  $("#pud-step-up-phone-form")?.reset();
+  $("#pud-step-up-code-form")?.reset();
+  resetTurnstile($("#pud-step-up-phone-form"));
+  resetTurnstile($("#pud-step-up-code-form"));
+}
+
+function renderStepUpState(override = "") {
+  const session = activeVerifiedSession();
+  const phoneForm = $("#pud-step-up-phone-form");
+  const codeForm = $("#pud-step-up-code-form");
+  const active = $("[data-step-up-active]");
+  const status = $("[data-step-up-state]");
+  if (!phoneForm || !codeForm || !active || !status) return;
+  phoneForm.hidden = Boolean(session) || Boolean(verificationId);
+  codeForm.hidden = Boolean(session) || !verificationId;
+  active.hidden = !session;
+  status.dataset.active = session ? "true" : "false";
+  status.textContent = override || (session
+    ? `Phone verified until ${formatDate(session.expiresAt)}. Each protected action still receives its own one-time authorization.`
+    : verificationId
+      ? "Enter the code. The resulting verified session stays only in this page's memory."
+      : "Phone verification is required for protected actions.");
+  if (!phoneForm.hidden) ensureTurnstile(phoneForm);
+  if (!codeForm.hidden) ensureTurnstile(codeForm);
+}
+
+function focusStepUp() {
+  $("[data-step-up]")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  const selector = verificationId ? "#pud-step-up-code-form input[name=code]" : "#pud-step-up-phone-form input[name=phone]";
+  $(selector)?.focus();
+}
+
 function closePaymentReplacement() {
   destroyPaymentMethodReplacement();
   recoverySetupIntentId = "";
+  confirmedReplacementSetupIntentId = "";
   const form = $("#pud-payment-method-form");
   if (form) form.hidden = true;
   const actions = $("[data-payment-actions]");
   if (actions) actions.hidden = false;
   $("#pud-payment-method-element")?.replaceChildren();
+}
+
+function clearMemoryCredentials() {
+  clearVerifiedSession();
+  clearStepUpVerification();
+  closePaymentReplacement();
+  pendingRotation = null;
 }
 
 function fragmentToken() {
@@ -387,6 +1027,63 @@ function fragmentToken() {
 function replacePrivateLocation(value) {
   const hash = value ? `#${encodeURIComponent(value)}` : "";
   history.replaceState(null, "", `${location.pathname}${hash}`);
+}
+
+async function setupTurnstile(siteKey) {
+  if (!siteKey) throw new Error("Phone verification protection is not configured.");
+  turnstileSiteKey = siteKey;
+  if (!globalThis.turnstile) {
+    await new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${PUD_CONFIG.turnstileScript}"]`);
+      if (existing) {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", () => reject(new Error("The anti-bot check could not load.")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = PUD_CONFIG.turnstileScript;
+      script.async = true;
+      script.defer = true;
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", () => reject(new Error("The anti-bot check could not load.")), { once: true });
+      document.head.append(script);
+    });
+  }
+}
+
+function ensureTurnstile(container) {
+  if (!container || !turnstileSiteKey || !globalThis.turnstile?.render) return;
+  container.querySelectorAll("[data-turnstile]").forEach((node) => {
+    if (node.dataset.widgetId) return;
+    let widgetId;
+    const resetWithMessage = (text, delay = 0) => {
+      if (node.closest("form")?.hidden) return;
+      message(text);
+      window.setTimeout(() => {
+        try { globalThis.turnstile.reset(widgetId); } catch (_error) { /* widget may be gone */ }
+      }, delay);
+    };
+    widgetId = globalThis.turnstile.render(node, {
+      sitekey: turnstileSiteKey,
+      theme: "light",
+      "error-callback": () => resetWithMessage("The anti-bot check could not complete. It has been reset; please try again.", 500),
+      "expired-callback": () => resetWithMessage("The anti-bot check expired. Complete the refreshed check and try again."),
+      "timeout-callback": () => resetWithMessage("The anti-bot check timed out. Complete the refreshed check and try again."),
+    });
+    node.dataset.widgetId = String(widgetId);
+  });
+}
+
+function turnstileValue(form) {
+  const value = String(new FormData(form).get("cf-turnstile-response") || "");
+  if (!value) throw new Error("Complete the anti-bot check and try again.");
+  return value;
+}
+
+function resetTurnstile(form) {
+  const widget = form?.querySelector?.("[data-turnstile]");
+  if (!widget?.dataset.widgetId || !globalThis.turnstile?.reset) return;
+  try { globalThis.turnstile.reset(widget.dataset.widgetId); } catch (_error) { /* no-op */ }
 }
 
 function actionButton(text, action, data = {}, variant = "primary") {

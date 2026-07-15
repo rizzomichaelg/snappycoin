@@ -2,11 +2,25 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   PUD_PUBLIC_REQUEST_CONTRACTS,
+  assertActionCapability,
+  assertClaimEvidenceAsset,
+  assertClaimEvidenceCapability,
+  assertClaimEvidenceGrant,
+  assertClaimResult,
+  assertLoyaltySummary,
   assertOrderStatus,
   assertPaymentSession,
+  assertPhoneResend,
+  assertPhoneStart,
+  assertPhoneVerify,
+  assertPortalHistory,
+  assertPreferencesUpdate,
   assertPublicConfig,
   assertRecurringResult,
   assertReorderBootstrap,
+  assertStatusSession,
+  assertStatusTokenRevocation,
+  assertStatusTokenRotation,
   assertTipResult,
   contractBody,
 } from "../assets/js/pud-contract.js";
@@ -59,6 +73,12 @@ for (const [path, browserContract] of Object.entries(PUD_PUBLIC_REQUEST_CONTRACT
   }
 }
 
+const evidenceUploadOperation = pathOperations.get("/api/pud/orders/claim-evidence/upload");
+if (!evidenceUploadOperation || evidenceUploadOperation.method !== "post" ||
+    !apiSource.includes('requestRaw("/api/pud/orders/claim-evidence/upload"')) {
+  throw new Error("The raw claim-evidence upload path is missing from OpenAPI or pud-api.js.");
+}
+
 const responseContracts = {
   PublicRouteOption: {
     required: ["routeId", "routeDate", "windowCode", "windowStartAt", "windowEndAt", "remainingOrders", "remainingBags", "routeProof"],
@@ -78,16 +98,90 @@ const responseContracts = {
   },
   SafeOrderStatus: {
     required: [
-      "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "totalCents", "refundedCents",
+      "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "totalCents", "refundedCents", "receipt",
       "paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim",
       "canCreateRecurring", "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
     ],
     allowed: [
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "deliveryPromisedAt",
-      "actualBags", "weightTenths", "totalCents", "refundedCents", "paymentAttentionRequired",
+      "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired",
       "operationalAttentionRequired", "canCancel", "canTip", "canClaim", "canCreateRecurring",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
     ],
+  },
+  ItemizedReceipt: {
+    required: [
+      "currency", "weightTenths", "pricePerLbCents", "weightChargeCents", "minimumCents",
+      "minimumAdjustmentCents", "baseChargeCents", "deliveryFeeCents", "discountCents", "taxCents",
+      "tipCents", "totalCents", "amountCapturedCents", "refundedCents", "netPaidCents",
+      "pricingVersion", "taxRuleVersion",
+    ],
+    allowed: [
+      "currency", "weightTenths", "pricePerLbCents", "weightChargeCents", "minimumCents",
+      "minimumAdjustmentCents", "baseChargeCents", "deliveryFeeCents", "discountCents", "taxCents",
+      "tipCents", "totalCents", "amountCapturedCents", "refundedCents", "netPaidCents",
+      "pricingVersion", "taxRuleVersion",
+    ],
+  },
+  StatusSessionData: {
+    required: ["statusSession", "expiresAt", "phoneVerifiedAt", "orderVersion"],
+    allowed: ["statusSession", "expiresAt", "phoneVerifiedAt", "orderVersion"],
+  },
+  ActionCapabilityData: {
+    required: ["actionCapability", "purpose", "expiresAt", "orderVersion"],
+    allowed: ["actionCapability", "purpose", "expiresAt", "orderVersion"],
+  },
+  ClaimEvidenceCapabilityData: {
+    required: ["actionCapability", "purpose", "expiresAt", "orderVersion"],
+    allowed: ["actionCapability", "purpose", "expiresAt", "orderVersion"],
+  },
+  ClaimEvidenceGrantData: {
+    required: ["uploadGrant", "expiresAt", "maxBytes", "acceptedMimeTypes"],
+    allowed: ["uploadGrant", "expiresAt", "maxBytes", "acceptedMimeTypes"],
+  },
+  ClaimEvidenceUploadData: {
+    required: ["assetId", "sha256", "mimeType", "byteSize", "retentionUntil"],
+    allowed: ["assetId", "sha256", "mimeType", "byteSize", "retentionUntil"],
+  },
+  LoyaltyHistoryItem: {
+    required: ["transactionId", "type", "amountCents", "balanceAfterCents", "orderNumber", "expiresAt", "createdAt"],
+    allowed: ["transactionId", "type", "amountCents", "balanceAfterCents", "orderNumber", "expiresAt", "createdAt"],
+  },
+  LoyaltyCustomerData: {
+    required: ["currency", "balanceCents", "status", "history"],
+    allowed: ["currency", "balanceCents", "status", "history"],
+  },
+  PhoneStartData: {
+    required: ["verificationId", "phoneLast4", "expiresAt"],
+    allowed: ["verificationId", "phoneLast4", "expiresAt"],
+  },
+  PhoneResendData: {
+    required: ["expiresAt"],
+    allowed: ["expiresAt"],
+  },
+  PhoneVerifyData: {
+    required: ["phoneProof", "expiresAt"],
+    allowed: ["phoneProof", "expiresAt"],
+  },
+  PortalClaimSummary: {
+    required: ["claimId", "claimType", "status", "requestedAmountCents", "approvedAmountCents", "openedAt", "resolvedAt"],
+    allowed: ["claimId", "claimType", "status", "requestedAmountCents", "approvedAmountCents", "openedAt", "resolvedAt"],
+  },
+  PortalHistoryOrder: {
+    required: ["orderNumber", "serviceMode", "fulfillmentStatus", "paymentStatus", "createdAt", "deliveredAt", "updatedAt", "receipt", "claims"],
+    allowed: ["orderNumber", "serviceMode", "fulfillmentStatus", "paymentStatus", "createdAt", "deliveredAt", "updatedAt", "receipt", "claims"],
+  },
+  PortalPreferences: {
+    required: ["sourceOrderNumber", "detergent", "softenerPref", "canUpdate", "orderVersion"],
+    allowed: ["sourceOrderNumber", "detergent", "softenerPref", "specialInstructions", "canUpdate", "orderVersion"],
+  },
+  PortalHistoryData: {
+    required: ["anchorOrderNumber", "orders", "hasMore", "preferences"],
+    allowed: ["anchorOrderNumber", "orders", "hasMore", "nextCursor", "preferences"],
+  },
+  PreferencesUpdateData: {
+    required: ["preferences", "status", "duplicate"],
+    allowed: ["preferences", "status", "duplicate"],
   },
   PaymentRecoveryData: {
     required: ["paymentStatus", "setupIntentId", "setupIntentClientSecret", "duplicate"],
@@ -106,6 +200,18 @@ const responseContracts = {
       "priorOrderNumber", "customer", "address", "preferences", "savedPaymentMethodAvailable", "bookingBlocked",
       "nextStep", "requiresPhoneVerification", "requiresPaymentSetup", "recurringProposalId",
     ],
+  },
+  ClaimOpenData: {
+    required: ["claimId", "claimType", "status", "requestedAmountCents", "openedAt", "version", "duplicate"],
+    allowed: ["claimId", "claimType", "status", "requestedAmountCents", "openedAt", "version", "duplicate"],
+  },
+  StatusTokenRotationData: {
+    required: ["statusToken", "status"],
+    allowed: ["statusToken", "status"],
+  },
+  StatusTokenRevocationData: {
+    required: ["revoked", "orderNumber", "version"],
+    allowed: ["revoked", "orderNumber", "version"],
   },
 };
 
@@ -144,6 +250,25 @@ function verifyResponseGuards() {
     paymentStatus: "succeeded",
     totalCents: 4200,
     refundedCents: 0,
+    receipt: {
+      currency: "usd",
+      weightTenths: 200,
+      pricePerLbCents: 199,
+      weightChargeCents: 3980,
+      minimumCents: 2500,
+      minimumAdjustmentCents: 0,
+      baseChargeCents: 3980,
+      deliveryFeeCents: 300,
+      discountCents: 100,
+      taxCents: 20,
+      tipCents: 0,
+      totalCents: 4200,
+      amountCapturedCents: 4200,
+      refundedCents: 0,
+      netPaidCents: 4200,
+      pricingVersion: "2026-07",
+      taxRuleVersion: "2026-07",
+    },
     paymentAttentionRequired: false,
     operationalAttentionRequired: false,
     canCancel: false,
@@ -175,6 +300,8 @@ function verifyResponseGuards() {
     tipsEnabled: true,
     referralsEnabled: true,
     claimsEnabled: true,
+    loyaltyEnabled: true,
+    claimEvidenceEnabled: true,
     stripePublishableKey: "pk_test_from_server",
     turnstileSiteKey: "turnstile-from-server",
     timezone: "America/Chicago",
@@ -215,6 +342,107 @@ function verifyResponseGuards() {
     action: "skip",
     proposal: { proposalId: "proposal_1", status: "skipped", proposedForAt: "2026-07-22T14:00:00Z" },
   };
+  const statusSession = {
+    statusSession: "status-session-memory-only",
+    expiresAt: "2026-07-13T18:15:00Z",
+    phoneVerifiedAt: "2026-07-13T18:00:00Z",
+    orderVersion: 3,
+  };
+  const actionCapability = {
+    actionCapability: "action-capability-once",
+    purpose: "cancel_order",
+    expiresAt: "2026-07-13T18:10:00Z",
+    orderVersion: 3,
+  };
+  const claimEvidenceCapability = {
+    actionCapability: "evidence-action-capability-once",
+    purpose: "upload_claim_evidence",
+    expiresAt: "2026-07-13T18:10:00Z",
+    orderVersion: 3,
+  };
+  const claimEvidenceGrant = {
+    uploadGrant: "evidence-upload-grant-once",
+    expiresAt: "2026-07-13T18:10:00Z",
+    maxBytes: 5 * 1024 * 1024,
+    acceptedMimeTypes: ["image/jpeg", "image/png", "application/pdf"],
+  };
+  const claimEvidenceAsset = {
+    assetId: "claim_evidence_asset_1",
+    sha256: "a".repeat(64),
+    mimeType: "image/png",
+    byteSize: 2048,
+    retentionUntil: "2027-07-13T18:00:00Z",
+  };
+  const loyalty = {
+    currency: "USD",
+    balanceCents: 750,
+    status: "active",
+    history: [{
+      transactionId: "loyalty_tx_1",
+      type: "earn",
+      amountCents: 250,
+      balanceAfterCents: 750,
+      orderNumber: "PUD-1001",
+      expiresAt: "2027-07-13T18:00:00Z",
+      createdAt: "2026-07-13T18:00:00Z",
+    }],
+  };
+  const claim = {
+    claimId: "claim_1",
+    claimType: "billing",
+    status: "open",
+    requestedAmountCents: null,
+    openedAt: "2026-07-13T18:00:00Z",
+    version: 1,
+    duplicate: false,
+  };
+  const rotation = { statusToken: "replacement-status-token", status };
+  const revocation = { revoked: true, orderNumber: "PUD-1001", version: 4 };
+  const phoneStart = {
+    verificationId: "verification_1",
+    phoneLast4: "1212",
+    expiresAt: "2026-07-13T18:10:00Z",
+  };
+  const phoneResend = { expiresAt: "2026-07-13T18:12:00Z" };
+  const phoneVerify = {
+    phoneProof: "phone-proof-memory-only",
+    expiresAt: "2026-07-13T18:10:00Z",
+  };
+  const portalPreferences = {
+    sourceOrderNumber: "PUD-1001",
+    detergent: "free_clear",
+    softenerPref: "none",
+    specialInstructions: "Use fragrance-free products.",
+    canUpdate: true,
+    orderVersion: 3,
+  };
+  const portalClaim = {
+    claimId: "claim_1",
+    claimType: "billing",
+    status: "open",
+    requestedAmountCents: null,
+    approvedAmountCents: null,
+    openedAt: "2026-07-13T18:00:00Z",
+    resolvedAt: null,
+  };
+  const portalHistory = {
+    anchorOrderNumber: "PUD-1001",
+    orders: [{
+      orderNumber: "PUD-1001",
+      serviceMode: "pickup_delivery",
+      fulfillmentStatus: "delivered",
+      paymentStatus: "succeeded",
+      createdAt: "2026-07-10T14:00:00Z",
+      deliveredAt: "2026-07-13T17:00:00Z",
+      updatedAt: "2026-07-13T18:00:00Z",
+      receipt: status.receipt,
+      claims: [portalClaim],
+    }],
+    hasMore: true,
+    nextCursor: "encrypted-customer-bound-cursor",
+    preferences: portalPreferences,
+  };
+  const preferencesUpdate = { preferences: portalPreferences, status, duplicate: false };
 
   for (const [label, guard, value] of [
     ["public config", assertPublicConfig, publicConfig],
@@ -223,6 +451,20 @@ function verifyResponseGuards() {
     ["reorder bootstrap", assertReorderBootstrap, reorder],
     ["tip", assertTipResult, tip],
     ["recurring", assertRecurringResult, recurring],
+    ["status session", assertStatusSession, statusSession],
+    ["action capability", assertActionCapability, actionCapability],
+    ["claim-evidence capability", assertClaimEvidenceCapability, claimEvidenceCapability],
+    ["claim-evidence grant", assertClaimEvidenceGrant, claimEvidenceGrant],
+    ["claim-evidence asset", assertClaimEvidenceAsset, claimEvidenceAsset],
+    ["loyalty", assertLoyaltySummary, loyalty],
+    ["claim", assertClaimResult, claim],
+    ["status-token rotation", assertStatusTokenRotation, rotation],
+    ["status-token revocation", assertStatusTokenRevocation, revocation],
+    ["phone start", assertPhoneStart, phoneStart],
+    ["phone resend", assertPhoneResend, phoneResend],
+    ["phone verify", assertPhoneVerify, phoneVerify],
+    ["portal history", assertPortalHistory, portalHistory],
+    ["preference update", assertPreferencesUpdate, preferencesUpdate],
   ]) {
     if (guard(value) !== value) throw new Error(`${label} guard did not return its validated object.`);
   }
@@ -235,6 +477,24 @@ function verifyResponseGuards() {
   expectGuardFailure("reorder proof chain", () => assertReorderBootstrap({ ...reorder, requiresPhoneVerification: false }));
   expectGuardFailure("tip client secret shape", () => assertTipResult({ ...tip, clientSecret: undefined }));
   expectGuardFailure("recurring next proposal", () => assertRecurringResult({ ...recurring, nextProposalAt: undefined }));
+  expectGuardFailure("receipt total", () => assertOrderStatus({ ...status, receipt: { ...status.receipt, totalCents: -1 } }));
+  expectGuardFailure("expired-session timestamp shape", () => assertStatusSession({ ...statusSession, expiresAt: "not-a-date" }));
+  expectGuardFailure("action purpose", () => assertActionCapability({ ...actionCapability, purpose: "read_everything" }));
+  expectGuardFailure("claim-evidence purpose", () => assertClaimEvidenceCapability({ ...claimEvidenceCapability, purpose: "open_claim" }));
+  expectGuardFailure("claim-evidence MIME", () => assertClaimEvidenceGrant({ ...claimEvidenceGrant, acceptedMimeTypes: ["text/html"] }));
+  expectGuardFailure("claim-evidence digest", () => assertClaimEvidenceAsset({ ...claimEvidenceAsset, sha256: "BAD" }));
+  expectGuardFailure("loyalty balance", () => assertLoyaltySummary({ ...loyalty, balanceCents: -1 }));
+  expectGuardFailure("claim status", () => assertClaimResult({ ...claim, status: "secret_internal_state" }));
+  expectGuardFailure("revocation flag", () => assertStatusTokenRevocation({ ...revocation, revoked: false }));
+  expectGuardFailure("phone start last four", () => assertPhoneStart({ ...phoneStart, phoneLast4: "12" }));
+  expectGuardFailure("phone verify proof", () => assertPhoneVerify({ ...phoneVerify, phoneProof: "" }));
+  expectGuardFailure("history cursor requirement", () => assertPortalHistory({ ...portalHistory, nextCursor: undefined }));
+  expectGuardFailure("final history cursor", () => assertPortalHistory({ ...portalHistory, hasMore: false }));
+  expectGuardFailure("portal claim status", () => assertPortalHistory({
+    ...portalHistory,
+    orders: [{ ...portalHistory.orders[0], claims: [{ ...portalClaim, status: "internal_only" }] }],
+  }));
+  expectGuardFailure("preference update duplicate", () => assertPreferencesUpdate({ ...preferencesUpdate, duplicate: "false" }));
 }
 
 function expectGuardFailure(label, callback) {
