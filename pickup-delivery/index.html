@@ -4,31 +4,40 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Schedule secure wash-dry-fold pickup and delivery with Snappy Coin Laundry.">
+  <meta name="theme-color" content="#f7f2e7">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://www.facebook.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self'; script-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net http://127.0.0.1:8787 http://localhost:8787; font-src 'self';">
   <title>Pickup &amp; Delivery | Snappy Coin Laundry</title>
-  <link rel="icon" href="/assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="/assets/css/pud.css">
+  <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260715-2">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#booking">Skip to booking</a>
   <header class="pud-header">
-    <a class="pud-brand" href="/"><img src="/assets/logo.png" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
-    <a class="pud-status-link" href="/pickup-delivery/status/">Check an order</a>
+    <a class="pud-brand" href="/"><img src="/assets/logo-96.webp" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
+    <nav class="pud-header-actions" aria-label="Pickup and delivery">
+      <a class="pud-header-call" href="tel:13146281001">Call (314) 628-1001</a>
+      <a class="pud-status-link" href="/pickup-delivery/status/">Check an order</a>
+    </nav>
   </header>
 
   <main id="booking" class="pud-layout" data-pud-booking>
     <section class="pud-hero" aria-labelledby="pud-title">
-      <p class="pud-eyebrow">Wash · Dry · Fold</p>
+      <p class="pud-eyebrow">Pickup · Wash · Dry · Fold</p>
       <h1 id="pud-title">Your laundry, picked up and brought home.</h1>
-      <p>Check your address first. We’ll show only pickup windows with room and calculate the final price after weighing.</p>
+      <p class="pud-hero-lead">Start with your address. We’ll show only pickup windows with room, then weigh, wash, fold, and return everything to you.</p>
       <ul class="pud-trust-list">
-        <li><strong data-pud-price>$1.99/lb · $35 minimum</strong></li>
-        <li>Card saved securely; charged once after weighing</li>
-        <li>Private bag tracking and order updates</li>
+        <li><span>Price</span><strong data-pud-price>$1.99/lb · $35 minimum</strong></li>
+        <li><span>Payment</span><strong>Charged once, after weighing</strong></li>
+        <li><span>Updates</span><strong>Private order updates and receipt</strong></li>
       </ul>
+      <div class="pud-how-it-works" aria-label="How pickup and delivery works">
+        <p><strong>01</strong> Check your address and choose a route.</p>
+        <p><strong>02</strong> Tell us how you want your laundry handled.</p>
+        <p><strong>03</strong> Follow the private link for updates and your receipt.</p>
+      </div>
     </section>
 
     <section class="pud-card pud-booking-card" aria-label="Book pickup and delivery">
@@ -65,7 +74,11 @@
           <h2 tabindex="-1">Pickup and laundry details</h2>
           <p class="pud-confirmed-address"><span aria-hidden="true">✓</span> <span data-normalized-address></span></p>
           <form id="pud-details-form" class="pud-form">
-            <label>Pickup window <select id="pud-route" name="routeId" required></select></label>
+            <div class="pud-route-planner">
+              <label>Estimated bags <select id="pud-estimated-bags" name="estimatedBags"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+              <label>Pickup window <select id="pud-route" name="routeId" aria-describedby="pud-route-capacity" required></select></label>
+            </div>
+            <p id="pud-route-capacity" class="pud-fine-print" data-route-capacity-note aria-live="polite">Route availability accounts for the estimated bag count.</p>
             <div class="pud-field-row">
               <label>First name <input name="firstName" autocomplete="given-name" maxlength="80" required></label>
               <label>Last name <input name="lastName" autocomplete="family-name" maxlength="80" required></label>
@@ -75,7 +88,6 @@
             <p class="pud-fine-print" data-reorder-phone-last4></p>
             <label>How did you hear about us? <select name="selfReportedSource"><option value="">Prefer not to say</option><option value="google">Google</option><option value="facebook">Facebook or Instagram</option><option value="friend_referral">Friend or family</option><option value="drove_by">Saw the store</option><option value="other">Other</option></select></label>
             <div class="pud-field-row">
-              <label>Estimated bags <select name="estimatedBags"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
               <label>Detergent <select name="detergent"><option value="standard">Standard</option><option value="free_clear">Free &amp; clear</option><option value="customer_supplied">I’ll provide mine</option></select></label>
               <label>Softener <select name="softenerPref"><option value="none">None</option><option value="standard">Standard</option></select></label>
             </div>
@@ -90,7 +102,6 @@
             </fieldset>
             <fieldset><legend>Optional marketing</legend>
               <label class="pud-check"><input name="marketingEmail" type="checkbox" value="yes"> Email me offers. I can unsubscribe anytime.</label>
-              <label class="pud-check"><input name="marketingSms" type="checkbox" value="yes"> Text me offers. Message/data rates may apply; reply STOP to opt out.</label>
             </fieldset>
             <div class="pud-turnstile" data-turnstile></div>
             <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="address">Back</button><button class="pud-button pud-button-primary" type="submit">Text me a code</button></div>
@@ -103,9 +114,16 @@
           <p>Enter the one-time code sent to the number ending in <strong data-phone-last4></strong>. We never use this code for marketing consent.</p>
           <form id="pud-code-form" class="pud-form">
             <label>Verification code <input name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{4,10}" maxlength="10" required></label>
-            <div class="pud-turnstile" data-turnstile></div>
-            <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="details">Back</button><button class="pud-button pud-button-link" type="button" data-action="resend">Resend code</button><button class="pud-button pud-button-primary" type="submit">Verify phone</button></div>
+            <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="details">Back</button><button class="pud-button pud-button-primary" type="submit">Verify phone</button></div>
           </form>
+          <details class="pud-resend">
+            <summary>Didn’t get the code?</summary>
+            <form id="pud-resend-form" class="pud-form">
+              <p class="pud-fine-print">Complete this short anti-bot check only if you need another code.</p>
+              <div class="pud-turnstile" data-turnstile></div>
+              <button class="pud-button pud-button-link" type="button" data-action="resend">Send a new code</button>
+            </form>
+          </details>
         </section>
 
         <section data-step="payment" hidden>
@@ -128,7 +146,10 @@
             <div><dt>Laundry</dt><dd data-review-bags></dd></div>
           </dl>
           <form id="pud-review-form" class="pud-form">
-            <div class="pud-field-row"><label>Promotion code <input id="pud-promotion-code" maxlength="40" autocapitalize="characters"></label><label>Referral code <input id="pud-referral-code" maxlength="40" autocapitalize="characters"></label></div>
+            <div class="pud-field-row pud-code-fields" data-code-fields hidden>
+              <label data-promotion-field hidden>Promotion code <input id="pud-promotion-code" maxlength="40" autocapitalize="characters"></label>
+              <label data-referral-field hidden>Referral code <input id="pud-referral-code" maxlength="40" autocapitalize="characters"></label>
+            </div>
             <p class="pud-fine-print">Submitting reserves route capacity. Your card is charged only after weighing, using the price and minimum shown above plus any configured tax or disclosed fee.</p>
             <button class="pud-button pud-button-primary" type="submit">Submit pickup request</button>
           </form>
@@ -137,12 +158,19 @@
         <section data-step="complete" hidden>
           <p class="pud-success-mark" aria-hidden="true">✓</p>
           <h2 tabindex="-1">Pickup requested</h2>
-          <p>Your order number is <strong data-order-number></strong>. Keep the private status link from your confirmation message.</p>
-          <a class="pud-button pud-button-primary" data-status-link href="/pickup-delivery/status/">View order status</a>
+          <p>Your order number is <strong data-order-number></strong>. Your private link opens updates, payment status, and the final receipt. Treat it like a password.</p>
+          <div class="pud-actions">
+            <a class="pud-button pud-button-primary" data-status-link href="/pickup-delivery/status/">View order status</a>
+            <button class="pud-button pud-button-secondary" type="button" data-action="copy-status-link">Copy private link</button>
+            <button class="pud-button pud-button-link" type="button" data-action="copy-order-number">Copy order number</button>
+            <button class="pud-button pud-button-link" type="button" data-action="print-confirmation">Print or save</button>
+          </div>
+          <p class="pud-fine-print" data-confirmation-action-status role="status" aria-live="polite"></p>
         </section>
       </div>
 
       <div data-booking-panel="waitlist" hidden>
+        <p class="pud-eyebrow">Route update</p>
         <h2>Join the service waitlist</h2>
         <p data-waitlist-reason></p>
         <form id="pud-waitlist-form" class="pud-form">
@@ -151,8 +179,10 @@
           <label>Mobile phone <input name="phone" type="tel" autocomplete="tel" required></label>
           <label>Email <input name="email" type="email" autocomplete="email" required></label>
           <label>How did you hear about us? <select name="selfReportedSource"><option value="">Prefer not to say</option><option value="google">Google</option><option value="facebook">Facebook or Instagram</option><option value="friend_referral">Friend or family</option><option value="drove_by">Saw the store</option><option value="other">Other</option></select></label>
-          <label class="pud-check"><input name="marketingEmail" type="checkbox" value="yes"> Email me when service opens and send optional offers.</label>
-          <label class="pud-check"><input name="marketingSms" type="checkbox" value="yes"> Text me when service opens and send optional offers.</label>
+          <p class="pud-consent-note"><strong>Waitlist updates are not marketing.</strong> We’ll use the contact details above to respond about service availability for this request.</p>
+          <fieldset><legend>Optional marketing</legend>
+            <label class="pud-check"><input name="marketingEmail" type="checkbox" value="yes"> Email me occasional Snappy offers. I can unsubscribe anytime.</label>
+          </fieldset>
           <div class="pud-turnstile" data-turnstile></div>
           <button class="pud-button pud-button-primary" type="submit">Join waitlist</button>
           <button class="pud-button pud-button-link" type="button" data-action="start-over">Check another address</button>
@@ -160,14 +190,24 @@
       </div>
 
       <div data-booking-panel="unavailable" hidden>
-        <h2>Online booking is not open</h2><p data-unavailable></p>
-        <a class="pud-button pud-button-secondary" href="/pickup-delivery/status/">Check an existing order</a>
+        <p class="pud-eyebrow">Booking connection</p>
+        <h2>Online booking isn’t available right now.</h2>
+        <p data-unavailable></p>
+        <p>If you already scheduled a pickup, try your private order page. You can also call the store or return to the main site while booking reconnects.</p>
+        <div class="pud-actions pud-unavailable-actions">
+          <button class="pud-button pud-button-primary" type="button" data-action="retry-booking">Try online booking again</button>
+          <a class="pud-button pud-button-secondary" href="tel:13146281001">Call the store</a>
+        </div>
+        <div class="pud-unavailable-links">
+          <a href="/pickup-delivery/status/"><strong>Already scheduled?</strong><span>Open your private order page</span></a>
+          <a href="/"><strong>Need another option?</strong><span>See store hours, machines, and directions</span></a>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="pud-footer"><p>Snappy Coin Laundry · 2303 McKelvey Rd, Maryland Heights, MO</p><nav><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
-  <script type="module" src="/assets/js/site-analytics.js?v=20260621-1"></script>
-  <script type="module" src="/assets/js/pud-booking.js"></script>
+  <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
+  <script type="module" src="/assets/js/site-analytics.js?v=20260715-4"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20260715-2"></script>
 </body>
 </html>

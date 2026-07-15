@@ -1,706 +1,314 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="description" content="Snappy Coin Laundry — Single-page layout" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta
-    http-equiv="Content-Security-Policy"
-    content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://snappycoinlaundry.com https://www.facebook.com https://connect.facebook.net https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' https://challenges.cloudflare.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://www.google.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://dexterlive-status.snappycoinlaundry.workers.dev https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net"
-  />
-  <title>Snappy Coin Laundry</title>
-
-  <!-- Favicon and Homescreen Icons -->
-  <link rel="icon" href="assets/logo.png" type="image/png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="assets/logo.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-
-  <!-- Material Icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-
-  <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260620-1" />
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Fast self-service laundry, wash-dry-fold pickup and delivery, and live machine availability in Maryland Heights, Missouri.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#1238c8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://snappycoinlaundry.com https://www.facebook.com https://connect.facebook.net https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'sha256-DvTPvOg2js+ThHnaBNSdSJL9+ksTN4LUbta/34jgkcM=' https://challenges.cloudflare.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://www.google.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://dexterlive-status.snappycoinlaundry.workers.dev https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net">
+  <meta property="og:title" content="Snappy Coin Laundry | Maryland Heights">
+  <meta property="og:description" content="Big-load washers, live machine availability, and laundry pickup and delivery—open daily in Maryland Heights.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://snappycoinlaundry.com/">
+  <meta property="og:image" content="https://snappycoinlaundry.com/assets/laundryrow.jpg">
+  <link rel="canonical" href="https://snappycoinlaundry.com/">
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/logo.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css?v=20260715-4">
+  <title>Snappy Coin Laundry | Self-Service &amp; Pickup in Maryland Heights</title>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Laundromat","name":"Snappy Coin Laundry","url":"https://snappycoinlaundry.com/","image":"https://snappycoinlaundry.com/assets/laundryrow.jpg","telephone":"+1-314-628-1001","email":"snappycoinlaundry@gmail.com","address":{"@type":"PostalAddress","streetAddress":"2303 McKelvey Rd","addressLocality":"Maryland Heights","addressRegion":"MO","postalCode":"63043","addressCountry":"US"},"sameAs":["https://www.facebook.com/profile.php?id=61573065201719","https://www.instagram.com/snappycoinlaundry/"],"openingHours":["Mo-Su 06:00-23:59","Mo-Su 00:00-01:30"],"paymentAccepted":"Cash, DexterPay"}</script>
   <script src="assets/js/promo-config.js?v=20260531"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-
-  <!-- (Optional) Web App Manifest -->
-  <!--
-  <link rel="manifest" href="manifest.json" />
-  -->
 </head>
-
 <body>
-  <!-- HEADER / NAVIGATION -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
   <header class="header">
-    <nav class="navbar">
-      <div class="logo">
-        <a href="#hero">
-          <!-- Changed logo format from .tiff to .png for Chrome compatibility -->
-          <img id="logo-img" src="assets/logo.png" alt="Snappy Coin Laundry Logo" />
-        </a>
-      </div>
-      <!-- Hamburger menu button for mobile displays -->
-      <button class="hamburger"><span class="material-icons">menu</span></button>
-      <ul class="nav-links">
-        <li><a href="#hero" class="nav-link">Home</a></li>
-        <li id="promo-nav-item"><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
-        <li><a href="#about" class="nav-link">About</a></li>
+    <nav class="navbar" aria-label="Main navigation">
+      <a class="logo" href="#hero" aria-label="Snappy Coin Laundry home">
+        <img id="logo-img" src="assets/logo-96.webp" alt="" width="56" height="56">
+        <span class="brand-copy"><strong>SNAPPY</strong><span>COIN LAUNDRY</span></span>
+      </a>
+      <button class="hamburger" type="button" aria-expanded="false" aria-controls="primary-nav">
+        <span class="hamburger-label">Menu</span><span class="hamburger-lines" aria-hidden="true"></span>
+      </button>
+      <ul id="primary-nav" class="nav-links">
+        <li><a href="#live-machines" class="nav-link">Machines</a></li>
         <li><a href="#services" class="nav-link">Services</a></li>
-        <li><a href="#why-choose-us" class="nav-link">Why Choose Us</a></li>
-        <li><a href="#faq" class="nav-link">FAQ</a></li>
-        <li><a href="#contact-section" class="nav-link">Contact</a></li>
-        <!-- Header Social Media Icons -->
-        <li class="social-link">
-          <a href="https://www.facebook.com/profile.php?id=61573065201719" target="_blank" rel="noopener noreferrer">
-            <span class="material-icons">thumb_up</span>
-          </a>
-        </li>
-        <li class="social-link">
-          <a href="https://www.instagram.com/snappycoinlaundry/" target="_blank" rel="noopener noreferrer">
-            <span class="material-icons">photo_camera</span>
-          </a>
-        </li>
+        <li><a href="pickup-delivery/" class="nav-link">Pickup &amp; delivery</a></li>
+        <li id="promo-nav-item"><a href="#free-weekday-wash" class="nav-link">Free wash</a></li>
+        <li><a href="#faq" class="nav-link">FAQs</a></li>
+        <li><a href="#visit" class="nav-link nav-link-visit">Visit us</a></li>
       </ul>
     </nav>
   </header>
 
-  <!-- HERO SECTION -->
-  <section id="hero" class="hero-section coming-soon">
-    <div class="hero-inner">
-      <div class="hero-content">
-        <h2>Wash &amp; Dry in a Snap! 🫰</h2>
-        <div class="hero-action-stack">
-          <div class="hero-ctas" role="group" aria-label="Primary actions">
-            <a id="hero-promo-cta" href="#free-weekday-wash" class="btn-cta primary">Claim Free Wash</a>
-            <a id="hero-plan-cta" href="#contact-section" class="btn-cta ghost">Plan Your Visit</a>
-          </div>
-          <a class="hero-wdf-callout" href="#services" aria-label="Wash Dry Fold service details">
-            <span class="hero-wdf-title">Wash/Dry/Fold</span>
-            <span>$1.50 per pound</span>
-            <span>FREE pickup &amp; delivery!</span>
-            <span class="hero-wdf-action">See details below.</span>
-          </a>
-          <a class="hero-services-link" href="#services">Explore services</a>
-          <ul class="hero-highlights" aria-label="Key amenities">
-            <li><strong>Huge Washers &amp; Dryers</strong> For Bulky Loads</li>
-            <li class="hero-highlight-link-item">
-              <a href="#dexterpay" class="hero-highlight-link" aria-label="DexterPay cashless checkout, location number 12105. View setup instructions.">
-                <strong>DexterPay</strong> cashless checkout · Location #12105
-              </a>
-            </li>
-          </ul>
-          <a href="#mending-alterations" class="hero-spotlight-link">
-            <span class="hero-spotlight-icon">
-              <span class="material-icons" aria-hidden="true">content_cut</span>
-            </span>
-            <span class="hero-spotlight-copy">
-              <span class="hero-spotlight-eyebrow">New service available</span>
-              <span class="hero-spotlight-title">Mending &amp; Simple Alterations</span>
-            </span>
-            <span class="hero-spotlight-action">
-              See details
-              <span class="material-icons" aria-hidden="true">south_east</span>
-            </span>
-          </a>
+  <main id="main-content">
+    <section id="hero" class="hero-section">
+      <div class="hero-copy">
+        <p class="eyebrow">Maryland Heights · Open every day</p>
+        <h1><span class="hero-ink">Big loads.</span><br><span>Less waiting.</span></h1>
+        <p class="hero-lead">Bring the comforters, the tournament uniforms, or the whole week’s laundry. Our high-capacity Dexter machines get it done fast—or we’ll pick it up and do it for you.</p>
+        <div class="hero-ctas" aria-label="Primary actions">
+          <a id="hero-promo-cta" class="button button-primary" href="#free-weekday-wash">Claim free weekday wash</a>
+          <a id="hero-plan-cta" class="button button-dark" href="pickup-delivery/">Book pickup &amp; delivery</a>
+        </div>
+        <div class="hero-quick-links" aria-label="Visit essentials">
+          <a href="#live-machines"><strong>Check machines</strong><span>See what’s open now</span></a>
+          <a href="https://www.google.com/maps/dir/?api=1&amp;destination=2303+McKelvey+Rd+Maryland+Heights+MO+63043" target="_blank" rel="noopener noreferrer"><strong>Get directions</strong><span>2303 McKelvey Rd</span></a>
+          <a href="tel:13146281001"><strong>Call the store</strong><span>(314) 628-1001</span></a>
         </div>
       </div>
-      <div class="hero-cards">
-        <div class="hero-card info-card" aria-label="Hours and quick facts">
-          <h3>Today&apos;s Hours</h3>
-          <p class="hero-hours">6:00 AM – 1:30 AM</p>
-          <p class="hero-hours-status" data-open-status>Checking availability…</p>
-          <div class="hero-pill-group">
-            <span class="hero-pill">Open 365 Days</span>
-            <span class="hero-pill">Family Owned</span>
-          </div>
-          <ul class="hero-card-list">
-            <li>
-              <span class="material-icons" aria-hidden="true">place</span>
-              2303 McKelvey Rd, Maryland Heights
-            </li>
-            <li>
-              <span class="material-icons" aria-hidden="true">star_rate</span>
-              Brand-new Dexter washers &amp; dryers
-            </li>
-          </ul>
-        </div>
+      <figure class="hero-photo">
+        <picture>
+          <source type="image/webp" srcset="assets/laundryrow-960.webp 960w, assets/laundryrow-1600.webp 1600w, assets/laundryrow-2400.webp 2400w" sizes="(max-width: 860px) 100vw, 54vw">
+          <img src="assets/laundryrow.jpg" alt="Bright blue wall and a row of large Dexter dryers inside Snappy Coin Laundry" width="1600" height="1294" fetchpriority="high">
+        </picture>
+        <figcaption><span>80 LB</span> capacity for your biggest loads</figcaption>
+      </figure>
+    </section>
 
-        <div
-          class="info-card availability-card"
-          data-availability-widget
-          data-status-url="https://dexterlive-status.snappycoinlaundry.workers.dev/status"
-          data-poll-ms="90000"
-          data-stale-ms="300000"
-          aria-live="polite"
-        >
-          <div class="availability-header">
-            <h3 class="availability-title">Available now</h3>
-            <span class="availability-pill pill--loading" data-availability-pill>Checking…</span>
-          </div>
+    <section class="hours-ribbon" aria-label="Store hours and status">
+      <p><span class="status-dot" aria-hidden="true"></span><strong data-open-status>Checking hours…</strong></p>
+      <p>6:00 AM–1:30 AM · 365 days a year</p>
+      <a href="#visit">Plan a visit <span aria-hidden="true">→</span></a>
+    </section>
 
-          <div class="availability-metrics">
-            <div class="availability-metric">
-              <div class="metric-label">Washers</div>
-              <div class="metric-main">
-                <span class="metric-num" data-washers-available>—</span>
-                <span class="metric-of">
-                  / <span data-washers-total>—</span>
-                </span>
-              </div>
-              <div class="metric-sub">
-                <span data-washers-inuse>—</span> in use
-              </div>
-              <div class="metric-bar" aria-hidden="true">
-                <span class="metric-bar-fill" data-washers-bar></span>
-              </div>
-            </div>
-
-            <div class="availability-metric">
-              <div class="metric-label">Dryers</div>
-              <div class="metric-main">
-                <span class="metric-num" data-dryers-available>—</span>
-                <span class="metric-of">
-                  / <span data-dryers-total>—</span>
-                </span>
-              </div>
-              <div class="metric-sub">
-                <span data-dryers-inuse>—</span> in use
-              </div>
-              <div class="metric-bar" aria-hidden="true">
-                <span class="metric-bar-fill" data-dryers-bar></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="availability-meta">
-            <span class="availability-meta-line" data-availability-status>Updated —</span>
-            <span class="availability-meta-line availability-status-state" data-availability-state>Updates automatically</span>
-          </div>
-
-          <div class="availability-error" data-availability-error hidden></div>
-        </div>
+    <section id="live-machines" class="utility-section" aria-labelledby="machine-heading">
+      <div class="section-heading machine-heading">
+        <p class="eyebrow">Before you leave home</p>
+        <h2 id="machine-heading">Know what’s ready.</h2>
+        <p>Live availability comes directly from the laundry floor and refreshes automatically.</p>
       </div>
-    </div>
-  </section>
+      <div class="availability-board" data-availability-widget data-status-url="https://dexterlive-status.snappycoinlaundry.workers.dev/status" data-poll-ms="90000" data-stale-ms="300000" aria-live="polite">
+        <div class="availability-header">
+          <p class="availability-title">Machines available now</p>
+          <span class="availability-pill pill--loading" data-availability-pill>Checking…</span>
+        </div>
+        <div class="availability-metrics">
+          <article class="availability-metric">
+            <p class="metric-label">Washers</p>
+            <p class="metric-main"><strong data-washers-available>—</strong><span>/ <span data-washers-total>—</span></span></p>
+            <p class="metric-sub"><span data-washers-inuse>—</span> in use</p>
+            <div class="metric-bar" aria-hidden="true"><span class="metric-bar-fill" data-washers-bar></span></div>
+          </article>
+          <article class="availability-metric">
+            <p class="metric-label">Dryers</p>
+            <p class="metric-main"><strong data-dryers-available>—</strong><span>/ <span data-dryers-total>—</span></span></p>
+            <p class="metric-sub"><span data-dryers-inuse>—</span> in use</p>
+            <div class="metric-bar" aria-hidden="true"><span class="metric-bar-fill" data-dryers-bar></span></div>
+          </article>
+        </div>
+        <div class="availability-meta">
+          <span data-availability-status>Updated —</span>
+          <span data-availability-state>Updates automatically</span>
+        </div>
+        <div class="availability-error" data-availability-error hidden></div>
+      </div>
+      <aside class="machine-note">
+        <strong>Need a monster machine?</strong>
+        <p>Our 80-pound washers handle king-size comforters, family-size loads, and the laundry you’ve been avoiding.</p>
+        <a href="#self-service">See self-service details <span aria-hidden="true">→</span></a>
+      </aside>
+    </section>
 
-  <!-- PROMO SIGNUP SECTION -->
-  <section id="free-weekday-wash" class="content-section promo-embed-section" data-promo-section>
-    <div class="section-inner promo-embed-layout">
-      <div class="promo-embed-copy" data-promo-active-content>
-        <p class="eyebrow">Weekday offer</p>
-        <h2>Claim a free weekday washer load.</h2>
-        <p id="promo-offer" class="section-lead promo-offer-copy">One free 20- or 30-pound washer load</p>
-        <ul class="promo-facts" aria-label="Offer details">
-          <li><span class="material-icons" aria-hidden="true">calendar_month</span>July 6-30, 2026; Monday-Thursday</li>
-          <li><span class="material-icons" aria-hidden="true">schedule</span>Redeem between 9 AM and 6 PM</li>
-          <li><span class="material-icons" aria-hidden="true">local_laundry_service</span>Use in person at Snappy Coin Laundry</li>
-          <li><span class="material-icons" aria-hidden="true">filter_1</span>Limit one promo claim per customer</li>
-        </ul>
+    <section id="services" class="services-section" aria-labelledby="services-heading">
+      <div class="section-heading services-heading">
+        <p class="eyebrow">Three ways to get it done</p>
+        <h2 id="services-heading">Laundry on your terms.</h2>
       </div>
 
-      <section class="promo-card promo-signup-card" aria-label="Claim form" data-promo-active-content>
-        <h2>Get your code</h2>
-        <p>Verify your phone, then we&apos;ll email your coupon code.</p>
-        <form id="promo-signup-form" class="promo-form" novalidate>
-          <div class="promo-field promo-field-half">
-            <label for="promo-firstName">First name</label>
-            <input id="promo-firstName" name="firstName" autocomplete="given-name" required />
-          </div>
-          <div class="promo-field promo-field-half">
-            <label for="promo-lastName">Last name</label>
-            <input id="promo-lastName" name="lastName" autocomplete="family-name" required />
-          </div>
-          <div class="promo-field promo-field-half">
-            <label for="promo-email">Email</label>
-            <input id="promo-email" name="email" type="email" autocomplete="email" required />
-          </div>
-          <div class="promo-field promo-field-half">
-            <label for="promo-phone">Mobile phone</label>
-            <input id="promo-phone" name="phone" type="tel" autocomplete="tel" required />
-          </div>
-          <div class="promo-field promo-field-half">
-            <label for="promo-zip">ZIP code</label>
-            <input id="promo-zip" name="zip" inputmode="numeric" autocomplete="postal-code" required />
-          </div>
-          <label class="promo-check">
-            <input type="checkbox" name="phoneVerificationConsent" required />
-            <span>I agree to receive a one-time SMS verification code for this offer.</span>
-          </label>
-          <label class="promo-check">
-            <input type="checkbox" name="emailMarketingConsent" />
-            <span>Send me future Snappy Coin Laundry deals, discounts, and updates by email.</span>
-          </label>
-          <div id="promo-turnstile"></div>
-          <div class="promo-actions">
-            <button id="promo-submit" class="promo-submit" type="submit">Send verification code</button>
-          </div>
-          <div id="promo-message" class="promo-alert" role="alert" hidden></div>
-        </form>
-
-        <section id="promo-verification" class="promo-verification-panel" hidden>
-          <h2>Enter the SMS code</h2>
-          <div id="promo-verify-message" class="promo-alert" role="alert" hidden></div>
-          <form id="promo-verify-form" class="promo-form" novalidate>
-            <input id="promo-claim-id" name="claimId" type="hidden" />
-            <div class="promo-field">
-              <label for="promo-phoneCode">Verification code</label>
-              <input id="promo-phoneCode" name="phoneCode" inputmode="numeric" autocomplete="one-time-code" required />
-            </div>
-            <button id="promo-verify-submit" class="promo-submit" type="submit">Verify and email coupon</button>
-            <div class="promo-resend-row">
-              <p id="promo-resend-status">Didn&apos;t get a text? You can resend in 60s.</p>
-              <button id="promo-resend" class="promo-secondary-action" type="button" disabled>Resend code in 60s</button>
-            </div>
-          </form>
-        </section>
-
-        <section id="promo-success" class="promo-success-panel" aria-live="polite" hidden>
-          <span class="material-icons promo-success-icon" aria-hidden="true">check_circle</span>
-          <h2>Coupon emailed</h2>
-          <p id="promo-success-message">Your coupon code was emailed.</p>
-        </section>
-      </section>
-
-      <section id="promo-paused" class="promo-card promo-paused-panel" hidden>
-        <p class="eyebrow">Promotions</p>
-        <h2>More ways to save are coming.</h2>
-        <p>
-          No current promos are open right now. Stop in for fast machines, friendly attendants, and
-          convenient wash, dry, and fold service.
-        </p>
-        <ul class="promo-facts" aria-label="Snappy Coin Laundry highlights">
-          <li><span class="material-icons" aria-hidden="true">schedule</span>Open 6:00 AM to 1:30 AM every day</li>
-          <li><span class="material-icons" aria-hidden="true">local_laundry_service</span>Large Dexter washers for bulky loads</li>
-          <li><span class="material-icons" aria-hidden="true">local_shipping</span>Wash/Dry/Fold with free pickup and delivery</li>
-        </ul>
-        <div class="promo-paused-actions">
-          <a class="btn-cta primary" href="#contact-section">Plan Your Visit</a>
-          <a class="btn-cta ghost" href="#services">Explore Services</a>
-        </div>
-      </section>
-    </div>
-  </section>
-
-  <!-- ABOUT SECTION -->
-  <section id="about" class="content-section bg-light about-gradient">
-    <div class="section-inner">
-      <h2>About Snappy Coin Laundry</h2>
-      <div class="about-grid">
-        <div class="about-copy">
-          <p>
-            Snappy Coin Laundry makes laundry day easier with brand new, state-of-the-art, Made in the USA machines.
-          </p>
-          <h3 class="vision-heading">Our Values and Vision</h3>
-          <ul class="value-list">
-            <li>
-              <span class="material-icons bullet-icon">star</span>
-              Clean, Safe, Welcoming Facility
-            </li>
-            <li>
-              <span class="material-icons bullet-icon">star</span>
-              Exceptional Customer Focus
-            </li>
-            <li>
-              <span class="material-icons bullet-icon">star</span>
-              Quality and Care in Every Wash
-            </li>
-            <li>
-              <span class="material-icons bullet-icon">star</span>
-              Clean, handicap-accessible restroom
-            </li>
+      <article class="service-feature service-feature-pud">
+        <div class="service-number" aria-hidden="true">01</div>
+        <div class="service-copy">
+          <p class="service-kicker">We come to you</p>
+          <h3>Pickup &amp; delivery</h3>
+          <p>Choose a route, tell us how you like your laundry, save a card securely, and follow the order from pickup through delivery.</p>
+          <ul class="service-facts">
+            <li>Address and route checked before checkout</li>
+            <li>Final price calculated after weighing</li>
+            <li>Private order tracking and text updates</li>
           </ul>
-        </div>
-        <div class="about-highlight-card">
-          <p class="about-highlight-heading">What you&apos;ll love</p>
-          <ul class="about-highlight-list">
-            <li><span class="material-icons" aria-hidden="true">attach_money</span> Best pricing</li>
-            <li><span class="material-icons" aria-hidden="true">wifi</span> Complimentary Wi-Fi &amp; entertainment</li>
-            <li><span class="material-icons" aria-hidden="true">local_drink</span> Fully stocked vending &amp; supplies</li>
-            <li><span class="material-icons" aria-hidden="true">security</span> Bright, secure facility with attendants</li>
-          </ul>
-          <div class="about-stats">
-            <div class="stat">
-              <span>Huge Machines</span>
-              For Bulky Loads
-            </div>
-            <div class="stat">
-              <span>365</span>
-              Days a Year
-            </div>
-            <div class="stat">
-              <span>DexterPay</span>
-              App Ready
-            </div>
+          <div class="service-actions">
+            <a class="button button-primary" href="pickup-delivery/">Check my address</a>
+            <a class="text-link" href="pickup-delivery/status/">Track an order <span aria-hidden="true">→</span></a>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SERVICES SECTION -->
-  <section id="services" class="content-section services-gradient">
-    <div class="section-inner">
-      <h2>Our Services</h2>
-      <p class="section-lead">
-        Choose the experience that fits your schedule. Every visit comes with friendly attendants, spotless machines, and
-        a calm, family-friendly atmosphere.
-      </p>
-      <div class="services-wrapper">
-        <!-- Self-Service -->
-        <article class="service-block">
-          <div class="icon-wrapper">
-            <img src="assets/laundrymachine icon.png" alt="Self-Service icon" />
-          </div>
-          <h3>Self-Service Laundry</h3>
-          <p>
-            State-of-the-art, Made in the USA washers and dryers for large or small loads. Our 80 pound washers are
-            perfect for comforters, bedding, and bulk laundry. Get all of your family's laundry done in one load!
-          </p>
-          <ul class="bulleted-list fancy-bullets">
-            <li><span class="material-icons bullet-icon">check_circle</span> Free Wi-Fi</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Flat-screen TVs</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Vending machines (Drinks, snacks, &amp;
-              laundry supplies)</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> ATM</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Money Changers</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> DexterPay Laundry App</li>
-          </ul>
-          <a class="service-link" href="#contact-section">Get directions</a>
-        </article>
-
-        <!-- Drop-Off Service -->
-        <article class="service-block">
-          <div class="icon-wrapper">
-            <img src="assets/laundrybasket.png" alt="Drop-Off icon" />
-          </div>
-          <h3>Wash / Dry / Fold Service</h3>
-          <p class="service-tagline">Laundry done for you—fresh, folded, and ready to put away.</p>
-          <div class="service-meta" aria-label="Wash dry fold highlights">
-            <span class="service-pill rate"><span class="material-icons" aria-hidden="true">local_offer</span>$1.50 per pound</span>
-            <span class="service-pill"><span class="material-icons" aria-hidden="true">local_shipping</span>Free pickup &amp; delivery</span>
-            <span class="service-pill"><span class="material-icons" aria-hidden="true">schedule</span>Same-day available, no charge, when received by 12 noon</span>
-          </div>
-          <p><strong>Pressed for time or just don&apos;t like doing laundry?</strong></p>
-          <p>
-            We sort, wash, dry, and neatly fold your items with quality detergents and attentive care. Spend time on what
-            you love instead of worrying about laundry.
-          </p>
-          <ul class="bulleted-list fancy-bullets">
-            <li><span class="material-icons bullet-icon">check_circle</span> Fresh, hypoallergenic detergents</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Text updates when your order is ready</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Neatly folded and bundled for easy put-away</li>
-          </ul>
-          <a class="service-link" href="#contact-section">Schedule a pickup</a>
-        </article>
-
-        <article id="mending-alterations" class="service-block">
-          <div class="icon-wrapper">
-            <span class="material-icons service-icon" aria-hidden="true">content_cut</span>
-          </div>
-          <p class="eyebrow">New service available</p>
-          <h3>Mending &amp; Simple Alterations</h3>
-          <p class="service-tagline">Quick clothing fixes and straightforward alterations while you handle laundry.</p>
-          <p>
-            Need a hem, button, seam repair, or another simple clothing adjustment? Ask our team about mending and
-            alteration services available in-store.
-          </p>
-          <ul class="bulleted-list fancy-bullets">
-            <li><span class="material-icons bullet-icon">check_circle</span> Simple repairs and everyday fixes</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Convenient to add during your laundry visit</li>
-            <li><span class="material-icons bullet-icon">check_circle</span> Ask in-store for current availability</li>
-          </ul>
-          <a class="service-link" href="#contact-section">Ask about alterations</a>
-        </article>
-      </div>
-      <div class="amenities-bar" aria-label="Popular amenities">
-        <p class="amenities-title">In-Store Perks</p>
-        <div class="amenities-list">
-          <span class="amenity-pill"><span class="material-icons" aria-hidden="true">weekend</span> Lounge seating</span>
-          <span class="amenity-pill"><span class="material-icons" aria-hidden="true">visibility</span> 24/7 CCTV</span>
-          <span class="amenity-pill"><span class="material-icons" aria-hidden="true">local_cafe</span> Snacks &amp; drinks</span>
-          <span class="amenity-pill"><span class="material-icons" aria-hidden="true">electric_bolt</span> Fast, efficient cycles</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHY CHOOSE US SECTION -->
-  <section id="why-choose-us" class="content-section bg-light why-gradient">
-    <div class="section-inner">
-      <h2>Why Choose Snappy Coin Laundry?</h2>
-      <article class="why-reasons">
-        <div class="reason-item">
-          <span class="material-icons reason-icon" aria-hidden="true">diversity_3</span>
-          <h3>Family-Owned Business</h3>
-          <p>Rooted in the community, providing a family-friendly environment and personalized service.</p>
-        </div>
-        <div class="reason-item">
-          <span class="material-icons reason-icon" aria-hidden="true">verified_user</span>
-          <h3>Safe, Clean Facility</h3>
-          <p>Our immaculate laundromat is designed for customer comfort and safety.</p>
-        </div>
-        <div class="reason-item">
-          <span class="material-icons reason-icon" aria-hidden="true">build_circle</span>
-          <h3>State-of-the-Art Equipment</h3>
-          <p>Enjoy brand-new, high-capacity, dependable machines for a faster, more efficient wash. <strong>Made in the
-              USA.</strong></p>
-        </div>
-        <div class="reason-item">
-          <span class="material-icons reason-icon" aria-hidden="true">volunteer_activism</span>
-          <h3>Friendly Staff</h3>
-          <p>Our staff is available to answer questions and help you choose the best wash cycles.</p>
-        </div>
-        <div class="reason-item">
-          <span class="material-icons reason-icon" aria-hidden="true">map</span>
-          <h3>Convenient Location</h3>
-          <p>Located at the intersection of McKelvey and Ameling Roads in Maryland Heights, across from the Community
-            Center and Aquaport, near Creve Coeur Lake, Sportport International, and Scott Gallagher &amp; Lou Fusz
-            soccer fields.</p>
-        </div>
-        <div class="reason-item">
-          <span class="material-icons reason-icon" aria-hidden="true">translate</span>
-          <h3>Servicio Amigable para Hispanohablantes</h3>
-          <p>
-            <strong>Se habla español</strong> — Nuestro personal bilingüe está aquí para asistir a clientes que hablan
-            español.
-          </p>
+        <div class="service-visual service-visual-pud" aria-hidden="true">
+          <p>YOU BAG IT</p><span>→</span><p>WE HANDLE IT</p><span>→</span><p>BACK HOME, FOLDED</p>
         </div>
       </article>
-    </div>
-  </section>
 
-  <!-- HIGHLIGHTS SECTION -->
-  <section id="highlights" class="content-section highlights-gradient">
-    <div class="section-inner">
-      <h2>Facility Highlights</h2>
-      <p class="section-lead">Here&apos;s what you can count on every time you stop by Snappy Coin Laundry.</p>
-      <div class="feature-grid" aria-label="Facility highlights">
-        <article class="feature-card">
-          <span class="material-icons feature-icon" aria-hidden="true">local_laundry_service</span>
-          <h3>Mega-Capacity Washers</h3>
-          <p>Made-in-the-USA Dexter machines make quick work of comforters, bedding, and bulk loads.</p>
+      <div class="service-pair">
+        <article id="self-service" class="service-feature service-feature-self">
+          <div class="service-number" aria-hidden="true">02</div>
+          <p class="service-kicker">Do it here</p>
+          <h3>Self-service</h3>
+          <p>Clean, attended, high-capacity Dexter washers and dryers with coins or DexterPay.</p>
+          <dl class="service-specs">
+            <div><dt>Largest washer</dt><dd>80 lb</dd></div>
+            <div><dt>DexterPay location</dt><dd>#12105</dd></div>
+            <div><dt>Open</dt><dd>365 days</dd></div>
+          </dl>
+          <a class="text-link" href="#dexterpay">Set up DexterPay <span aria-hidden="true">→</span></a>
         </article>
-        <article class="feature-card">
-          <span class="material-icons feature-icon" aria-hidden="true">shield</span>
-          <h3>Attended &amp; Secure</h3>
-          <p>Friendly staff, bright lighting, cameras, and on-site assistance keep your visit comfortable and safe.</p>
-        </article>
-        <article class="feature-card">
-          <span class="material-icons feature-icon" aria-hidden="true">tap_and_play</span>
-          <h3>Flexible Payments</h3>
-          <p>Use coins, on-site changers, or DexterPay for fast, secure mobile checkout using location number 12105.</p>
+
+        <article id="mending-alterations" class="service-feature service-feature-mending">
+          <div class="service-number" aria-hidden="true">03</div>
+          <p class="service-kicker">Fix it while you’re here</p>
+          <h3>Mending &amp; simple alterations</h3>
+          <p>Ask our team about hems, buttons, seam repairs, and straightforward clothing adjustments.</p>
+          <p class="service-note">Availability varies. Call or ask an attendant in store.</p>
+          <a class="text-link" href="tel:13146281001">Ask about a repair <span aria-hidden="true">→</span></a>
         </article>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- DEXTERPAY SECTION -->
-  <section id="dexterpay" class="content-section dexterpay-gradient">
-    <div class="section-inner">
-      <div class="dexterpay-layout">
-        <div class="dexterpay-intro-card">
-          <p class="eyebrow">Cashless Checkout</p>
-          <h2>Set Up DexterPay Before You Arrive</h2>
-          <p class="dexterpay-lead">
-            If you want to pay from your phone, download DexterPay before your visit and use Snappy Coin Laundry&apos;s
-            location number when the app asks for it.
-          </p>
-          <div class="dexterpay-number-card" aria-label="DexterPay location number">
-            <span class="dexterpay-number-label">Location Number</span>
-            <strong class="dexterpay-number-value">12105</strong>
-          </div>
-          <div class="dexterpay-actions-row">
-            <a
-              class="btn-cta primary"
-              href="https://www.dexter.com/dexterpay/how-to-use/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >Download DexterPay</a>
-            <a class="dexterpay-text-link" href="#contact-section">Need setup help?</a>
-          </div>
-          <p class="dexterpay-note">Available for iPhone and Android through Dexter&apos;s official download page.</p>
-        </div>
-        <div class="dexterpay-steps-grid" aria-label="DexterPay steps">
-          <article class="dexterpay-step-card">
-            <span class="dexterpay-step-num">1</span>
-            <h3>Download the app</h3>
-            <p>Open Dexter&apos;s official DexterPay page and install the app before you head over.</p>
-          </article>
-          <article class="dexterpay-step-card">
-            <span class="dexterpay-step-num">2</span>
-            <h3>Create your account</h3>
-            <p>Sign up with your email so you can save payment details and keep track of your loads.</p>
-          </article>
-          <article class="dexterpay-step-card">
-            <span class="dexterpay-step-num">3</span>
-            <h3>Enter location #12105</h3>
-            <p>Use location number 12105 to connect the app to Snappy Coin Laundry when you arrive.</p>
-          </article>
-          <article class="dexterpay-step-card">
-            <span class="dexterpay-step-num">4</span>
-            <h3>Start and track your machine</h3>
-            <p>Select your washer or dryer, pay from your phone, and monitor progress while you wait.</p>
-          </article>
-        </div>
+    <section class="proof-section" aria-labelledby="proof-heading">
+      <div class="proof-intro">
+        <p class="eyebrow">A laundromat that works like one</p>
+        <h2 id="proof-heading">The useful stuff is not an upgrade.</h2>
       </div>
-    </div>
-  </section>
+      <ul class="proof-list">
+        <li><span>01</span><strong>Attendants on site</strong><p>Real help choosing cycles, handling bulky items, or finding supplies.</p></li>
+        <li><span>02</span><strong>Made-in-USA Dexter machines</strong><p>Modern, high-capacity equipment for fewer loads and less waiting.</p></li>
+        <li><span>03</span><strong>Spanish-friendly service</strong><p>Se habla español. Nuestro equipo está aquí para ayudar.</p></li>
+        <li><span>04</span><strong>Everything you forgot</strong><p>Detergent, softener, dryer sheets, snacks, drinks, Wi-Fi, ATM, and changers.</p></li>
+      </ul>
+    </section>
 
-  <!-- FAQ SECTION -->
-  <section id="faq" class="content-section">
-    <div class="section-inner">
-      <h2>Frequently Asked Questions</h2>
-      <div class="faq-layout">
-        <div class="faq-accordion">
-          <details class="faq-item" open>
-            <summary>
-              <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
-              <span>What payment methods do the machines accept?</span>
-            </summary>
-            <p>The machines accept coins; there are money changers available on-site. We also accept DexterPay for secure,
-              mobile payments. If you want to set it up before you arrive, our location number is 12105.</p>
-          </details>
-          <details class="faq-item">
-            <summary>
-              <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
-              <span>Do you offer detergent if I forget mine?</span>
-            </summary>
-            <p>Absolutely! Our vending machines have detergent, fabric softener, and dryer sheets.</p>
-          </details>
-          <details class="faq-item">
-            <summary>
-              <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
-              <span>Can I leave my clothes unattended?</span>
-            </summary>
-            <p>We recommend staying on-site for the safety and care of your items. We are not responsible for items left
-              unattended.</p>
-          </details>
-          <details class="faq-item">
-            <summary>
-              <span class="material-icons faq-icon" aria-hidden="true">help_outline</span>
-              <span>Do you have drop-off laundry service?</span>
-            </summary>
-            <p>Yes! You may call in advance or just drop off your laundry for a quick turnaround.</p>
-          </details>
-        </div>
-        <aside class="faq-help-card">
-          <p class="eyebrow">Need a hand?</p>
-          <h3>Our attendants are on-site every day.</h3>
-          <p>Stop in, send us an email, or DM us on social to get answers quickly.</p>
-          <ul class="faq-help-list">
-            <li><span class="material-icons" aria-hidden="true">support_agent</span> Live team from open to close</li>
-            <li><span class="material-icons" aria-hidden="true">sms</span> Quick responses via email &amp; social</li>
-            <li><span class="material-icons" aria-hidden="true">local_shipping</span> Assistance for bulky items</li>
+    <section id="free-weekday-wash" class="promo-section" data-promo-section aria-labelledby="promo-heading">
+      <div class="promo-embed-layout">
+        <div class="promo-embed-copy" data-promo-active-content>
+          <p class="eyebrow">Weekday offer · July 2026</p>
+          <h2 id="promo-heading">One load.<br>On the house.</h2>
+          <p id="promo-offer" class="promo-offer-copy">One free 20- or 30-pound washer load</p>
+          <ul class="promo-facts" aria-label="Offer details">
+            <li><strong>When</strong><span>July 6-30, 2026; Monday-Thursday</span></li>
+            <li><strong>Hours</strong><span>Redeem between 9 AM and 6 PM</span></li>
+            <li><strong>Where</strong><span>In person at Snappy</span></li>
+            <li><strong>Limit</strong><span>One claim per customer</span></li>
           </ul>
-          <a class="btn-cta primary" href="#contact-section">Contact our team</a>
-        </aside>
-      </div>
-    </div>
-  </section>
-
-  <!-- CONTACT SECTION -->
-  <section id="contact-section" class="content-section bg-light contact-gradient">
-    <div class="section-inner">
-      <h2>Contact Us</h2>
-      <p>
-        <strong>Address:</strong> 2303 McKelvey Rd, Maryland Heights, MO 63043<br />
-        <strong>Phone:</strong> <a href="tel:13146281001">(314) 628-1001</a><br />
-        <strong>Across from:</strong> Maryland Heights Community Center
-      </p>
-      <div class="contact-info-grid">
-        <article class="contact-card">
-          <span class="material-icons contact-icon" aria-hidden="true">schedule</span>
-          <h3>Hours</h3>
-          <p><strong>Monday – Sunday:</strong> 6:00 AM – 1:30 AM</p>
-          <p>Open 365 days a year, even on holidays.</p>
-        </article>
-        <article class="contact-card">
-          <span class="material-icons contact-icon" aria-hidden="true">place</span>
-          <h3>Visit</h3>
-          <p>2303 McKelvey Rd<br />Maryland Heights, MO 63043</p>
-          <p>Across from the Community Center &amp; Aquaport.</p>
-        </article>
-        <article class="contact-card">
-          <span class="material-icons contact-icon" aria-hidden="true">email</span>
-          <h3>Message</h3>
-          <p><a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a></p>
-          <p>Follow us for updates on
-            <a href="https://www.facebook.com/profile.php?id=61573065201719" target="_blank" rel="noopener noreferrer">Facebook</a>
-            &amp;
-            <a href="https://www.instagram.com/snappycoinlaundry/" target="_blank" rel="noopener noreferrer">Instagram</a>.
-          </p>
-        </article>
-      </div>
-      <section class="newsletter-card" aria-labelledby="newsletter-heading">
-        <div class="newsletter-copy">
-          <p class="eyebrow">Deals &amp; updates</p>
-          <h3 id="newsletter-heading">Get future Snappy Coin Laundry offers.</h3>
-          <p>Join the email list for promotions, service updates, and local laundry tips.</p>
         </div>
-        <form id="newsletter-signup-form" class="newsletter-form" novalidate>
-          <div class="newsletter-fields">
-            <label class="sr-only" for="newsletter-firstName">First name</label>
-            <input id="newsletter-firstName" name="firstName" autocomplete="given-name" placeholder="First name" />
-            <label class="sr-only" for="newsletter-email">Email address</label>
-            <input id="newsletter-email" name="email" type="email" autocomplete="email" placeholder="Email address" required />
-            <button id="newsletter-submit" class="promo-submit" type="submit">Join email list</button>
-          </div>
-          <p class="newsletter-note">By joining, you agree to receive marketing emails from Snappy Coin Laundry. Unsubscribe anytime.</p>
-          <div id="newsletter-turnstile"></div>
-          <div id="newsletter-message" class="promo-alert" role="alert" hidden></div>
-        </form>
-      </section>
-      <!-- Updated map container for responsiveness -->
-      <div class="map-container">
-        <iframe title="Snappy Coin Laundry Map"
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2s2303%20McKelvey%20Rd%2C%20Maryland%20Heights%2C%20MO%2063043!5e0!3m2!1sen!2sus!4v1610000000000!5m2!1sen!2sus"
-          allowfullscreen="" loading="lazy">
-        </iframe>
-      </div>
-    </div>
-  </section>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-inner">
-      <p>
-        <strong>Snappy Coin Laundry</strong> | 2303 McKelvey Rd, Maryland Heights, MO 63043
-        | <em>(Mon–Sun: 6:00 AM–1:30 AM)</em>
-      </p>
-      <p>
-        Email:
-        <a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a><br />
-        Website:
-        <a href="https://snappycoinlaundry.com" target="_blank" rel="noopener noreferrer">
-          snappycoinlaundry.com
-        </a><br />
-        &copy; 2025 Snappy Coin Laundry. All Rights Reserved.
-      </p>
-      <nav class="footer-policy-links" aria-label="Legal and privacy links">
-        <a href="privacy.html">Privacy Policy</a>
-        <a href="terms.html">Terms of Use</a>
-        <a href="cookies.html">Cookie Statement</a>
-      </nav>
-      <!-- Social Media Links in Footer -->
-      <div class="social-links">
-        <a href="https://www.facebook.com/profile.php?id=61573065201719" target="_blank" rel="noopener noreferrer" class="facebook">
-          <span class="material-icons">thumb_up</span> Like us on Facebook
-        </a>
-        <a href="https://www.instagram.com/snappycoinlaundry/" target="_blank" rel="noopener noreferrer" class="instagram">
-          <span class="material-icons">photo_camera</span> Follow us on Instagram
-        </a>
+        <section class="promo-card promo-signup-card" aria-label="Claim form" data-promo-active-content>
+          <p class="form-number">FREE WASH / 2026</p>
+          <h2>Get your code</h2>
+          <p>Verify your mobile number and we’ll email the coupon.</p>
+          <form id="promo-signup-form" class="promo-form" novalidate>
+            <div class="promo-field promo-field-half"><label for="promo-firstName">First name</label><input id="promo-firstName" name="firstName" autocomplete="given-name" required></div>
+            <div class="promo-field promo-field-half"><label for="promo-lastName">Last name</label><input id="promo-lastName" name="lastName" autocomplete="family-name" required></div>
+            <div class="promo-field promo-field-half"><label for="promo-email">Email</label><input id="promo-email" name="email" type="email" autocomplete="email" required></div>
+            <div class="promo-field promo-field-half"><label for="promo-phone">Mobile phone</label><input id="promo-phone" name="phone" type="tel" autocomplete="tel" required></div>
+            <div class="promo-field promo-field-half"><label for="promo-zip">ZIP code</label><input id="promo-zip" name="zip" inputmode="numeric" autocomplete="postal-code" required></div>
+            <label class="promo-check"><input type="checkbox" name="phoneVerificationConsent" required><span>I agree to receive a one-time SMS verification code for this offer.</span></label>
+            <label class="promo-check"><input type="checkbox" name="emailMarketingConsent"><span>Send me future Snappy Coin Laundry deals and updates by email.</span></label>
+            <div id="promo-turnstile"></div>
+            <button id="promo-submit" class="button button-dark promo-submit" type="submit">Send verification code</button>
+            <div id="promo-message" class="promo-alert" role="alert" hidden></div>
+          </form>
+          <section id="promo-verification" class="promo-verification-panel" hidden>
+            <h2>Enter the SMS code</h2>
+            <div id="promo-verify-message" class="promo-alert" role="alert" hidden></div>
+            <form id="promo-verify-form" class="promo-form" novalidate>
+              <input id="promo-claim-id" name="claimId" type="hidden">
+              <div class="promo-field"><label for="promo-phoneCode">Verification code</label><input id="promo-phoneCode" name="phoneCode" inputmode="numeric" autocomplete="one-time-code" required></div>
+              <button id="promo-verify-submit" class="button button-dark promo-submit" type="submit">Verify and email coupon</button>
+              <div class="promo-resend-row"><p id="promo-resend-status">You can resend in 60 seconds.</p><button id="promo-resend" class="text-button" type="button" disabled>Resend code in 60s</button></div>
+            </form>
+          </section>
+          <section id="promo-success" class="promo-success-panel" aria-live="polite" hidden>
+            <p class="success-mark" aria-hidden="true">✓</p><h2>Coupon emailed</h2><p id="promo-success-message">Your coupon code was emailed.</p>
+          </section>
+        </section>
+
+        <section id="promo-paused" class="promo-paused-panel" hidden>
+          <p class="eyebrow">Promotions</p>
+          <h2>Nothing to claim today.</h2>
+          <p>Check live machines, book pickup and delivery, or stop in anytime between 6:00 AM and 1:30 AM.</p>
+          <div class="promo-paused-actions"><a class="button button-dark" href="#live-machines">Check machines</a><a class="text-link" href="pickup-delivery/">Book pickup &amp; delivery <span aria-hidden="true">→</span></a></div>
+        </section>
       </div>
-    </div>
+    </section>
+
+    <section id="dexterpay" class="dexterpay-section" aria-labelledby="dexter-heading">
+      <div class="dexterpay-number" aria-hidden="true">12105</div>
+      <div class="dexterpay-copy">
+        <p class="eyebrow">Pay from your phone</p>
+        <h2 id="dexter-heading">DexterPay, minus the parking-lot setup.</h2>
+        <p>Download the app before you arrive, create an account, and enter Snappy’s location number <strong>12105</strong>. Then choose a machine, pay, and follow the cycle from your phone.</p>
+        <div class="service-actions"><a class="button button-primary" href="https://www.dexter.com/dexterpay/how-to-use/" target="_blank" rel="noopener noreferrer">Get DexterPay</a><a class="text-link light-link" href="#visit">Need help in store? <span aria-hidden="true">→</span></a></div>
+      </div>
+    </section>
+
+    <section id="faq" class="faq-section" aria-labelledby="faq-heading">
+      <div class="faq-heading-wrap">
+        <p class="eyebrow">Straight answers</p>
+        <h2 id="faq-heading">Before you load the car.</h2>
+        <p>Still unsure? Call <a href="tel:13146281001">(314) 628-1001</a> and an attendant can help.</p>
+      </div>
+      <div class="faq-accordion">
+        <details class="faq-item" open><summary>What payments do the machines accept?<span aria-hidden="true">+</span></summary><p>Use coins, the on-site changers, or DexterPay. Snappy’s DexterPay location number is 12105.</p></details>
+        <details class="faq-item"><summary>Can I wash a king-size comforter?<span aria-hidden="true">+</span></summary><p>Yes. Our largest washers hold up to 80 pounds and are built for comforters, bedding, and other bulky loads.</p></details>
+        <details class="faq-item"><summary>Do you sell detergent and laundry supplies?<span aria-hidden="true">+</span></summary><p>Yes. Vending machines carry detergent, fabric softener, dryer sheets, drinks, and snacks.</p></details>
+        <details class="faq-item"><summary>How does pickup and delivery work?<span aria-hidden="true">+</span></summary><p>Start by checking your address. If a route is available, choose a pickup window and preferences, verify your phone, save a card securely, and submit the request. You are charged after the laundry is weighed.</p></details>
+        <details class="faq-item"><summary>Can I leave while my clothes wash?<span aria-hidden="true">+</span></summary><p>We recommend staying with your items. Snappy is not responsible for laundry left unattended.</p></details>
+      </div>
+    </section>
+
+    <section id="visit" class="visit-section" aria-labelledby="visit-heading">
+      <div class="visit-details">
+        <p class="eyebrow">McKelvey &amp; Ameling</p>
+        <h2 id="visit-heading">Come get it done.</h2>
+        <address>2303 McKelvey Rd<br>Maryland Heights, MO 63043</address>
+        <dl class="visit-list">
+          <div><dt>Hours</dt><dd>Daily · 6:00 AM–1:30 AM</dd></div>
+          <div><dt>Phone</dt><dd><a href="tel:13146281001">(314) 628-1001</a></dd></div>
+          <div><dt>Email</dt><dd><a href="mailto:snappycoinlaundry@gmail.com">snappycoinlaundry@gmail.com</a></dd></div>
+          <div><dt>Landmark</dt><dd>Across from the Community Center &amp; Aquaport</dd></div>
+        </dl>
+        <a class="button button-primary" href="https://www.google.com/maps/dir/?api=1&amp;destination=2303+McKelvey+Rd+Maryland+Heights+MO+63043" target="_blank" rel="noopener noreferrer">Open directions</a>
+      </div>
+      <div class="map-container"><iframe title="Map showing Snappy Coin Laundry at 2303 McKelvey Road" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2s2303%20McKelvey%20Rd%2C%20Maryland%20Heights%2C%20MO%2063043!5e0!3m2!1sen!2sus!4v1610000000000!5m2!1sen!2sus" loading="lazy" allowfullscreen></iframe></div>
+    </section>
+
+    <section class="newsletter-section" aria-labelledby="newsletter-heading">
+      <div class="newsletter-copy"><p class="eyebrow">Occasional emails, useful deals</p><h2 id="newsletter-heading">Keep laundry day cheaper.</h2><p>Get promotions, service news, and local updates. No mystery frequency; unsubscribe anytime.</p></div>
+      <form id="newsletter-signup-form" class="newsletter-form" novalidate>
+        <div class="newsletter-field">
+          <label for="newsletter-firstName">First name <span>(optional)</span></label>
+          <input id="newsletter-firstName" name="firstName" autocomplete="given-name">
+        </div>
+        <div class="newsletter-field">
+          <label for="newsletter-email">Email address</label>
+          <input id="newsletter-email" name="email" type="email" autocomplete="email" required>
+        </div>
+        <button id="newsletter-submit" class="button button-dark promo-submit" type="submit">Join the list</button>
+        <p class="newsletter-note">By joining, you agree to receive marketing email from Snappy Coin Laundry.</p>
+        <div id="newsletter-turnstile"></div><div id="newsletter-message" class="promo-alert" role="alert" hidden></div>
+      </form>
+    </section>
+  </main>
+
+  <nav class="mobile-action-dock" aria-label="Quick actions">
+    <a href="#live-machines"><strong>Machines</strong><span>Live status</span></a>
+    <a href="pickup-delivery/"><strong>Pickup</strong><span>Book online</span></a>
+    <a href="https://www.google.com/maps/dir/?api=1&amp;destination=2303+McKelvey+Rd+Maryland+Heights+MO+63043" target="_blank" rel="noopener noreferrer"><strong>Directions</strong><span>Open maps</span></a>
+  </nav>
+
+  <footer class="footer">
+    <div class="footer-brand"><img src="assets/logo-96.webp" alt="" width="60" height="60"><p><strong>SNAPPY</strong><span>COIN LAUNDRY</span></p></div>
+    <div><p>2303 McKelvey Rd<br>Maryland Heights, MO 63043</p><p>Open daily · 6:00 AM–1:30 AM</p></div>
+    <nav aria-label="Service links"><a href="pickup-delivery/">Book pickup &amp; delivery</a><a href="pickup-delivery/status/">Track an order</a><a href="#live-machines">Live machines</a></nav>
+    <nav aria-label="Legal links"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="cookies.html">Cookies</a><button class="footer-link-button" type="button" data-cookie-preferences>Cookie choices</button><a href="https://www.facebook.com/profile.php?id=61573065201719" target="_blank" rel="noopener noreferrer">Facebook</a><a href="https://www.instagram.com/snappycoinlaundry/" target="_blank" rel="noopener noreferrer">Instagram</a></nav>
+    <p class="footer-bottom">© 2026 Snappy Coin Laundry. Family owned in Maryland Heights.</p>
   </footer>
 
-  <!-- JAVASCRIPT -->
-  <script type="module" src="assets/js/site-analytics.js?v=20260621-1"></script>
+  <script type="module" src="assets/js/site-analytics.js?v=20260715-4"></script>
   <script src="assets/js/availability-widget.js" defer></script>
-  <script src="assets/js/promo-signup.js?v=20260623-1" defer></script>
-  <script src="script.js?v=20260527"></script>
+  <script src="assets/js/promo-signup.js?v=20260715-2" defer></script>
+  <script src="script.js?v=20260715-2"></script>
 </body>
-
 </html>

@@ -25,6 +25,7 @@ if (form && window.top !== window.self) {
   history.replaceState(null, "", location.pathname);
   let capabilities = takeClaimCapabilities();
   let uploadedEvidence = [];
+  let selectedEvidenceFiles = [];
   let pendingClaimInput = null;
   let evidenceUploadTerminalFailure = false;
   let submitting = false;
@@ -32,6 +33,42 @@ if (form && window.top !== window.self) {
   const evidenceInput = form.elements.namedItem("evidence");
   const evidenceField = document.querySelector("[data-claim-evidence-field]");
   const evidenceHelp = document.querySelector("[data-claim-evidence-help]");
+  const evidenceReview = document.querySelector("[data-evidence-review]");
+  const evidenceList = document.querySelector("[data-evidence-list]");
+
+  document.querySelectorAll("[data-return-status]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (!token) return;
+      event.preventDefault();
+      location.assign(`/pickup-delivery/status/#${encodeURIComponent(token)}`);
+    });
+  });
+
+  evidenceInput?.addEventListener("change", () => {
+    try {
+      selectedEvidenceFiles = validateClaimEvidenceFiles(evidenceInput.files);
+      renderEvidenceSelection();
+      show(selectedEvidenceFiles.length
+        ? `${selectedEvidenceFiles.length} evidence file${selectedEvidenceFiles.length === 1 ? " is" : "s are"} ready to submit with this report.`
+        : "", "status");
+    } catch (error) {
+      selectedEvidenceFiles = [];
+      evidenceInput.value = "";
+      renderEvidenceSelection();
+      show(error?.message || "Review the selected evidence files.");
+    }
+  });
+
+  evidenceList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-remove-evidence]");
+    if (!button || submitting) return;
+    const index = Number(button.dataset.removeEvidence);
+    if (!Number.isInteger(index) || index < 0 || index >= selectedEvidenceFiles.length) return;
+    const [removed] = selectedEvidenceFiles.splice(index, 1);
+    syncEvidenceInput();
+    renderEvidenceSelection();
+    show(`${removed.name || "Evidence file"} removed.`, "status");
+  });
 
   if (!token || !capabilities) {
     clearMemoryCredentials();
@@ -77,7 +114,7 @@ if (form && window.top !== window.self) {
         return;
       }
       try {
-        evidenceFiles = validateClaimEvidenceFiles(evidenceInput?.files);
+        evidenceFiles = validateClaimEvidenceFiles(selectedEvidenceFiles);
         if (evidenceFiles.length > capabilities.evidenceCapabilities.length) {
           throw new Error("Evidence upload is unavailable for one or more selected files. Return to the status page and verify again.");
         }
@@ -117,11 +154,7 @@ if (form && window.top !== window.self) {
       await retireActionKey("claim", attemptId);
       const evidenceCount = uploadedEvidence.length;
       clearMemoryCredentials();
-      form.replaceChildren(Object.assign(document.createElement("p"), {
-        textContent: result.duplicate
-          ? `Claim ${result.claimId} was already received and remains ${result.status}${evidenceCount ? ` with ${evidenceCount} evidence file${evidenceCount === 1 ? "" : "s"}` : ""}.`
-          : `Claim ${result.claimId} was received and is ${result.status}${evidenceCount ? ` with ${evidenceCount} evidence file${evidenceCount === 1 ? "" : "s"}` : ""}. We will contact you after review.`,
-      }));
+      renderClaimResult(result, evidenceCount);
     } catch (error) {
       if (evidenceUploadTerminalFailure) return;
       if (error?.code === "PUD_IDEMPOTENCY_CONFLICT") {
@@ -187,7 +220,85 @@ if (form && window.top !== window.self) {
     token = "";
     capabilities = null;
     uploadedEvidence = [];
+    selectedEvidenceFiles = [];
     pendingClaimInput = null;
+  }
+
+  function renderEvidenceSelection() {
+    if (!evidenceReview || !evidenceList) return;
+    evidenceList.replaceChildren();
+    selectedEvidenceFiles.forEach((file, index) => {
+      const item = document.createElement("li");
+      const details = document.createElement("span");
+      const name = document.createElement("strong");
+      name.textContent = file.name || `Evidence file ${index + 1}`;
+      const size = document.createElement("small");
+      size.textContent = formatFileSize(file.size);
+      details.append(name, size);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "pud-file-remove";
+      remove.dataset.removeEvidence = String(index);
+      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", `Remove ${file.name || `evidence file ${index + 1}`}`);
+      item.append(details, remove);
+      evidenceList.append(item);
+    });
+    evidenceReview.hidden = selectedEvidenceFiles.length === 0;
+  }
+
+  function syncEvidenceInput() {
+    if (!evidenceInput) return;
+    try {
+      const transfer = new DataTransfer();
+      selectedEvidenceFiles.forEach((file) => transfer.items.add(file));
+      evidenceInput.files = transfer.files;
+    } catch (_error) {
+      evidenceInput.value = "";
+    }
+  }
+
+  function renderClaimResult(result, evidenceCount) {
+    const panel = document.createElement("section");
+    panel.className = "pud-claim-result";
+    panel.setAttribute("role", "status");
+    panel.tabIndex = -1;
+    const eyebrow = document.createElement("p");
+    eyebrow.className = "pud-step-label";
+    eyebrow.textContent = result.duplicate ? "Already on file" : "Report sent";
+    const heading = document.createElement("h2");
+    heading.textContent = result.duplicate ? "We already have this report." : "Your report is with our team.";
+    const copy = document.createElement("p");
+    const evidenceText = evidenceCount
+      ? ` ${evidenceCount} supporting file${evidenceCount === 1 ? " was" : "s were"} attached.`
+      : "";
+    copy.textContent = `Reference ${result.claimId} is ${claimStatusLabel(result.status).toLowerCase()}.${evidenceText} We’ll contact you after a staff member reviews it.`;
+    const actions = document.createElement("div");
+    actions.className = "pud-actions";
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "pud-button pud-button-secondary";
+    copyButton.textContent = "Copy reference number";
+    copyButton.addEventListener("click", async () => {
+      if (!navigator.clipboard?.writeText) return show(`Reference number: ${result.claimId}`, "status");
+      try {
+        await navigator.clipboard.writeText(result.claimId);
+        show("Reference number copied.", "status");
+      } catch (_error) {
+        show(`Reference number: ${result.claimId}`, "status");
+      }
+    });
+    const statusLink = document.createElement("a");
+    statusLink.className = "pud-button pud-button-link";
+    statusLink.href = "/pickup-delivery/status/";
+    statusLink.textContent = "Open order page";
+    actions.append(copyButton, statusLink);
+    const note = document.createElement("p");
+    note.className = "pud-fine-print";
+    note.textContent = "To see this report in order history, reopen your original private order link and verify your mobile number again.";
+    panel.append(eyebrow, heading, copy, actions, note);
+    form.replaceChildren(panel);
+    panel.focus();
   }
 
   function show(text, variant = "error") {
@@ -196,6 +307,23 @@ if (form && window.top !== window.self) {
     message.hidden = !text;
     if (text) message.focus();
   }
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 1) return "Size unavailable";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function claimStatusLabel(status) {
+  return ({
+    open: "Received",
+    investigating: "Under review",
+    approved: "Approved",
+    denied: "Not approved",
+    resolved: "Resolved",
+    withdrawn: "Closed by customer",
+  })[status] || "Received";
 }
 
 function fragmentToken() {

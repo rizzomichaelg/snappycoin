@@ -27,7 +27,7 @@ test("loyalty summary validates bounded customer-safe balance history", () => {
   assert.throws(() => assertLoyaltySummary({ ...summary, history: [{ ...summary.history[0], createdAt: "yesterday" }] }), /UTC timestamp/);
 });
 
-test("loyalty request strips unknown data and public config requires both new flags", () => {
+test("loyalty request strips unknown data and public config requires feature flags", () => {
   assert.deepEqual(contractBody("/api/pud/loyalty", {
     token: "status-token-memory-only",
     statusSession: "verified-session-memory-only",
@@ -44,6 +44,7 @@ test("loyalty request strips unknown data and public config requires both new fl
     bookingEnabled: true,
     recurringEnabled: true,
     tipsEnabled: true,
+    promotionsEnabled: true,
     referralsEnabled: true,
     claimsEnabled: true,
     loyaltyEnabled: true,
@@ -55,6 +56,7 @@ test("loyalty request strips unknown data and public config requires both new fl
     consentVersions: { privacy: "2026-07" },
   };
   assert.equal(assertPublicConfig(config), config);
+  assert.throws(() => assertPublicConfig({ ...config, promotionsEnabled: undefined }), /must be a boolean/);
   assert.throws(() => assertPublicConfig({ ...config, loyaltyEnabled: undefined }), /must be a boolean/);
   assert.throws(() => assertPublicConfig({ ...config, claimEvidenceEnabled: undefined }), /must be a boolean/);
 });

@@ -298,6 +298,7 @@ function verifyResponseGuards() {
     bookingEnabled: true,
     recurringEnabled: true,
     tipsEnabled: true,
+    promotionsEnabled: true,
     referralsEnabled: true,
     claimsEnabled: true,
     loyaltyEnabled: true,
@@ -470,6 +471,7 @@ function verifyResponseGuards() {
   }
 
   expectGuardFailure("public config feature flags", () => assertPublicConfig({ ...publicConfig, referralsEnabled: undefined }));
+  expectGuardFailure("public config promotions flag", () => assertPublicConfig({ ...publicConfig, promotionsEnabled: undefined }));
   expectGuardFailure("route proofs", () => assertOrderStatus({ ...status, rescheduleOptions: [{ ...route, routeProof: "" }] }));
   expectGuardFailure("private status fields", () => assertOrderStatus({ ...status, phoneCiphertext: "must-not-leak" }));
   expectGuardFailure("recurring defaults", () => assertOrderStatus({ ...status, recurringDefaults: null }));

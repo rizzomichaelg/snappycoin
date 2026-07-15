@@ -47,6 +47,7 @@ async function boot() {
     showMessage("Your waitlist invitation is ready. Recheck the address, verify the invited phone, and complete secure checkout for the reserved pickup window.", "success");
   }
   state.config = await getPublicConfig();
+  configureCodeFields();
   if (!state.config.publicEnabled) return showUnavailable(state.config.message || "Pickup and delivery is not accepting bookings yet.");
   const price = state.config.pricing || {};
   $("[data-pud-price]").textContent = `${money(price.pricePerLbCents ?? 199)}/lb · ${money(price.minimumCents ?? 3500)} minimum${price.deliveryFeeCents ? ` · ${money(price.deliveryFeeCents)} delivery` : ""}`;
@@ -59,6 +60,7 @@ async function boot() {
 function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
+  root.addEventListener("change", onChange);
   window.addEventListener("popstate", () => showStep(history.state?.pudStep || state.step, false));
 }
 
@@ -110,9 +112,9 @@ async function submitAddress(form) {
     state.routeId = invitedRoute.id;
   }
   $("[data-normalized-address]").textContent = displayAddress(state.address);
-  renderRoutes($("#pud-route"), state.routes);
+  renderRoutesForSelectedBags();
   const preferredRouteId = state.reorderBootstrap?.preferredRouteId;
-  if (preferredRouteId && state.routes.some((route) => route.id === preferredRouteId)) {
+  if (preferredRouteId && [...$("#pud-route").options].some((option) => option.value === preferredRouteId)) {
     state.routeId = preferredRouteId;
     $("#pud-route").value = preferredRouteId;
   }
@@ -146,6 +148,7 @@ async function submitAddress(form) {
   }
   if (state.reorderBootstrap) {
     prefillReorderDetails($("#pud-details-form"), state.reorderBootstrap);
+    renderRoutesForSelectedBags();
     $("[data-reorder-phone-last4]").textContent = `For security, re-enter and verify the mobile number ending in ${state.reorderBootstrap.customer.phoneLast4}.`;
   }
   trackFunnel("pud_address_eligible");
@@ -154,10 +157,15 @@ async function submitAddress(form) {
 
 async function submitDetails(form) {
   const data = new FormData(form);
+  const estimatedBags = Number(data.get("estimatedBags") || 1);
+  const availableRoutes = routesForBagCount(estimatedBags);
   state.routeId = state.waitlistContinuationToken
     ? state.waitlistRouteId
     : String(data.get("routeId") || "");
   if (!state.routeId) throw new Error("Choose a pickup window.");
+  if (!availableRoutes.some((route) => route.id === state.routeId)) {
+    throw new Error(`That pickup window does not have room for ${estimatedBags} estimated bag${estimatedBags === 1 ? "" : "s"}. Choose another window or a lower bag estimate.`);
+  }
   state.customer = {
     firstName: String(data.get("firstName") || "").trim(),
     lastName: String(data.get("lastName") || "").trim(),
@@ -166,7 +174,7 @@ async function submitDetails(form) {
   };
   setSelfReportedSource(state.attribution, data.get("selfReportedSource"));
   state.order = {
-    estimatedBags: Number(data.get("estimatedBags") || 1),
+    estimatedBags,
     detergent: String(data.get("detergent") || "standard"),
     softenerPref: String(data.get("softenerPref") || "none"),
     specialInstructions: String(data.get("specialInstructions") || "").trim(),
@@ -273,8 +281,8 @@ async function submitOrder() {
       marketing_sms: { accepted: state.consents.marketingSms, version: consentVersion.marketing_sms || state.consents.consentVersion },
     },
     attribution: state.attribution,
-    promotionCode: $("#pud-promotion-code").value.trim() || undefined,
-    referralCode: $("#pud-referral-code").value.trim() || undefined,
+    promotionCode: state.config.promotionsEnabled === true ? $("#pud-promotion-code")?.value.trim() || undefined : undefined,
+    referralCode: state.config.referralsEnabled === true ? $("#pud-referral-code")?.value.trim() || undefined : undefined,
     recurringProposalId: state.reorderBootstrap?.recurringProposalId || undefined,
   };
   const orderKey = await stableActionKey("order", JSON.stringify([state.checkoutProof, state.setupIntentId, intent]));
@@ -316,23 +324,50 @@ async function submitWaitlist(form) {
 async function onClick(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
+  if (button.dataset.action === "copy-status-link") {
+    const value = $("[data-status-link]")?.href || "";
+    const status = $("[data-confirmation-action-status]");
+    try {
+      await navigator.clipboard.writeText(value);
+      if (status) status.textContent = "Private link copied. Store it somewhere only you can access.";
+    } catch (_error) {
+      if (status) status.textContent = "Your browser could not copy the link. Open order status and copy the address from the browser bar.";
+    }
+  }
+  if (button.dataset.action === "copy-order-number") {
+    const value = $("[data-order-number]")?.textContent?.trim() || "";
+    const status = $("[data-confirmation-action-status]");
+    try {
+      await navigator.clipboard.writeText(value);
+      if (status) status.textContent = "Order number copied.";
+    } catch (_error) {
+      if (status) status.textContent = "Your browser could not copy the order number.";
+    }
+  }
+  if (button.dataset.action === "print-confirmation") window.print();
   if (button.dataset.action === "back") go(button.dataset.step || steps[Math.max(0, steps.indexOf(state.step) - 1)]);
   if (button.dataset.action === "edit") go(button.dataset.step);
   if (button.dataset.action === "resend") {
+    const resendForm = $("#pud-resend-form");
     button.disabled = true;
-    try { await resendPhoneVerification(state.verificationId, turnstileValue($("#pud-code-form"))); showMessage("A new code was sent.", "success"); }
+    try { await resendPhoneVerification(state.verificationId, turnstileValue(resendForm)); showMessage("A new code was sent.", "success"); }
     catch (error) { showError(error); }
     finally {
-      resetTurnstile($("#pud-code-form"));
+      resetTurnstile(resendForm);
       window.setTimeout(() => { button.disabled = false; }, 60000);
     }
   }
+  if (button.dataset.action === "retry-booking") location.reload();
   if (button.dataset.action === "start-over") {
     sessionStorage.removeItem(PUD_CONFIG.storageKey);
     clearWaitlistContinuation();
     clearReorderBootstrap();
     location.reload();
   }
+}
+
+function onChange(event) {
+  if (event.target?.matches?.('[name="estimatedBags"]')) renderRoutesForSelectedBags();
 }
 
 function go(step, push = true) {
@@ -356,6 +391,44 @@ function showStep(step) {
 function showPanel(name) {
   root.querySelectorAll("[data-booking-panel]").forEach((panel) => { panel.hidden = panel.dataset.bookingPanel !== name; });
   ensureTurnstile(root.querySelector(`[data-booking-panel="${name}"]`));
+}
+
+function configureCodeFields() {
+  const promotionField = $("[data-promotion-field]");
+  const referralField = $("[data-referral-field]");
+  const codeFields = $("[data-code-fields]");
+  if (promotionField) promotionField.hidden = state.config?.promotionsEnabled !== true;
+  if (referralField) referralField.hidden = state.config?.referralsEnabled !== true;
+  if (codeFields) codeFields.hidden = promotionField?.hidden !== false && referralField?.hidden !== false;
+}
+
+function routesForBagCount(bagCount) {
+  if (state.waitlistContinuationToken) return state.routes;
+  return state.routes.filter((route) => {
+    const remainingBags = Number(route.remainingBags);
+    return !Number.isFinite(remainingBags) || remainingBags >= bagCount;
+  });
+}
+
+function renderRoutesForSelectedBags() {
+  const select = $("#pud-route");
+  if (!select) return [];
+  const bagCount = Math.max(1, Number($("#pud-estimated-bags")?.value || 1));
+  const selectedRouteId = select.value || state.routeId;
+  const availableRoutes = routesForBagCount(bagCount);
+  renderRoutes(select, availableRoutes);
+  if (selectedRouteId && availableRoutes.some((route) => route.id === selectedRouteId)) {
+    select.value = selectedRouteId;
+  } else if (state.routeId === selectedRouteId) {
+    state.routeId = "";
+  }
+  const note = $("[data-route-capacity-note]");
+  if (note) {
+    note.textContent = availableRoutes.length
+      ? `${availableRoutes.length} pickup window${availableRoutes.length === 1 ? "" : "s"} can currently take ${bagCount} estimated bag${bagCount === 1 ? "" : "s"}.`
+      : `No listed pickup window has room for ${bagCount} estimated bag${bagCount === 1 ? "" : "s"}. Choose a lower estimate or call the store.`;
+  }
+  return availableRoutes;
 }
 
 function money(cents) {
@@ -442,7 +515,15 @@ function clearMessage() { showMessage(""); }
 function showError(error) {
   showMessage(error?.message || "Something went wrong. Please try again.");
 }
-function fatal(error) { root?.replaceChildren(Object.assign(document.createElement("p"), { className: "pud-alert", textContent: error?.message || "Booking could not load." })); }
+function fatal(error) {
+  if (!root) return;
+  const unavailable = $("[data-unavailable]");
+  if (!unavailable) {
+    root.replaceChildren(Object.assign(document.createElement("p"), { className: "pud-alert", textContent: error?.message || "Booking could not load." }));
+    return;
+  }
+  showUnavailable(error?.message || "Booking could not load. Try again or call the store.");
+}
 
 function takeWaitlistContinuation() {
   const parsed = window.SnappyWaitlistContinuation?.get?.();

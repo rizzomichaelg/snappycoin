@@ -86,6 +86,49 @@ function setCookieConsent(value) {
   storageSet(sessionStore, COOKIE_CONSENT_STORAGE_KEY, value);
 }
 
+function analyticsCookieNames() {
+  const names = new Set(["_ga", "_gid", "_gat", "_gcl_au", "_fbp", "_fbc"]);
+  String(document.cookie || "")
+    .split(";")
+    .map((part) => part.split("=")[0]?.trim())
+    .filter((name) => /^(_ga(?:_|$)|_gid$|_gat(?:_|$)|_gcl_|_fb[pc]$)/.test(name || ""))
+    .forEach((name) => names.add(name));
+  return names;
+}
+
+function expireAnalyticsCookies() {
+  const hostname = String(window.location?.hostname || "").trim();
+  const domains = new Set(["", hostname, ".snappycoinlaundry.com"]);
+  const secure = window.location?.protocol === "https:" ? "; Secure" : "";
+  analyticsCookieNames().forEach((name) => {
+    domains.forEach((domain) => {
+      const domainAttribute = domain ? `; domain=${domain}` : "";
+      document.cookie = `${name}=; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${domainAttribute}; SameSite=Lax${secure}`;
+    });
+  });
+}
+
+function revokeOptionalAnalytics() {
+  initialized = false;
+  optionalAnalyticsStarted = false;
+  usingFirebase = false;
+  firebaseTrack = null;
+  storageRemove(browserStorage("sessionStorage"), PENDING_META_LEAD_KEY);
+
+  if (typeof window.gtag === "function") {
+    window.gtag("consent", "update", {
+      analytics_storage: "denied",
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+    });
+  }
+  if (typeof window.fbq === "function") {
+    window.fbq("consent", "revoke");
+  }
+  expireAnalyticsCookies();
+}
+
 function removeCookieBanner() {
   const banner = document.querySelector(".cookie-consent-banner");
   if (banner && typeof banner.remove === "function") {
@@ -93,8 +136,8 @@ function removeCookieBanner() {
   }
 }
 
-function renderCookieBanner() {
-  if (hasCookieConsentChoice() || document.querySelector(".cookie-consent-banner")) {
+function renderCookieBanner(force = false) {
+  if ((!force && hasCookieConsentChoice()) || document.querySelector(".cookie-consent-banner")) {
     return;
   }
 
@@ -107,14 +150,13 @@ function renderCookieBanner() {
     <div class="cookie-consent-copy">
       <strong>Cookie choices</strong>
       <p>
-        We use optional analytics and advertising cookies to measure visits and promo claims.
-        Essential security and form tools still run either way.
-        <a href="cookies.html">Cookie Statement</a>
+        Optional analytics help us measure visits and promo claims. Essential tools work either way.
+        <a href="/cookies.html">Cookie details</a>
       </p>
     </div>
     <div class="cookie-consent-actions">
-      <button class="cookie-consent-button secondary" type="button" data-cookie-consent="decline">Decline optional</button>
-      <button class="cookie-consent-button primary" type="button" data-cookie-consent="accept">Accept optional cookies</button>
+      <button class="cookie-consent-button secondary" type="button" data-cookie-consent="decline">Decline</button>
+      <button class="cookie-consent-button primary" type="button" data-cookie-consent="accept">Accept</button>
     </div>
   `;
 
@@ -129,8 +171,13 @@ function renderCookieBanner() {
   }
   if (decline) {
     decline.addEventListener("click", () => {
+      const reloadRequired = hasOptionalCookieConsent() || optionalAnalyticsStarted;
       setCookieConsent(COOKIE_CONSENT_DECLINED);
+      revokeOptionalAnalytics();
       removeCookieBanner();
+      if (reloadRequired && typeof window.location?.reload === "function") {
+        window.location.reload();
+      }
     });
   }
 
@@ -334,6 +381,10 @@ function bootstrapGtag() {
 function initGoogleAnalytics() {
   return bootstrapGtag()
     .then(() => {
+      if (!hasOptionalCookieConsent()) {
+        initialized = false;
+        return;
+      }
       window.gtag("js", new Date());
       window.gtag("config", GA_MEASUREMENT_ID);
       window.gtag("config", GOOGLE_ADS_ID);
@@ -345,6 +396,7 @@ function initGoogleAnalytics() {
 }
 
 async function tryInitFirebase() {
+  if (!hasOptionalCookieConsent()) return false;
   const cfg = window.__SNAPPY_ANALYTICS_CONFIG__;
   if (!cfg || !cfg.apiKey || !cfg.appId || !cfg.projectId) {
     return false;
@@ -353,6 +405,7 @@ async function tryInitFirebase() {
   try {
     const appMod = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js");
     const analyticsMod = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js");
+    if (!hasOptionalCookieConsent()) return false;
     const app = appMod.initializeApp(cfg);
     const analytics = analyticsMod.getAnalytics(app);
     firebaseTrack = (name, params) => analyticsMod.logEvent(analytics, name, params);
@@ -365,7 +418,7 @@ async function tryInitFirebase() {
 }
 
 function trackEvent(name, params = {}) {
-  if (!initialized) return;
+  if (!initialized || !hasOptionalCookieConsent()) return;
 
   if (usingFirebase && typeof firebaseTrack === "function") {
     firebaseTrack(name, params);
@@ -381,7 +434,7 @@ function trackCtaClicks() {
   if (ctaTrackingAttached) return;
   ctaTrackingAttached = true;
   document.body.addEventListener("click", (event) => {
-    const target = event.target.closest(".btn-cta");
+    const target = event.target.closest("a.button, .btn-cta");
     if (!target) return;
 
     trackEvent("cta_click", {
@@ -404,7 +457,7 @@ async function initOptionalAnalytics() {
     await initGoogleAnalytics();
   }
 
-  if (!initialized) {
+  if (!initialized || !hasOptionalCookieConsent()) {
     return;
   }
 
@@ -418,6 +471,9 @@ async function initOptionalAnalytics() {
 
 function init() {
   renderCookieBanner();
+  document.querySelectorAll("[data-cookie-preferences]").forEach((button) => {
+    button.addEventListener("click", () => renderCookieBanner(true));
+  });
   initOptionalAnalytics();
 }
 

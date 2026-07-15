@@ -45,6 +45,86 @@ const authorizationErrors = new Set([
   "PUD_PHONE_PROOF_INVALID",
   "PUD_PHONE_PROOF_REPLAYED",
 ]);
+const fulfillmentSteps = Object.freeze([
+  "submitted",
+  "confirmed",
+  "picked_up",
+  "weighed",
+  "ready",
+  "out_for_delivery",
+  "delivered",
+]);
+const fulfillmentLabels = Object.freeze({
+  submitted: "Order received",
+  confirmed: "Pickup scheduled",
+  picked_up: "Laundry picked up",
+  weighed: "Weighed and processing",
+  ready: "Clean and packed",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+  canceled: "Order canceled",
+});
+const nextStepByFulfillment = Object.freeze({
+  submitted: "We’re checking the order details. Your pickup window will appear here once it is confirmed.",
+  confirmed: "Your pickup is reserved. Have your bags ready during the pickup window shown below.",
+  picked_up: "Your laundry is with our team. We’ll weigh it before washing so the final price is accurate.",
+  weighed: "Your laundry has been weighed and is moving through wash, dry, and fold.",
+  ready: "Everything is clean, folded, and packed. We’re preparing the return route.",
+  out_for_delivery: "Your order is with our driver and headed back to you.",
+  delivered: "Your laundry is back. Your final receipt and support options are available below.",
+  canceled: "No further pickup or delivery is scheduled for this order.",
+});
+const humanLabels = Object.freeze({
+  ...fulfillmentLabels,
+  uncharged: "Not charged yet",
+  processing: "Payment processing",
+  succeeded: "Paid",
+  requires_action: "Card confirmation needed",
+  failed: "Payment needs attention",
+  partially_refunded: "Partially refunded",
+  refunded: "Refunded",
+  disputed: "Payment under review",
+  succeeded_external: "Paid",
+  pickup_delivery: "Pickup and delivery",
+  walk_in: "In-store service",
+  missing_item: "Missing item",
+  damage: "Damaged item",
+  service_quality: "Wash or service quality",
+  billing: "Billing question",
+  other: "Other issue",
+  open: "Received",
+  investigating: "Under review",
+  approved: "Approved",
+  denied: "Not approved",
+  resolved: "Resolved",
+  withdrawn: "Closed by customer",
+  not_enrolled: "Not enrolled",
+  active: "Active",
+  review_required: "Review needed",
+  suspended: "Temporarily paused",
+  closed: "Closed",
+  earn: "Reward earned",
+  redeem: "Reward used",
+  reverse_earn: "Reward adjustment",
+  reverse_redeem: "Reward restored",
+  expire: "Reward expired",
+  manual_credit: "Account credit",
+  manual_debit: "Account adjustment",
+  weekly: "Weekly",
+  biweekly: "Every two weeks",
+  monthly: "Monthly",
+  paused: "Paused",
+  proposed: "Needs your confirmation",
+  confirmed: "Confirmed",
+  skipped: "Skipped",
+  expired: "Expired",
+  blocked: "Choose another pickup window",
+  canceled: "Canceled",
+  standard: "Standard",
+  free_clear: "Free and clear",
+  customer_supplied: "Customer supplied",
+  none: "None",
+});
 
 let token = "";
 let order = null;
@@ -60,6 +140,9 @@ let portalDetails = null;
 let portalPreferences = null;
 let portalLoyalty = null;
 let pendingRotation = null;
+let pendingConfirmation = null;
+let automaticRefreshTimer = 0;
+let automaticRefreshFailures = 0;
 
 if (root && window.top !== window.self) {
   root.replaceChildren(Object.assign(document.createElement("p"), {
@@ -82,6 +165,11 @@ async function boot() {
 function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
+  $("[data-confirm-dialog]")?.addEventListener("close", () => { pendingConfirmation = null; });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) clearAutomaticRefresh();
+    else if (token && order) scheduleAutomaticRefresh(1_000);
+  });
   // Keep this listener for every navigation. A page restored from the
   // back-forward cache may be verified again before a later pagehide.
   window.addEventListener("pagehide", clearMemoryCredentials);
@@ -113,17 +201,27 @@ async function onSubmit(event) {
   if (form.id === "pud-step-up-phone-form") return runAction(() => submitStepUpPhone(form));
   if (form.id === "pud-step-up-code-form") return runAction(() => submitStepUpCode(form));
   if (form.id === "pud-preferences-form") return runAction(() => submitPreferences(form));
-  if (form.id === "pud-reschedule-form") await runAction(() => submitReschedule(form));
-  if (form.id === "pud-payment-method-form") await runAction(submitPaymentMethod);
-  if (form.id === "pud-tip-form") await runAction(() => submitTip(form));
-  if (form.id === "pud-recurring-create-form") await runAction(() => submitRecurring(form));
+  if (form.id === "pud-reschedule-form") return runAction(() => submitReschedule(form));
+  if (form.id === "pud-payment-method-form") return runAction(submitPaymentMethod);
+  if (form.id === "pud-tip-form") {
+    try {
+      submitTip(form);
+    } catch (error) {
+      message(error?.message || "Review the tip amount and try again.");
+    }
+    return;
+  }
+  if (form.id === "pud-recurring-create-form") return runAction(() => submitRecurring(form));
 }
 
 async function onClick(event) {
   const button = event.target.closest("[data-action]");
   if (!button || actionInFlight) return;
   const action = button.dataset.action;
-  if (action === "refresh") return runAction(refresh);
+  if (action === "refresh") return runAction(async () => {
+    automaticRefreshFailures = 0;
+    await refresh();
+  });
   if (action === "history-more") return runAction(() => loadPortalHistory({ append: true }));
   if (action === "step-up-restart") {
     clearVerifiedSession();
@@ -133,10 +231,26 @@ async function onClick(event) {
     return;
   }
   if (action === "step-up-resend") return runAction(resendStepUpCode);
+  if (action === "dismiss-confirmation") {
+    closeConfirmation();
+    return;
+  }
+  if (action === "confirm-pending") {
+    const confirmation = pendingConfirmation;
+    closeConfirmation();
+    if (confirmation?.run) return runAction(confirmation.run);
+    return;
+  }
   if (!token || !order) return message("Refresh the private order before using this control.");
 
-  if (action === "cancel" && confirm("Cancel this order? This cannot be undone.")) {
-    return runAction(cancelCurrentOrder);
+  if (action === "copy-status-link") return runAction(copyPrivateLink);
+  if (action === "cancel") {
+    return openConfirmation({
+      title: "Cancel this pickup?",
+      copy: "This stops the order and cannot be undone from this page. If the laundry has already been collected, contact the store instead.",
+      confirmLabel: "Cancel order",
+      run: cancelCurrentOrder,
+    });
   }
   if (action === "reorder") return runAction(() => beginBookingBootstrap());
   if (action === "open-claim") return runAction(openClaimForm);
@@ -145,11 +259,21 @@ async function onClick(event) {
     closePaymentReplacement();
     return;
   }
-  if (action === "rotate-status-token" && confirm("Rotate this private link now? The current link will stop working immediately.")) {
-    return runAction(rotatePrivateLink);
+  if (action === "rotate-status-token") {
+    return openConfirmation({
+      title: "Replace this private link?",
+      copy: "The current link will stop working immediately. Confirmation messages containing the old link will not update, so copy the replacement before leaving.",
+      confirmLabel: "Replace link",
+      run: rotatePrivateLink,
+    });
   }
-  if (action === "revoke-status-token" && confirm("Revoke this private link permanently? You will lose online access from this page.")) {
-    return runAction(revokePrivateLink);
+  if (action === "revoke-status-token") {
+    return openConfirmation({
+      title: "Permanently disable this link?",
+      copy: "You will lose online access from this page. This action cannot be undone here; contact the store if you still need help with the order.",
+      confirmLabel: "Disable link",
+      run: revokePrivateLink,
+    });
   }
   if (["recurring-pause", "recurring-resume", "recurring-skip"].includes(action)) {
     return runAction(() => updateRecurring(button));
@@ -160,7 +284,36 @@ async function onClick(event) {
   }
 }
 
-async function refresh() {
+async function copyPrivateLink() {
+  const privateLink = `${location.origin}${location.pathname}#${encodeURIComponent(token)}`;
+  if (!navigator.clipboard?.writeText) {
+    throw new Error("Copying is unavailable in this browser. Use your browser’s address-bar copy control instead.");
+  }
+  await navigator.clipboard.writeText(privateLink);
+  message("Private link copied. Share it only with someone you trust to view this order.", "success");
+}
+
+function openConfirmation({ title, copy, confirmLabel, run }) {
+  const dialog = $("[data-confirm-dialog]");
+  if (!dialog) throw new Error("The confirmation panel could not open.");
+  pendingConfirmation = { run };
+  $("[data-confirm-title]").textContent = title;
+  $("[data-confirm-copy]").textContent = copy;
+  $("[data-confirm-button]").textContent = confirmLabel;
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+  $("[data-action=dismiss-confirmation]")?.focus();
+}
+
+function closeConfirmation() {
+  const dialog = $("[data-confirm-dialog]");
+  pendingConfirmation = null;
+  if (!dialog) return;
+  if (typeof dialog.close === "function" && dialog.open) dialog.close();
+  else dialog.removeAttribute("open");
+}
+
+async function refresh({ silent = false } = {}) {
   try {
     const [config, status] = await Promise.all([
       publicConfig ? Promise.resolve(publicConfig) : getPublicConfig(),
@@ -168,8 +321,12 @@ async function refresh() {
     ]);
     publicConfig = config;
     order = status;
-    closePaymentReplacement();
+    // Background refreshes must not erase card details while a customer is
+    // actively completing the replacement-card form.
+    if (!silent) closePaymentReplacement();
     render(status);
+    automaticRefreshFailures = 0;
+    scheduleAutomaticRefresh();
     try {
       await setupTurnstile(config.turnstileSiteKey);
       renderStepUpState();
@@ -178,8 +335,34 @@ async function refresh() {
     }
   } catch (error) {
     if (["PUD_ORDER_TOKEN_INVALID", "PUD_ORDER_TOKEN_REVOKED"].includes(error?.code)) clearVerifiedSession();
-    message(error?.message || "Order status could not be refreshed.");
+    if (!silent) message(error?.message || "Order status could not be refreshed.");
     throw error;
+  }
+}
+
+function clearAutomaticRefresh() {
+  globalThis.clearTimeout(automaticRefreshTimer);
+  automaticRefreshTimer = 0;
+}
+
+function scheduleAutomaticRefresh(delay = 60_000) {
+  clearAutomaticRefresh();
+  if (!token || !order || document.hidden) return;
+  automaticRefreshTimer = globalThis.setTimeout(runAutomaticRefresh, delay);
+}
+
+async function runAutomaticRefresh() {
+  automaticRefreshTimer = 0;
+  if (!token || !order || document.hidden) return;
+  if (actionInFlight || pendingConfirmation) {
+    scheduleAutomaticRefresh(15_000);
+    return;
+  }
+  try {
+    await refresh({ silent: true });
+  } catch (_error) {
+    automaticRefreshFailures += 1;
+    scheduleAutomaticRefresh(Math.min(5 * 60_000, 30_000 * (2 ** automaticRefreshFailures)));
   }
 }
 
@@ -197,7 +380,7 @@ async function submitStepUpPhone(form) {
   const codeForm = $("#pud-step-up-code-form");
   codeForm.reset();
   renderStepUpState(`A code was sent to the mobile number ending in ${result.phoneLast4 || phone.slice(-4)}.`);
-  ensureTurnstile(codeForm);
+  ensureTurnstile($("#pud-step-up-resend-form"));
   codeForm.querySelector("input[name=code]")?.focus();
 }
 
@@ -242,7 +425,7 @@ async function submitStepUpCode(form) {
 
 async function resendStepUpCode() {
   if (!verificationId) throw new Error("Enter the mobile number again to request a code.");
-  const form = $("#pud-step-up-code-form");
+  const form = $("#pud-step-up-resend-form");
   let result;
   try {
     result = await resendPhoneVerification(verificationId, turnstileValue(form));
@@ -335,14 +518,22 @@ async function submitPaymentMethod() {
   message("The replacement card was saved and the original payment was retried. Refresh if payment is still processing.", "success");
 }
 
-async function submitTip(form) {
+function submitTip(form) {
   const amountText = String(new FormData(form).get("amount") || "").trim();
   if (!/^\d{1,4}(?:\.\d{1,2})?$/.test(amountText)) throw new Error("Enter a tip amount with no more than two decimal places.");
   const amountCents = Math.round(Number(amountText) * 100);
   if (!Number.isSafeInteger(amountCents) || amountCents < 50 || amountCents > 100_000) {
     throw new Error("Tip amount must be between $0.50 and $1,000.00.");
   }
-  if (!confirm(`Add a ${money(amountCents)} tip to ${order.orderNumber}?`)) return;
+  openConfirmation({
+    title: `Add a ${money(amountCents)} tip?`,
+    copy: `This creates a separate tip payment for ${order.orderNumber}. It will not change the laundry order charge.`,
+    confirmLabel: "Add tip",
+    run: () => commitTip(form, amountCents),
+  });
+}
+
+async function commitTip(form, amountCents) {
   const signature = `${order.orderNumber}:${amountCents}`;
   const key = await stableActionKey("tip", signature);
   const actionCapability = await issueCapability("add_tip");
@@ -621,6 +812,8 @@ async function revokePrivateLink() {
     replacePrivateLocation("");
     $("#pud-status-form").reset();
     $("[data-status-content]").hidden = true;
+    const tokenEntry = $("[data-token-entry]");
+    if (tokenEntry) tokenEntry.open = true;
     message(`The private link for ${orderNumber} was revoked.`, "success");
   } catch (error) {
     await handleVersionConflict(error);
@@ -629,14 +822,17 @@ async function revokePrivateLink() {
 
 function render(value) {
   $("[data-status-content]").hidden = false;
+  const tokenEntry = $("[data-token-entry]");
+  if (tokenEntry) tokenEntry.open = false;
   $("[data-order-number]").textContent = value.orderNumber || "Your order";
-  $("[data-fulfillment-status]").textContent = label(value.fulfillmentStatus);
   $("[data-payment-status]").textContent = label(value.paymentStatus);
-  $("[data-pickup-window]").textContent = value.pickupWindowCode || "See confirmation message";
+  $("[data-payment-status]").parentElement.dataset.state = paymentTone(value.paymentStatus);
+  $("[data-pickup-window]").textContent = pickupWindowLabel(value.pickupWindowCode);
   $("[data-delivery-promise]").textContent = value.deliveryPromisedAt ? formatDate(value.deliveryPromisedAt) : "Pending after intake";
   $("[data-bag-status]").textContent = value.actualBags == null ? "Confirmed after pickup" : `${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`;
   $("[data-total]").textContent = value.weightTenths == null ? "Calculated after weighing" : money(value.totalCents);
   $("[data-last-updated]").textContent = value.updatedAt ? `Server status updated ${formatDate(value.updatedAt)}.` : "";
+  renderJourney(value);
 
   renderReceipt(value.receipt, value.paymentStatus);
   const paymentVisible = value.paymentAttentionRequired && ["requires_action", "failed"].includes(value.paymentStatus) && Boolean(publicConfig?.stripePublishableKey);
@@ -648,6 +844,77 @@ function render(value) {
   renderReschedule(value.rescheduleOptions);
   renderTip(value);
   renderRecurring(value);
+}
+
+function renderJourney(value) {
+  const stage = value.fulfillmentStatus;
+  const currentIndex = fulfillmentSteps.indexOf(stage);
+  const status = $("[data-fulfillment-status]");
+  const nextStep = $("[data-next-step]");
+  const timeline = $("[data-fulfillment-timeline]");
+  status.textContent = fulfillmentLabels[stage] || "Order update available";
+  nextStep.textContent = nextStepByFulfillment[stage] || "Refresh for the latest update from our team.";
+  timeline.dataset.state = stage === "canceled" ? "canceled" : "active";
+  timeline.setAttribute(
+    "aria-label",
+    stage === "canceled"
+      ? "This order was canceled. No further fulfillment steps are scheduled."
+      : `Order journey. Current stage: ${fulfillmentLabels[stage] || "update available"}.`,
+  );
+  timeline.querySelectorAll("[data-timeline-step]").forEach((step) => {
+    const stepIndex = fulfillmentSteps.indexOf(step.dataset.timelineStep);
+    const state = stage === "canceled"
+      ? "canceled"
+      : stepIndex < currentIndex
+        ? "complete"
+        : stepIndex === currentIndex
+          ? "current"
+          : "upcoming";
+    step.dataset.state = state;
+    if (state === "current") step.setAttribute("aria-current", "step");
+    else step.removeAttribute("aria-current");
+  });
+  renderAttention(value);
+}
+
+function renderAttention(value) {
+  const panel = $("[data-attention-panel]");
+  const title = $("[data-attention-title]");
+  const copy = $("[data-attention-copy]");
+  const paymentNeedsHelp = Boolean(value.paymentAttentionRequired);
+  const orderNeedsHelp = Boolean(value.operationalAttentionRequired);
+  const canRepairPayment = ["requires_action", "failed"].includes(value.paymentStatus) && Boolean(publicConfig?.stripePublishableKey);
+  panel.hidden = !paymentNeedsHelp && !orderNeedsHelp;
+  if (panel.hidden) {
+    title.textContent = "";
+    copy.textContent = "";
+    delete panel.dataset.variant;
+    return;
+  }
+  panel.dataset.variant = paymentNeedsHelp && orderNeedsHelp ? "both" : paymentNeedsHelp ? "payment" : "operations";
+  if (paymentNeedsHelp && orderNeedsHelp) {
+    title.textContent = "Your order needs attention";
+    copy.textContent = canRepairPayment
+      ? "Please update payment below. Our team is also reviewing an order detail and will contact you if anything else is needed."
+      : "Our team is reviewing the payment and an order detail. We’ll contact you using the information on the order if anything is needed.";
+  } else if (paymentNeedsHelp) {
+    title.textContent = "Payment needs your attention";
+    copy.textContent = canRepairPayment
+      ? value.paymentStatus === "requires_action"
+        ? "Your card needs confirmation. Use the secure payment section below to keep this order moving."
+        : "The card could not be charged. Update it below; this retries the same order and does not create a duplicate charge."
+      : "The payment is being reviewed. We’ll contact you using the information on the order if anything is needed.";
+  } else {
+    title.textContent = "Our team is reviewing an order detail";
+    copy.textContent = "Your laundry remains tracked. We’ll contact you using the information on the order if we need anything from you.";
+  }
+}
+
+function paymentTone(status) {
+  if (["requires_action", "failed", "disputed"].includes(status)) return "attention";
+  if (["succeeded", "succeeded_external"].includes(status)) return "settled";
+  if (["refunded", "partially_refunded"].includes(status)) return "refunded";
+  return "pending";
 }
 
 function renderReceipt(receipt, paymentStatus) {
@@ -843,7 +1110,7 @@ function proposalCard(schedule, proposal) {
   header.append(textNode("h5", `Proposed pickup · ${formatDate(proposal.proposedForAt)}`), statusPill(proposal.status));
   card.append(header);
   if (proposal.expiresAt) card.append(textNode("p", `Respond by ${formatDate(proposal.expiresAt)}.`));
-  if (proposal.blockedReason) card.append(textNode("p", `A new route is needed: ${label(proposal.blockedReason)}.`));
+  if (proposal.blockedReason) card.append(textNode("p", "That pickup window is no longer available. Choose another open time to continue."));
   const actions = actionGroup();
   if (proposal.routeId) actions.append(actionButton("Continue with proposed route", "proposal-confirm", {
     proposalId: proposal.proposalId,
@@ -972,19 +1239,22 @@ function clearStepUpVerification() {
   verificationId = "";
   $("#pud-step-up-phone-form")?.reset();
   $("#pud-step-up-code-form")?.reset();
+  $("#pud-step-up-resend-form")?.reset();
   resetTurnstile($("#pud-step-up-phone-form"));
-  resetTurnstile($("#pud-step-up-code-form"));
+  resetTurnstile($("#pud-step-up-resend-form"));
 }
 
 function renderStepUpState(override = "") {
   const session = activeVerifiedSession();
   const phoneForm = $("#pud-step-up-phone-form");
   const codeForm = $("#pud-step-up-code-form");
+  const resendPanel = $("[data-step-up-resend-panel]");
   const active = $("[data-step-up-active]");
   const status = $("[data-step-up-state]");
   if (!phoneForm || !codeForm || !active || !status) return;
   phoneForm.hidden = Boolean(session) || Boolean(verificationId);
   codeForm.hidden = Boolean(session) || !verificationId;
+  if (resendPanel) resendPanel.hidden = Boolean(session) || !verificationId;
   active.hidden = !session;
   status.dataset.active = session ? "true" : "false";
   status.textContent = override || (session
@@ -993,7 +1263,7 @@ function renderStepUpState(override = "") {
       ? "Enter the code. The resulting verified session stays only in this page's memory."
       : "Phone verification is required for protected actions.");
   if (!phoneForm.hidden) ensureTurnstile(phoneForm);
-  if (!codeForm.hidden) ensureTurnstile(codeForm);
+  if (resendPanel && !resendPanel.hidden) ensureTurnstile($("#pud-step-up-resend-form"));
 }
 
 function focusStepUp() {
@@ -1014,9 +1284,11 @@ function closePaymentReplacement() {
 }
 
 function clearMemoryCredentials() {
+  clearAutomaticRefresh();
   clearVerifiedSession();
   clearStepUpVerification();
   closePaymentReplacement();
+  closeConfirmation();
   pendingRotation = null;
 }
 
@@ -1113,8 +1385,16 @@ function textNode(tagName, text) {
   return Object.assign(document.createElement(tagName), { textContent: text });
 }
 
-function label(value) {
-  return String(value || "pending").replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+function label(value, fallback = "Update available") {
+  return humanLabels[String(value || "")] || fallback;
+}
+
+function pickupWindowLabel(value) {
+  const code = String(value || "").trim().toUpperCase();
+  if (!code) return "Not scheduled yet";
+  if (code === "AM") return "Morning pickup window";
+  if (code === "PM") return "Afternoon pickup window";
+  return "Scheduled pickup window";
 }
 
 function formatDate(value) {

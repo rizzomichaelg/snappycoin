@@ -8,36 +8,75 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://js.stripe.com https://challenges.cloudflare.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com https://challenges.cloudflare.com http://127.0.0.1:8787 http://localhost:8787; frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com;">
   <title>Private Order Status | Snappy Coin Laundry</title>
-  <link rel="stylesheet" href="/assets/css/pud.css">
-  <link rel="stylesheet" href="/assets/css/pud-status.css">
+  <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260715-2">
+  <link rel="stylesheet" href="/assets/css/pud-status.css?v=20260715-2">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
 </head>
 <body>
   <a class="skip-link" href="#private-order">Skip to order status</a>
-  <header class="pud-header">
-    <a class="pud-brand" href="/"><img src="/assets/logo.png" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
+  <header class="pud-header pud-private-header">
+    <a class="pud-brand" href="/"><img src="/assets/logo-96.webp" alt="" width="48" height="48"><span><strong>Snappy Coin Laundry</strong><small>Pickup &amp; delivery</small></span></a>
+    <nav class="pud-private-nav" aria-label="Order page shortcuts">
+      <a href="/pickup-delivery/">Book a pickup</a>
+      <a href="/">Main site</a>
+    </nav>
   </header>
   <main id="private-order" class="pud-single pud-status-page" data-pud-status>
-    <section class="pud-card" aria-labelledby="status-title">
-      <p class="pud-eyebrow">Private order page</p>
-      <h1 id="status-title">Pickup &amp; delivery status</h1>
+    <section class="pud-card pud-status-shell" aria-labelledby="status-title">
+      <header class="pud-page-intro">
+        <p class="pud-eyebrow">Your private order page</p>
+        <h1 id="status-title">Laundry, without the guesswork.</h1>
+        <p>See where your order is now, what happens next, and anything that needs your attention.</p>
+      </header>
       <div class="pud-alert" data-message role="alert" tabindex="-1" hidden></div>
 
-      <form id="pud-status-form" class="pud-form pud-token-form">
-        <label>Private status token
-          <input name="token" autocomplete="off" autocapitalize="off" spellcheck="false" minlength="16" maxlength="2048">
-        </label>
-        <button class="pud-button pud-button-primary" type="submit">Open order</button>
-      </form>
+      <details class="pud-token-entry" data-token-entry open>
+        <summary>Open an order with a private token</summary>
+        <form id="pud-status-form" class="pud-form pud-token-form">
+          <label>Private order token
+            <input name="token" autocomplete="off" autocapitalize="off" spellcheck="false" minlength="16" maxlength="2048">
+          </label>
+          <button class="pud-button pud-button-primary" type="submit">Open order</button>
+        </form>
+      </details>
 
       <div data-status-content hidden>
         <div class="pud-status-heading">
-          <div><p class="pud-step-label">Order</p><h2 data-order-number></h2></div>
-          <button class="pud-button pud-button-link" type="button" data-action="refresh">Refresh status</button>
+          <div><p class="pud-step-label">Order number</p><h2 data-order-number></h2></div>
+          <button class="pud-button pud-button-secondary pud-refresh-button" type="button" data-action="refresh">Refresh</button>
         </div>
         <p class="pud-fine-print" data-last-updated></p>
+
+        <section class="pud-status-now" aria-labelledby="current-stage-heading">
+          <div>
+            <p class="pud-step-label">Current stage</p>
+            <h3 id="current-stage-heading" data-fulfillment-status></h3>
+            <p class="pud-next-step" data-next-step role="status"></p>
+          </div>
+          <div class="pud-attention" data-attention-panel role="status" aria-live="polite" hidden>
+            <strong data-attention-title></strong>
+            <p data-attention-copy></p>
+          </div>
+        </section>
+
+        <section class="pud-timeline-section" aria-labelledby="timeline-heading">
+          <div class="pud-section-heading">
+            <h3 id="timeline-heading">Order journey</h3>
+            <p>Updates come directly from our laundry and delivery team.</p>
+          </div>
+          <ol class="pud-fulfillment-timeline" data-fulfillment-timeline>
+            <li data-timeline-step="submitted"><span aria-hidden="true">1</span><strong>Received</strong><small>Order sent</small></li>
+            <li data-timeline-step="confirmed"><span aria-hidden="true">2</span><strong>Scheduled</strong><small>Pickup reserved</small></li>
+            <li data-timeline-step="picked_up"><span aria-hidden="true">3</span><strong>Picked up</strong><small>Bags collected</small></li>
+            <li data-timeline-step="weighed"><span aria-hidden="true">4</span><strong>In the wash</strong><small>Weighed &amp; processing</small></li>
+            <li data-timeline-step="ready"><span aria-hidden="true">5</span><strong>Clean &amp; packed</strong><small>Ready to return</small></li>
+            <li data-timeline-step="out_for_delivery"><span aria-hidden="true">6</span><strong>On the way</strong><small>With our driver</small></li>
+            <li data-timeline-step="delivered"><span aria-hidden="true">7</span><strong>Delivered</strong><small>Back with you</small></li>
+          </ol>
+        </section>
+
         <dl class="pud-status-grid">
-          <div><dt>Order status</dt><dd data-fulfillment-status></dd></div>
           <div><dt>Payment</dt><dd data-payment-status></dd></div>
           <div><dt>Pickup</dt><dd data-pickup-window></dd></div>
           <div><dt>Delivery</dt><dd data-delivery-promise></dd></div>
@@ -45,9 +84,44 @@
           <div><dt>Total</dt><dd data-total></dd></div>
         </dl>
 
+        <section class="pud-status-section pud-payment-attention" data-payment-panel hidden aria-labelledby="payment-heading">
+          <p class="pud-step-label">Action needed</p>
+          <h3 id="payment-heading">Let’s fix the payment</h3>
+          <p data-payment-help>Your laundry order is still here. Securely confirm a replacement card and we will retry the original payment—never create a second order.</p>
+          <div class="pud-actions" data-payment-actions>
+            <button class="pud-button pud-button-primary" type="button" data-action="payment-replace">Update card and retry</button>
+          </div>
+          <form id="pud-payment-method-form" class="pud-form pud-inline-form" hidden>
+            <div id="pud-payment-method-element" class="pud-payment-element" aria-label="Secure replacement card details"></div>
+            <p class="pud-fine-print">Confirming replaces the saved payment method and retries this order’s existing payment. It does not create a second order.</p>
+            <div class="pud-actions">
+              <button class="pud-button pud-button-primary" type="submit">Confirm replacement card</button>
+              <button class="pud-button pud-button-link" type="button" data-action="payment-replace-cancel">Cancel</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="pud-status-section" data-reschedule-panel hidden aria-labelledby="reschedule-heading">
+          <p class="pud-step-label">Pickup options</p>
+          <h3 id="reschedule-heading">Need a different pickup time?</h3>
+          <p>Only open windows are shown. Your current time stays reserved until the change succeeds.</p>
+          <form id="pud-reschedule-form" class="pud-form pud-inline-form">
+            <label>New pickup window <select name="routeId" data-reschedule-options required></select></label>
+            <label class="pud-visually-hidden">Reason <input name="reason" maxlength="500" value="customer_request"></label>
+            <button class="pud-button pud-button-primary" type="submit">Change pickup window</button>
+          </form>
+        </section>
+
+        <div class="pud-actions pud-status-actions" aria-label="Available order actions">
+          <button class="pud-button pud-button-secondary" type="button" data-reorder-action data-action="reorder" hidden>Book this order again</button>
+          <button class="pud-button pud-button-danger" type="button" data-cancel-action data-action="cancel" hidden>Cancel order</button>
+          <button class="pud-button pud-button-link" type="button" data-claim-link data-action="open-claim" hidden>Report an order issue</button>
+        </div>
+
         <section class="pud-status-section pud-step-up" aria-labelledby="step-up-heading" data-step-up>
-          <h3 id="step-up-heading">Verify before making changes</h3>
-          <p>Your private status link is read-only. For cancellation, payment, claims, recurring pickups, or link security changes, verify the mobile number on the order again.</p>
+          <p class="pud-step-label">Protected actions</p>
+          <h3 id="step-up-heading">Verify once to make changes</h3>
+          <p>Reading your status never requires a code. To change payment, cancel, report a problem, or manage saved details, verify the mobile number on the order.</p>
           <p class="pud-session-state" data-step-up-state role="status">Phone verification is required for protected actions.</p>
           <form id="pud-step-up-phone-form" class="pud-form pud-inline-form" autocomplete="off">
             <label>Mobile number
@@ -60,107 +134,95 @@
             <label>Verification code
               <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,10}" minlength="4" maxlength="10" required>
             </label>
-            <div class="pud-turnstile" data-turnstile></div>
             <div class="pud-actions">
               <button class="pud-button pud-button-primary" type="submit">Verify phone</button>
-              <button class="pud-button pud-button-link" type="button" data-action="step-up-resend">Send a new code</button>
               <button class="pud-button pud-button-link" type="button" data-action="step-up-restart">Use a different number</button>
             </div>
           </form>
+          <details class="pud-resend" data-step-up-resend-panel hidden>
+            <summary>Didn’t get the code?</summary>
+            <form id="pud-step-up-resend-form" class="pud-form pud-inline-form" autocomplete="off">
+              <p class="pud-fine-print">Complete this anti-bot check only when you need another code.</p>
+              <div class="pud-turnstile" data-turnstile></div>
+              <button class="pud-button pud-button-link" type="button" data-action="step-up-resend">Send a new code</button>
+            </form>
+          </details>
           <div class="pud-actions" data-step-up-active hidden>
             <button class="pud-button pud-button-link" type="button" data-action="step-up-restart">Verify again now</button>
           </div>
         </section>
 
-        <section class="pud-status-section" data-portal-details hidden aria-labelledby="portal-details-heading">
-          <h3 id="portal-details-heading">Verified order history and preferences</h3>
-          <p>These details are available only during this short verified session and are removed from the page when it expires.</p>
-          <div data-history-list></div>
-          <button class="pud-button pud-button-secondary" type="button" data-history-more data-action="history-more" hidden>Load more orders</button>
-
-          <section class="pud-preferences" aria-labelledby="preferences-heading">
-            <h4 id="preferences-heading">Saved laundry preferences</h4>
-            <p data-preferences-source></p>
-            <p class="pud-fine-print" data-preferences-note hidden></p>
-            <form id="pud-preferences-form" class="pud-form pud-inline-form" autocomplete="off">
-              <div class="pud-field-row">
-                <label>Detergent
-                  <select name="detergent" required>
-                    <option value="standard">Standard</option>
-                    <option value="free_clear">Free &amp; clear</option>
-                    <option value="customer_supplied">Customer supplied</option>
-                  </select>
-                </label>
-                <label>Softener
-                  <select name="softenerPref" required>
-                    <option value="none">None</option>
-                    <option value="standard">Standard</option>
-                  </select>
-                </label>
-              </div>
-              <label>Default special instructions
-                <textarea name="specialInstructions" rows="3" maxlength="2000"></textarea>
-              </label>
-              <button class="pud-button pud-button-primary" type="submit">Save preferences</button>
-            </form>
-          </section>
-        </section>
-
-        <section class="pud-status-section pud-loyalty" data-loyalty-panel hidden aria-labelledby="loyalty-heading">
-          <h3 id="loyalty-heading">Snappy Rewards</h3>
-          <p data-loyalty-state role="status"></p>
-          <p class="pud-loyalty-balance"><span>Available balance</span> <strong data-loyalty-balance></strong></p>
-          <h4>Recent rewards activity</h4>
-          <ol class="pud-loyalty-history" data-loyalty-history aria-label="Recent rewards activity"></ol>
-          <p class="pud-fine-print">Rewards details remain only in this page while your short verified session is active.</p>
-        </section>
-
-        <section class="pud-status-section" data-receipt aria-labelledby="receipt-heading">
-          <h3 id="receipt-heading">Itemized receipt</h3>
-          <p data-receipt-summary>Your current charges and payment activity are shown below.</p>
-          <dl class="pud-receipt-grid">
-            <div><dt>Processed weight</dt><dd data-receipt-weight></dd></div>
-            <div><dt>Price per pound</dt><dd data-receipt-rate></dd></div>
-            <div><dt>Weight charge</dt><dd data-receipt-weight-charge></dd></div>
-            <div data-receipt-minimum-row><dt>Minimum adjustment</dt><dd data-receipt-minimum-adjustment></dd></div>
-            <div><dt>Laundry subtotal</dt><dd data-receipt-base></dd></div>
-            <div data-receipt-delivery-row><dt>Delivery fee</dt><dd data-receipt-delivery></dd></div>
-            <div data-receipt-discount-row><dt>Discount</dt><dd data-receipt-discount></dd></div>
-            <div data-receipt-tax-row><dt>Tax</dt><dd data-receipt-tax></dd></div>
-            <div class="pud-receipt-total"><dt>Laundry order charge</dt><dd data-receipt-total></dd></div>
-            <div><dt>Order payment captured</dt><dd data-receipt-captured></dd></div>
-            <div data-receipt-tip-row><dt>Separate tip payment</dt><dd data-receipt-tip></dd></div>
-            <div data-receipt-refund-row><dt>Refunded</dt><dd data-receipt-refunded></dd></div>
-            <div class="pud-receipt-total"><dt>Net paid including tip</dt><dd data-receipt-net></dd></div>
-          </dl>
-          <p class="pud-fine-print" data-receipt-versions></p>
-        </section>
-
-        <section class="pud-status-section" data-payment-panel hidden aria-labelledby="payment-heading">
-          <h3 id="payment-heading">Resolve payment</h3>
-          <p data-payment-help>Securely authenticate a replacement card. After confirmation, the backend retries the same primary payment; it never creates a second order or charge record.</p>
-          <div class="pud-actions" data-payment-actions>
-            <button class="pud-button pud-button-primary" type="button" data-action="payment-replace">Replace card and retry payment</button>
+        <details class="pud-status-section pud-disclosure" data-receipt>
+          <summary><span>Receipt &amp; charges</span><small data-receipt-summary>Your current charges and payment activity.</small></summary>
+          <div class="pud-disclosure-body">
+            <h3 id="receipt-heading" class="pud-visually-hidden">Itemized receipt</h3>
+            <dl class="pud-receipt-grid">
+              <div><dt>Processed weight</dt><dd data-receipt-weight></dd></div>
+              <div><dt>Price per pound</dt><dd data-receipt-rate></dd></div>
+              <div><dt>Weight charge</dt><dd data-receipt-weight-charge></dd></div>
+              <div data-receipt-minimum-row><dt>Minimum adjustment</dt><dd data-receipt-minimum-adjustment></dd></div>
+              <div><dt>Laundry subtotal</dt><dd data-receipt-base></dd></div>
+              <div data-receipt-delivery-row><dt>Delivery fee</dt><dd data-receipt-delivery></dd></div>
+              <div data-receipt-discount-row><dt>Discount</dt><dd data-receipt-discount></dd></div>
+              <div data-receipt-tax-row><dt>Tax</dt><dd data-receipt-tax></dd></div>
+              <div class="pud-receipt-total"><dt>Laundry order charge</dt><dd data-receipt-total></dd></div>
+              <div><dt>Order payment captured</dt><dd data-receipt-captured></dd></div>
+              <div data-receipt-tip-row><dt>Separate tip payment</dt><dd data-receipt-tip></dd></div>
+              <div data-receipt-refund-row><dt>Refunded</dt><dd data-receipt-refunded></dd></div>
+              <div class="pud-receipt-total"><dt>Net paid including tip</dt><dd data-receipt-net></dd></div>
+            </dl>
+            <p class="pud-fine-print" data-receipt-versions></p>
           </div>
-          <form id="pud-payment-method-form" class="pud-form pud-inline-form" hidden>
-            <div id="pud-payment-method-element" class="pud-payment-element" aria-label="Secure replacement card details"></div>
-            <p class="pud-fine-print">Confirming replaces the saved payment method and retries the existing order payment when appropriate. It does not create a second order.</p>
-            <div class="pud-actions">
-              <button class="pud-button pud-button-primary" type="submit">Confirm replacement card</button>
-              <button class="pud-button pud-button-link" type="button" data-action="payment-replace-cancel">Cancel</button>
-            </div>
-          </form>
-        </section>
+        </details>
 
-        <section class="pud-status-section" data-reschedule-panel hidden aria-labelledby="reschedule-heading">
-          <h3 id="reschedule-heading">Change pickup window</h3>
-          <p>Only currently available windows are shown. Your existing window stays reserved until the change succeeds.</p>
-          <form id="pud-reschedule-form" class="pud-form pud-inline-form">
-            <label>New pickup window <select name="routeId" data-reschedule-options required></select></label>
-            <label>Reason <input name="reason" maxlength="500" value="customer_request"></label>
-            <button class="pud-button pud-button-primary" type="submit">Request route change</button>
-          </form>
-        </section>
+        <details class="pud-status-section pud-disclosure" data-portal-details hidden>
+          <summary><span>Order history &amp; wash preferences</span><small>Available during this verified session.</small></summary>
+          <div class="pud-disclosure-body">
+            <h3 id="portal-details-heading">Previous orders</h3>
+            <p>Private details disappear from this page when your verified session ends.</p>
+            <div data-history-list></div>
+            <button class="pud-button pud-button-secondary" type="button" data-history-more data-action="history-more" hidden>Load more orders</button>
+
+            <section class="pud-preferences" aria-labelledby="preferences-heading">
+              <h4 id="preferences-heading">Saved wash preferences</h4>
+              <p data-preferences-source></p>
+              <p class="pud-fine-print" data-preferences-note hidden></p>
+              <form id="pud-preferences-form" class="pud-form pud-inline-form" autocomplete="off">
+                <div class="pud-field-row">
+                  <label>Detergent
+                    <select name="detergent" required>
+                      <option value="standard">Standard</option>
+                      <option value="free_clear">Free &amp; clear</option>
+                      <option value="customer_supplied">Customer supplied</option>
+                    </select>
+                  </label>
+                  <label>Softener
+                    <select name="softenerPref" required>
+                      <option value="none">None</option>
+                      <option value="standard">Standard</option>
+                    </select>
+                  </label>
+                </div>
+                <label>Default special instructions
+                  <textarea name="specialInstructions" rows="3" maxlength="2000"></textarea>
+                </label>
+                <button class="pud-button pud-button-primary" type="submit">Save preferences</button>
+              </form>
+            </section>
+          </div>
+        </details>
+
+        <details class="pud-status-section pud-disclosure pud-loyalty" data-loyalty-panel hidden>
+          <summary><span>Snappy Rewards</span><small>Balance and recent activity.</small></summary>
+          <div class="pud-disclosure-body">
+            <h3 id="loyalty-heading" class="pud-visually-hidden">Snappy Rewards</h3>
+            <p data-loyalty-state role="status"></p>
+            <p class="pud-loyalty-balance"><span>Available balance</span> <strong data-loyalty-balance></strong></p>
+            <h4>Recent rewards activity</h4>
+            <ol class="pud-loyalty-history" data-loyalty-history aria-label="Recent rewards activity"></ol>
+            <p class="pud-fine-print">Rewards details disappear from this page when your verified session ends.</p>
+          </div>
+        </details>
 
         <section class="pud-status-section" data-tip-panel hidden aria-labelledby="tip-heading">
           <h3 id="tip-heading">Add a thank-you tip</h3>
@@ -173,40 +235,52 @@
           </form>
         </section>
 
-        <section class="pud-status-section" data-recurring-panel hidden aria-labelledby="recurring-heading">
-          <h3 id="recurring-heading">Recurring pickups</h3>
-          <div data-recurring-list></div>
-          <form id="pud-recurring-create-form" class="pud-form pud-inline-form" data-recurring-create hidden>
-            <h4>Start a schedule</h4>
-            <div class="pud-field-row">
-              <label>Cadence <select name="cadence"><option value="weekly">Weekly</option><option value="biweekly">Every two weeks</option><option value="monthly">Monthly</option></select></label>
-              <label>Estimated bags <select name="preferredBags"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
-              <label>Detergent <select name="detergent"><option value="standard">Standard</option><option value="free_clear">Free &amp; clear</option><option value="customer_supplied">I’ll provide mine</option></select></label>
-              <label>Softener <select name="softenerPref"><option value="none">None</option><option value="standard">Standard</option></select></label>
-            </div>
-            <label>Special instructions <textarea name="specialInstructions" rows="2" maxlength="2000"></textarea></label>
-            <button class="pud-button pud-button-primary" type="submit">Create recurring schedule</button>
-          </form>
-        </section>
-
-        <div class="pud-actions pud-status-actions">
-          <button class="pud-button pud-button-secondary" type="button" data-reorder-action data-action="reorder" hidden>Reorder</button>
-          <button class="pud-button pud-button-danger" type="button" data-cancel-action data-action="cancel" hidden>Cancel order</button>
-          <button class="pud-button pud-button-link" type="button" data-claim-link data-action="open-claim" hidden>Open a claim</button>
-        </div>
-
-        <section class="pud-status-section" aria-labelledby="link-security-heading">
-          <h3 id="link-security-heading">Private link security</h3>
-          <p>Rotate the link if it may have been shared. Revoke it only when you no longer need online access; revocation cannot be undone from this page.</p>
-          <div class="pud-actions">
-            <button class="pud-button pud-button-secondary" type="button" data-action="rotate-status-token">Rotate private link</button>
-            <button class="pud-button pud-button-danger" type="button" data-action="revoke-status-token">Revoke private link</button>
+        <details class="pud-status-section pud-disclosure" data-recurring-panel hidden>
+          <summary><span>Recurring pickups</span><small>Plan future laundry days.</small></summary>
+          <div class="pud-disclosure-body">
+            <h3 id="recurring-heading" class="pud-visually-hidden">Recurring pickups</h3>
+            <div data-recurring-list></div>
+            <form id="pud-recurring-create-form" class="pud-form pud-inline-form" data-recurring-create hidden>
+              <h4>Start a schedule</h4>
+              <div class="pud-field-row">
+                <label>How often <select name="cadence"><option value="weekly">Every week</option><option value="biweekly">Every two weeks</option><option value="monthly">Every month</option></select></label>
+                <label>Estimated bags <select name="preferredBags"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
+                <label>Detergent <select name="detergent"><option value="standard">Standard</option><option value="free_clear">Free &amp; clear</option><option value="customer_supplied">I’ll provide mine</option></select></label>
+                <label>Softener <select name="softenerPref"><option value="none">None</option><option value="standard">Standard</option></select></label>
+              </div>
+              <label>Special instructions <textarea name="specialInstructions" rows="2" maxlength="2000"></textarea></label>
+              <button class="pud-button pud-button-primary" type="submit">Start recurring pickups</button>
+            </form>
           </div>
-        </section>
+        </details>
+
+        <details class="pud-status-section pud-disclosure pud-security">
+          <summary><span>Private-link security</span><small>Replace or permanently disable this link.</small></summary>
+          <div class="pud-disclosure-body">
+            <h3 id="link-security-heading" class="pud-visually-hidden">Private link security</h3>
+            <p>Replace the link if it may have been shared. Disable it only when you no longer need online access; that choice cannot be undone here.</p>
+            <div class="pud-actions">
+              <button class="pud-button pud-button-secondary" type="button" data-action="copy-status-link">Copy current private link</button>
+              <button class="pud-button pud-button-secondary" type="button" data-action="rotate-status-token">Replace private link</button>
+              <button class="pud-button pud-button-danger" type="button" data-action="revoke-status-token">Permanently disable link</button>
+            </div>
+          </div>
+        </details>
       </div>
-      <p class="pud-fine-print">This page uses a private bearer token kept in the URL fragment for read-only status. Do not share the link. Protected actions also require fresh phone verification and a one-time authorization. None of these values are sent to analytics.</p>
+      <dialog class="pud-confirm-dialog" data-confirm-dialog aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-copy">
+        <form method="dialog">
+          <p class="pud-step-label">Please confirm</p>
+          <h2 id="confirm-dialog-title" data-confirm-title></h2>
+          <p id="confirm-dialog-copy" data-confirm-copy></p>
+          <div class="pud-actions">
+            <button class="pud-button pud-button-secondary" type="button" data-action="dismiss-confirmation">Go back</button>
+            <button class="pud-button pud-button-danger" type="button" data-action="confirm-pending" data-confirm-button>Confirm</button>
+          </div>
+        </form>
+      </dialog>
+      <p class="pud-fine-print pud-privacy-note"><strong>Keep this page private.</strong> The order token stays in the URL fragment and is never sent to analytics. Changes require fresh phone verification and a one-time authorization.</p>
     </section>
   </main>
-  <script type="module" src="/assets/js/pud-status.js"></script>
+  <script type="module" src="/assets/js/pud-status.js?v=20260715-4"></script>
 </body>
 </html>
