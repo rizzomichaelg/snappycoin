@@ -1,0 +1,139 @@
+.pud-status-page {
+  max-width: 940px;
+}
+
+.pud-token-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  margin-bottom: 1.5rem;
+}
+
+.pud-status-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pud-status-heading h2,
+.pud-status-heading p {
+  margin: 0;
+}
+
+.pud-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 1.5rem 0;
+}
+
+.pud-status-grid div {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.pud-status-grid dt {
+  color: var(--muted);
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.pud-status-grid dd {
+  margin: .25rem 0 0;
+  font-weight: 800;
+}
+
+.pud-status-section {
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.pud-status-section h3,
+.pud-status-section h4 {
+  margin: 0 0 .4rem;
+}
+
+.pud-inline-form {
+  max-width: 660px;
+  margin-top: 1rem;
+}
+
+.pud-status-actions {
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.pud-recurring-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.pud-recurring-card,
+.pud-proposal-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.pud-recurring-card header,
+.pud-proposal-card header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.pud-recurring-card h4,
+.pud-proposal-card h5,
+.pud-recurring-card p,
+.pud-proposal-card p {
+  margin: 0;
+}
+
+.pud-recurring-card > * + *,
+.pud-proposal-card > * + * {
+  margin-top: .75rem;
+}
+
+.pud-status-pill {
+  display: inline-flex;
+  border-radius: 999px;
+  background: #e9f8ef;
+  color: var(--green-dark);
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .25rem .65rem;
+  text-transform: capitalize;
+}
+
+.pud-status-pill[data-state="blocked"],
+.pud-status-pill[data-state="failed"] {
+  background: #fff3d6;
+  color: #744c00;
+}
+
+[aria-busy="true"] {
+  cursor: progress;
+}
+
+@media (max-width: 600px) {
+  .pud-token-form,
+  .pud-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pud-status-heading,
+  .pud-recurring-card header,
+  .pud-proposal-card header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pud-status-heading .pud-button {
+    align-self: start;
+  }
+}

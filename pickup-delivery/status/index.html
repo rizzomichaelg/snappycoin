@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://js.stripe.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com http://127.0.0.1:8787 http://localhost:8787; frame-src https://js.stripe.com https://hooks.stripe.com;">
+  <title>Private Order Status | Snappy Coin Laundry</title>
+  <link rel="stylesheet" href="/assets/css/pud.css">
+  <link rel="stylesheet" href="/assets/css/pud-status.css">
+  <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
+</head>
+<body>
+  <a class="skip-link" href="#private-order">Skip to order status</a>
+  <header class="pud-header">
+    <a class="pud-brand" href="/"><img src="/assets/logo.png" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
+  </header>
+  <main id="private-order" class="pud-single pud-status-page" data-pud-status>
+    <section class="pud-card" aria-labelledby="status-title">
+      <p class="pud-eyebrow">Private order page</p>
+      <h1 id="status-title">Pickup &amp; delivery status</h1>
+      <div class="pud-alert" data-message role="alert" tabindex="-1" hidden></div>
+
+      <form id="pud-status-form" class="pud-form pud-token-form">
+        <label>Private status token
+          <input name="token" autocomplete="off" autocapitalize="off" spellcheck="false" minlength="16" maxlength="2048">
+        </label>
+        <button class="pud-button pud-button-primary" type="submit">Open order</button>
+      </form>
+
+      <div data-status-content hidden>
+        <div class="pud-status-heading">
+          <div><p class="pud-step-label">Order</p><h2 data-order-number></h2></div>
+          <button class="pud-button pud-button-link" type="button" data-action="refresh">Refresh status</button>
+        </div>
+        <p class="pud-fine-print" data-last-updated></p>
+        <dl class="pud-status-grid">
+          <div><dt>Order status</dt><dd data-fulfillment-status></dd></div>
+          <div><dt>Payment</dt><dd data-payment-status></dd></div>
+          <div><dt>Pickup</dt><dd data-pickup-window></dd></div>
+          <div><dt>Delivery</dt><dd data-delivery-promise></dd></div>
+          <div><dt>Bags</dt><dd data-bag-status></dd></div>
+          <div><dt>Total</dt><dd data-total></dd></div>
+        </dl>
+
+        <section class="pud-status-section" data-receipt hidden aria-labelledby="receipt-heading">
+          <h3 id="receipt-heading">Receipt</h3>
+          <p>Your final amount and payment state appear above. A transactional receipt is also sent by email.</p>
+        </section>
+
+        <section class="pud-status-section" data-payment-panel hidden aria-labelledby="payment-heading">
+          <h3 id="payment-heading">Resolve payment</h3>
+          <p data-payment-help>Securely authenticate a replacement card. After confirmation, the backend retries the same primary payment; it never creates a second order or charge record.</p>
+          <div class="pud-actions" data-payment-actions>
+            <button class="pud-button pud-button-primary" type="button" data-action="payment-replace">Replace card and retry payment</button>
+          </div>
+          <form id="pud-payment-method-form" class="pud-form pud-inline-form" hidden>
+            <div id="pud-payment-method-element" class="pud-payment-element" aria-label="Secure replacement card details"></div>
+            <p class="pud-fine-print">Confirming replaces the saved payment method and retries the existing order payment when appropriate. It does not create a second order.</p>
+            <div class="pud-actions">
+              <button class="pud-button pud-button-primary" type="submit">Confirm replacement card</button>
+              <button class="pud-button pud-button-link" type="button" data-action="payment-replace-cancel">Cancel</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="pud-status-section" data-reschedule-panel hidden aria-labelledby="reschedule-heading">
+          <h3 id="reschedule-heading">Change pickup window</h3>
+          <p>Only currently available windows are shown. Your existing window stays reserved until the change succeeds.</p>
+          <form id="pud-reschedule-form" class="pud-form pud-inline-form">
+            <label>New pickup window <select name="routeId" data-reschedule-options required></select></label>
+            <label>Reason <input name="reason" maxlength="500" value="customer_request"></label>
+            <button class="pud-button pud-button-primary" type="submit">Request route change</button>
+          </form>
+        </section>
+
+        <section class="pud-status-section" data-tip-panel hidden aria-labelledby="tip-heading">
+          <h3 id="tip-heading">Add a thank-you tip</h3>
+          <p>Tips are optional and available only after delivery. No amount is selected for you.</p>
+          <form id="pud-tip-form" class="pud-form pud-inline-form">
+            <label>Tip amount in dollars
+              <input name="amount" type="number" inputmode="decimal" min="0.50" max="1000" step="0.01" placeholder="0.00" required>
+            </label>
+            <button class="pud-button pud-button-primary" type="submit">Review and submit tip</button>
+          </form>
+        </section>
+
+        <section class="pud-status-section" data-recurring-panel hidden aria-labelledby="recurring-heading">
+          <h3 id="recurring-heading">Recurring pickups</h3>
+          <div data-recurring-list></div>
+          <form id="pud-recurring-create-form" class="pud-form pud-inline-form" data-recurring-create hidden>
+            <h4>Start a schedule</h4>
+            <div class="pud-field-row">
+              <label>Cadence <select name="cadence"><option value="weekly">Weekly</option><option value="biweekly">Every two weeks</option><option value="monthly">Monthly</option></select></label>
+              <label>Estimated bags <select name="preferredBags"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
+              <label>Detergent <select name="detergent"><option value="standard">Standard</option><option value="free_clear">Free &amp; clear</option><option value="customer_supplied">I’ll provide mine</option></select></label>
+              <label>Softener <select name="softenerPref"><option value="none">None</option><option value="standard">Standard</option></select></label>
+            </div>
+            <label>Special instructions <textarea name="specialInstructions" rows="2" maxlength="2000"></textarea></label>
+            <button class="pud-button pud-button-primary" type="submit">Create recurring schedule</button>
+          </form>
+        </section>
+
+        <div class="pud-actions pud-status-actions">
+          <button class="pud-button pud-button-secondary" type="button" data-reorder-action data-action="reorder" hidden>Reorder</button>
+          <button class="pud-button pud-button-danger" type="button" data-cancel-action data-action="cancel" hidden>Cancel order</button>
+          <a class="pud-button pud-button-link" data-claim-link href="/pickup-delivery/claims/" hidden>Open a claim</a>
+        </div>
+      </div>
+      <p class="pud-fine-print">This page uses a private bearer token kept in the URL fragment. Do not share the link. The token is sent only in API request bodies and is never sent to analytics.</p>
+    </section>
+  </main>
+  <script type="module" src="/assets/js/pud-status.js"></script>
+</body>
+</html>
