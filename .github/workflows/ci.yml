@@ -1,0 +1,34 @@
+name: Static site verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out canonical backend contract
+        uses: actions/checkout@v4
+        with:
+          repository: rizzomichaelg/snappycoin-backend
+          path: .contract/snappycoin-backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run browser-module tests
+        run: node --test test/*.test.mjs
+      - name: Verify public runtime configuration
+        run: node scripts/verify-pud-config.mjs
+      - name: Verify OpenAPI client contract mirror
+        run: node scripts/verify-pud-contract.mjs
+        env:
+          PUD_OPENAPI: ${{ github.workspace }}/.contract/snappycoin-backend/docs/pud-openapi.yaml
+      - name: Verify static asset inventory
+        run: node scripts/verify-pud.mjs

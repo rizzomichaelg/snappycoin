@@ -1,3 +1,9 @@
+import {
+  CENTRAL_TIME_ZONE,
+  getLocale,
+  translateText,
+} from "./site-i18n.js";
+
 (() => {
   const root = document.querySelector("[data-availability-widget]");
   if (!root) return;
@@ -10,11 +16,12 @@
   const timeoutMs = 8000;
   const cacheKey = "snappy-availability-cache-v1";
   const maxCacheAgeMs = pollMs + 8000;
-  const CENTRAL_TIMEZONE = "America/Chicago";
   const OPEN_START_MINUTE = 6 * 60;
   const OPEN_END_MINUTE = 1 * 60 + 30;
 
   const $ = (sel) => root.querySelector(sel);
+  const t = (value) => translateText(value, getLocale());
+  const formatNumber = (value) => new Intl.NumberFormat(getLocale()).format(value);
 
   const el = {
     pill: $("[data-availability-pill]"),
@@ -68,19 +75,19 @@
   function formatAgo(input) {
     const ts = Number(input);
     if (!Number.isFinite(ts)) {
-      return "<1 minute ago";
+      return t("<1 minute ago");
     }
 
     const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-    if (seconds < 60) return "<1 minute ago";
+    if (seconds < 60) return t("<1 minute ago");
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 60) return t(`${formatNumber(minutes)}m ago`);
 
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return t(`${formatNumber(hours)}h ago`);
 
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return t(`${formatNumber(days)}d ago`);
   }
 
   function parseTimestamp(value) {
@@ -133,7 +140,7 @@
     ageBaseTs = Number.isFinite(updatedAt) ? updatedAt : Date.now();
     ageStateText = stateText || "";
     if (el.status) {
-      el.status.textContent = `Updated ${formatAgo(ageBaseTs)}`;
+      el.status.textContent = t(`Updated ${formatAgo(ageBaseTs)}`);
     }
     if (el.statusState) {
       el.statusState.textContent = ageStateText;
@@ -141,8 +148,8 @@
   }
 
   function isOpenCentralNow() {
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: CENTRAL_TIMEZONE,
+    const formatter = new Intl.DateTimeFormat(getLocale(), {
+      timeZone: CENTRAL_TIME_ZONE,
       hour12: false,
       hour: "numeric",
       minute: "numeric",
@@ -160,8 +167,8 @@
   }
 
   function minutesUntilOpening() {
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: CENTRAL_TIMEZONE,
+    const formatter = new Intl.DateTimeFormat(getLocale(), {
+      timeZone: CENTRAL_TIME_ZONE,
       hour12: false,
       hour: "numeric",
       minute: "numeric",
@@ -183,7 +190,8 @@
   }
 
   function pluralize(value, singular, plural) {
-    return value === 1 ? `${value} ${singular}` : `${value} ${plural}`;
+    const formatted = formatNumber(value);
+    return value === 1 ? `${formatted} ${singular}` : `${formatted} ${plural}`;
   }
 
   function formatOpeningIn() {
@@ -192,11 +200,11 @@
     const mins = minutes % 60;
 
     if (!minutes) {
-      return "Available now";
+      return t("Available now");
     }
 
     if (minutes < 60) {
-      return `Opening in ${pluralize(minutes, "minute", "minutes")}`;
+      return t(`Opening in ${pluralize(minutes, "minute", "minutes")}`);
     }
 
     const parts = [];
@@ -209,10 +217,10 @@
     }
 
     if (!parts.length) {
-      return "Opening in <1 minute";
+      return t("Opening in <1 minute");
     }
 
-    return `Opening in ${parts.join(" ")}`;
+    return t(`Opening in ${parts.join(" ")}`);
   }
 
   function syncAvailabilityHeading() {
@@ -234,7 +242,7 @@
     ageTimer = setInterval(() => {
       if (!ageBaseTs) return;
       if (el.status) {
-        el.status.textContent = `Updated ${formatAgo(ageBaseTs)}`;
+        el.status.textContent = t(`Updated ${formatAgo(ageBaseTs)}`);
       }
       if (el.statusState) {
         el.statusState.textContent = ageStateText;
@@ -260,10 +268,10 @@
   function pauseForStaleness() {
     if (!document.hidden && isPageStale()) {
       isStaleState = true;
-      setPill("Paused", "down");
-      statusLine(lastGoodAt || Date.now(), "Updates paused (inactive)");
+      setPill(t("Paused"), "down");
+      statusLine(lastGoodAt || Date.now(), t("Updates paused (inactive)"));
       setAvailabilityState("down");
-      setError("Updates paused while page is stale.");
+      setError(t("Updates paused while page is stale."));
       return true;
     }
     return false;
@@ -493,18 +501,18 @@
     }
 
     if (!ratios.length) {
-      return { text: "Busy right now", variant: "busy" };
+      return { text: t("Busy right now"), variant: "busy" };
     }
 
     const ratio = Math.min(...ratios);
     if (ratio >= 0.6) {
-      return { text: "Plenty available", variant: "good" };
+      return { text: t("Plenty available"), variant: "good" };
     }
     if (ratio >= 0.3) {
-      return { text: "Some available", variant: "ok" };
+      return { text: t("Some available"), variant: "ok" };
     }
 
-    return { text: "Busy right now", variant: "busy" };
+    return { text: t("Busy right now"), variant: "busy" };
   }
 
   function renderSummary(summary, degraded = false, updatedAt = null) {
@@ -514,42 +522,42 @@
     const wHaveData = Number.isFinite(washers.total) && washers.total > 0;
     const dHaveData = Number.isFinite(dryers.total) && dryers.total > 0;
 
-    el.wAvail.textContent = wHaveData ? String(washers.available) : "—";
-    el.wTotal.textContent = wHaveData ? String(washers.total) : "—";
-    el.wInUse.textContent = wHaveData ? String(washers.inUse) : "—";
+    el.wAvail.textContent = wHaveData ? formatNumber(washers.available) : "—";
+    el.wTotal.textContent = wHaveData ? formatNumber(washers.total) : "—";
+    el.wInUse.textContent = wHaveData ? formatNumber(washers.inUse) : "—";
     el.wBar.style.width = `${wHaveData ? percent(washers.available, washers.total) : 0}%`;
 
-    el.dAvail.textContent = dHaveData ? String(dryers.available) : "—";
-    el.dTotal.textContent = dHaveData ? String(dryers.total) : "—";
-    el.dInUse.textContent = dHaveData ? String(dryers.inUse) : "—";
+    el.dAvail.textContent = dHaveData ? formatNumber(dryers.available) : "—";
+    el.dTotal.textContent = dHaveData ? formatNumber(dryers.total) : "—";
+    el.dInUse.textContent = dHaveData ? formatNumber(dryers.inUse) : "—";
     el.dBar.style.width = `${dHaveData ? percent(dryers.available, dryers.total) : 0}%`;
 
     const label = busynessLabel(washers, dryers);
-    const pillText = delayed ? `${label.text} (delayed)` : label.text;
+    const pillText = delayed ? t(`${label.text} (delayed)`) : label.text;
 
     const state = delayed ? "down" : label.variant;
     setPill(pillText, state);
     setAvailabilityState(state);
 
-    const stateText = delayed ? "Live updates delayed" : "Updates automatically";
+    const stateText = t(delayed ? "Live updates delayed" : "Updates automatically");
     statusLine(updatedAt || Date.now(), stateText);
 
-    setError(delayed ? "Live updates are delayed right now." : "");
+    setError(delayed ? t("Live updates are delayed right now.") : "");
 
     syncAvailabilityHeading();
   }
 
   function showLoading() {
-    setPill("Checking…", "loading");
-    statusLine(Date.now(), "Checking");
+    setPill(t("Checking…"), "loading");
+    statusLine(Date.now(), t("Checking"));
     setAvailabilityState("loading");
     setError("");
     syncAvailabilityHeading();
   }
 
   function showDown(message) {
-    setPill("Unavailable", "down");
-    statusLine(Date.now(), "Live availability temporarily unavailable.");
+    setPill(t("Unavailable"), "down");
+    statusLine(Date.now(), t("Live availability temporarily unavailable."));
     setAvailabilityState("down");
     setError(message);
     syncAvailabilityHeading();
@@ -616,12 +624,12 @@
       if (lastGood) {
         renderSummary(lastGood, true, lastGoodAt);
         if (Date.now() - lastGoodAt > pollMs * 2.5) {
-          setError("Live updates are delayed right now.");
+          setError(t("Live updates are delayed right now."));
         }
         return;
       }
 
-      showDown("Live availability temporarily unavailable.");
+      showDown(t("Live availability temporarily unavailable."));
     } finally {
       inFlight = false;
     }

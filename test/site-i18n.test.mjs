@@ -6,6 +6,8 @@ import {
   CENTRAL_TIME_ZONE,
   DISPLAY_CURRENCY,
   SUPPORTED_LOCALES,
+  configurePublicLocales,
+  enabledPublicLocales,
   translateExternalText,
   translateText,
 } from "../assets/js/site-i18n.js";
@@ -16,6 +18,7 @@ const requiredPages = Object.freeze([
   "privacy.html",
   "terms.html",
   "cookies.html",
+  "promos/free-weekday-wash/index.html",
   "pickup-delivery/index.html",
   "pickup-delivery/status/index.html",
   "pickup-delivery/claims/index.html",
@@ -25,6 +28,7 @@ const requiredPages = Object.freeze([
 ]);
 
 const runtimeModules = Object.freeze([
+  "assets/js/availability-widget.js",
   "assets/js/pud-booking.js",
   "assets/js/pud-status.js",
   "assets/js/pud-claims.js",
@@ -47,6 +51,7 @@ const nonUiRuntimeLiterals = new Set([
   "Invalid reorder bootstrap.",
   "Incomplete reorder bootstrap.",
   "Unsafe reorder bootstrap.",
+  "Unrecognized status payload shape",
   "Invalid recurring proposal bootstrap.",
   "Invalid preferred route bootstrap.",
 ]);
@@ -56,6 +61,8 @@ const nonUiRuntimeTemplates = new Set([
 ]);
 
 const runtimeTemplateSamples = new Map([
+  ["Updated {value}", ["Updated hace menos de 1 minuto"]],
+  ["Opening in {value}", ["Opening in 2 minutes", "Opening in 1 hour 2 minutes"]],
   ["Reviewing a recurring pickup from {value}. Recheck the address, route, phone, and card before confirming it.", ["Reviewing a recurring pickup from PUD-20260715-AB12CD34. Recheck the address, route, phone, and card before confirming it."]],
   ["Reordering {value}. Recheck the address, phone, and card to create a new order.", ["Reordering PUD-20260715-AB12CD34. Recheck the address, phone, and card to create a new order."]],
   ["{value}/lb · {value} minimum{value}", ["$1.99/lb · $35.00 minimum", "$1.99/lb · $35.00 minimum · $5.00 delivery"]],
@@ -112,6 +119,16 @@ test("English and reviewed US Spanish catalogs have exact key parity", () => {
   assert.equal(DISPLAY_CURRENCY, "USD");
 });
 
+test("public locale activation is exactly off until the rollout config enables Spanish", async () => {
+  assert.deepEqual(configurePublicLocales(["en-US"]), ["en-US"]);
+  assert.deepEqual(enabledPublicLocales(), ["en-US"]);
+  assert.deepEqual(configurePublicLocales(["en-US", "es-US"]), ["en-US", "es-US"]);
+  assert.deepEqual(enabledPublicLocales(), ["en-US", "es-US"]);
+  const configSource = await readFile(new URL("assets/js/pud-config.js", root), "utf8");
+  assert.match(configSource, /supportedLocales:\s*Object\.freeze\(\["en-US"\]\)/);
+  configurePublicLocales(["en-US"]);
+});
+
 test("runtime outage and cookie-consent copy has reviewed Spanish text", () => {
   const expected = new Map([
     ["The service could not be reached. Check the connection and try again.", "No se pudo conectar con el servicio. Verifica la conexión e inténtalo de nuevo."],
@@ -136,6 +153,10 @@ test("runtime outage and cookie-consent copy has reviewed Spanish text", () => {
     translateExternalText("Unexpected provider/schema detail.", "We could not complete that request.", "es-US"),
     "No pudimos completar esa solicitud.",
   );
+  assert.equal(translateText("5m ago", "es-US"), "hace 5 min");
+  assert.equal(translateText("Updated hace 5 min", "es-US"), "Actualizado hace 5 min");
+  assert.equal(translateText("Opening in 1 hour 2 minutes", "es-US"), "Abre en 1 hora 2 minutos");
+  assert.equal(translateText("Plenty available (delayed)", "es-US"), "Muchas disponibles (con demora)");
 });
 
 test("every required public, booking, status, claims, and legal page loads the human-authored locale module", async () => {
@@ -206,6 +227,8 @@ test("locale implementation is local, explicit, and sends locale snapshots with 
   const localeSource = await readFile(new URL("assets/js/site-i18n.js", root), "utf8");
   const bookingSource = await readFile(new URL("assets/js/pud-booking.js", root), "utf8");
   const schedulingSource = await readFile(new URL("assets/js/pud-scheduling.js", root), "utf8");
+  const availabilitySource = await readFile(new URL("assets/js/availability-widget.js", root), "utf8");
+  const homeSource = await readFile(new URL("index.html", root), "utf8");
   assert.doesNotMatch(localeSource, /translate\.google|deepl|microsofttranslator|fetch\s*\(/i);
   assert.match(localeSource, /localStorage\.setItem\(LOCALE_STORAGE_KEY/);
   assert.match(localeSource, /url\.searchParams\.set\("lang", "es"\)/);
@@ -214,6 +237,10 @@ test("locale implementation is local, explicit, and sends locale snapshots with 
   assert.match(bookingSource, /locale: getLocale\?\.\(\) \|\| undefined/g);
   assert.match(schedulingSource, /formatCentralDateTime/);
   assert.match(bookingSource, /formatCurrencyCents/);
+  assert.match(availabilitySource, /CENTRAL_TIME_ZONE/);
+  assert.match(availabilitySource, /new Intl\.DateTimeFormat\(getLocale\(\)/);
+  assert.doesNotMatch(availabilitySource, /Intl\.DateTimeFormat\("en-US"/);
+  assert.match(homeSource, /type="module" src="assets\/js\/availability-widget\.js/);
 });
 
 test("Spanish calendar copy remains generic and contains no private fields", async () => {

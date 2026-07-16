@@ -6,6 +6,8 @@
  * copy kept in this repository. Keep the two catalogs in key parity.
  */
 
+import { PUD_CONFIG } from "./pud-config.js";
+
 export const SUPPORTED_LOCALES = Object.freeze(["en-US", "es-US"]);
 export const CENTRAL_TIME_ZONE = "America/Chicago";
 export const DISPLAY_CURRENCY = "USD";
@@ -68,6 +70,11 @@ const ES = Object.freeze({
   "Store hours and status": "Horario y estado de la lavandería",
   "Offer details": "Detalles de la oferta",
   "Claim form": "Formulario de solicitud",
+  "Claim a free weekday wash offer at Snappy Coin Laundry.": "Solicita una oferta de lavado gratis entre semana en Snappy Coin Laundry.",
+  "Free Weekday Wash | Snappy Coin Laundry": "Lavado gratis entre semana | Snappy Coin Laundry",
+  "Free Weekday Wash": "Lavado gratis entre semana",
+  "The Snappy Coin Laundry promo form is now part of the main website.": "El formulario de promociones de Snappy Coin Laundry ahora forma parte del sitio principal.",
+  "Continue to the claim form": "Continuar al formulario de solicitud",
   "Map showing Snappy Coin Laundry at 2303 McKelvey Road": "Mapa de Snappy Coin Laundry en 2303 McKelvey Road",
   "Bright blue wall and a row of large Dexter dryers inside Snappy Coin Laundry": "Pared azul brillante y una fila de secadoras Dexter grandes dentro de Snappy Coin Laundry",
   "Skip to main content": "Saltar al contenido principal",
@@ -101,6 +108,20 @@ const ES = Object.freeze({
   "in use": "en uso",
   "Updated —": "Actualizado —",
   "Updates automatically": "Se actualiza automáticamente",
+  "<1 minute ago": "hace menos de 1 minuto",
+  "Available now": "Disponible ahora",
+  "Opening in <1 minute": "Abre en menos de 1 minuto",
+  "Paused": "En pausa",
+  "Updates paused (inactive)": "Actualizaciones en pausa (inactividad)",
+  "Updates paused while page is stale.": "Las actualizaciones están en pausa por inactividad en la página.",
+  "Busy right now": "Muy concurrido ahora",
+  "Plenty available": "Muchas disponibles",
+  "Some available": "Algunas disponibles",
+  "Live updates delayed": "Actualizaciones en vivo demoradas",
+  "Live updates are delayed right now.": "Las actualizaciones en vivo están demoradas en este momento.",
+  "Checking": "Consultando",
+  "Unavailable": "No disponible",
+  "Live availability temporarily unavailable.": "La disponibilidad en vivo no está disponible temporalmente.",
   "Need a monster machine?": "¿Necesitas una máquina enorme?",
   "Our 80-pound washers handle king-size comforters, family-size loads, and the laundry you’ve been avoiding.": "Nuestras lavadoras de 80 libras aceptan edredones king size, cargas familiares y toda esa ropa que has estado posponiendo.",
   "See self-service details": "Ver detalles de autoservicio",
@@ -920,6 +941,13 @@ export const CATALOGS = Object.freeze({
 });
 
 const TEMPLATE_TRANSLATORS = Object.freeze([
+  [/^(\d+)m ago$/, (_m, value) => `hace ${value} min`],
+  [/^(\d+)h ago$/, (_m, value) => `hace ${value} h`],
+  [/^(\d+)d ago$/, (_m, value) => `hace ${value} d`],
+  [/^Updated (.+)$/, (_m, value) => `Actualizado ${value}`],
+  [/^Opening in (\d+) minute(?:s)?$/, (_m, minutes) => `Abre en ${minutes} ${Number(minutes) === 1 ? "minuto" : "minutos"}`],
+  [/^Opening in (\d+) hour(?:s)?(?: (\d+) minute(?:s)?)?$/, (_m, hours, minutes) => `Abre en ${hours} ${Number(hours) === 1 ? "hora" : "horas"}${minutes ? ` ${minutes} ${Number(minutes) === 1 ? "minuto" : "minutos"}` : ""}`],
+  [/^(Busy right now|Plenty available|Some available) \(delayed\)$/, (_m, label) => `${ES[label]} (con demora)`],
   [/^Reviewing a recurring pickup from (.+)\. Recheck the address, route, phone, and card before confirming it\.$/, (_m, order) => `Revisando una recogida recurrente del pedido ${order}. Vuelve a verificar la dirección, la ruta, el teléfono y la tarjeta antes de confirmarla.`],
   [/^Reordering (.+)\. Recheck the address, phone, and card to create a new order\.$/, (_m, order) => `Repitiendo el pedido ${order}. Vuelve a verificar la dirección, el teléfono y la tarjeta para crear un pedido nuevo.`],
   [/^(.+)\/lb · (.+) minimum(?: · (.+) delivery)?$/, (_m, rate, minimum, delivery) => `${rate}/libra · mínimo ${minimum}${delivery ? ` · entrega ${delivery}` : ""}`],
@@ -993,8 +1021,22 @@ function normalizeLocale(value) {
   return "";
 }
 
+function normalizeRuntimeLocales(values) {
+  const requested = Array.isArray(values) ? values : [];
+  const enabled = new Set(["en-US"]);
+  if (requested.some((value) => normalizeLocale(value) === "es-US")) enabled.add("es-US");
+  return Object.freeze(SUPPORTED_LOCALES.filter((value) => enabled.has(value)));
+}
+
+let runtimeLocales = normalizeRuntimeLocales(["en-US"]);
+
+function runtimeLocale(value) {
+  const normalized = normalizeLocale(value);
+  return runtimeLocales.includes(normalized) ? normalized : "";
+}
+
 function storedLocale() {
-  try { return normalizeLocale(localStorage.getItem(LOCALE_STORAGE_KEY)); }
+  try { return runtimeLocale(localStorage.getItem(LOCALE_STORAGE_KEY)); }
   catch (_error) { return ""; }
 }
 
@@ -1002,10 +1044,22 @@ function requestedLocale() {
   let query = "";
   try { query = new URL(location.href).searchParams.get("lang") || ""; }
   catch (_error) { /* non-browser tests */ }
-  return normalizeLocale(query) || storedLocale() || "en-US";
+  return runtimeLocale(query) || storedLocale() || "en-US";
 }
 
-let activeLocale = requestedLocale();
+let activeLocale = "en-US";
+
+export function enabledPublicLocales() {
+  return [...runtimeLocales];
+}
+
+export function configurePublicLocales(values) {
+  runtimeLocales = normalizeRuntimeLocales(values);
+  activeLocale = requestedLocale();
+  return enabledPublicLocales();
+}
+
+const localeConfigurationReady = Promise.resolve(configurePublicLocales(PUD_CONFIG.supportedLocales));
 
 export function getLocale() {
   return activeLocale;
@@ -1121,7 +1175,8 @@ function makeLocaleSwitcher() {
   switcher.setAttribute("role", "group");
   switcher.setAttribute("aria-label", translateText("Language"));
   switcher.setAttribute("translate", "no");
-  for (const [locale, label] of [["en-US", "English"], ["es-US", "Español"]]) {
+  for (const locale of runtimeLocales) {
+    const label = locale === "es-US" ? "Español" : "English";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "locale-switcher__button";
@@ -1136,7 +1191,7 @@ function makeLocaleSwitcher() {
 }
 
 export function selectLocale(locale) {
-  const normalized = normalizeLocale(locale);
+  const normalized = runtimeLocale(locale);
   if (!normalized) return;
   try { localStorage.setItem(LOCALE_STORAGE_KEY, normalized); }
   catch (_error) { /* persistence is best effort */ }
@@ -1146,7 +1201,8 @@ export function selectLocale(locale) {
   location.assign(`${url.pathname}${url.search}${url.hash}`);
 }
 
-function boot() {
+async function boot() {
+  await localeConfigurationReady;
   document.documentElement.lang = activeLocale;
   document.documentElement.dir = "ltr";
   document.documentElement.dataset.locale = activeLocale;
