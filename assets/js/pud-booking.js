@@ -2,11 +2,13 @@ import { PUD_CONFIG } from "./pud-config.js";
 import { createOrder, getPublicConfig, joinWaitlist } from "./pud-api.js";
 import { attribution, setSelfReportedSource, trackFunnel } from "./pud-attribution.js";
 import { displayAddress, validateAddress } from "./pud-address.js";
-import { renderRoutes, routeOptions } from "./pud-scheduling.js";
+import { formatRoute, renderRoutes, routeOptions } from "./pud-scheduling.js";
 import { beginPhoneVerification, confirmPhoneVerification, normalizeUsPhone, resendPhoneVerification } from "./pud-phone.js";
 import { confirmPayment, destroyPayment, preparePayment } from "./pud-payment.js";
 import { stableActionKey } from "./pud-idempotency.js";
 import { clearReorderBootstrap, prefillReorderAddress, prefillReorderDetails, takeReorderBootstrap } from "./pud-reorder.js";
+import { downloadPickupCalendar } from "./pud-calendar.js";
+import { formatCurrencyCents, getLocale, translateExternalText, translateText, withLocalePath } from "./site-i18n.js";
 
 const waitlistBootstrap = takeWaitlistContinuation();
 const root = document.querySelector("[data-pud-booking]");
@@ -26,6 +28,7 @@ const state = {
   reorderBootstrap: null,
   waitlistContinuationToken: waitlistBootstrap?.token || "",
   waitlistRouteId: waitlistBootstrap?.routeId || "",
+  calendarPickup: null,
 };
 
 const steps = ["address", "details", "phone", "payment", "review", "complete"];
@@ -119,19 +122,26 @@ async function submitAddress(form) {
     $("#pud-route").value = preferredRouteId;
   }
   if (result.eligibility === "out_of_zone") {
+    trackFunnel("pud_address_ineligible", { reasonCategory: "outside_area" });
     state.waitlistReason = "out_of_zone";
     $("#pud-waitlist-address").value = displayAddress(state.address);
-    $("[data-waitlist-reason]").textContent = result.message || "This address is outside our current service area.";
+    $("[data-waitlist-reason]").textContent = translateExternalText(
+      result.message || "This address is outside our current service area.",
+    );
     return showPanel("waitlist");
   }
   if (result.eligibility === "review_required") {
+    trackFunnel("pud_address_ineligible", { reasonCategory: "needs_review" });
     state.waitlistReason = "address_review";
     $("#pud-waitlist-address").value = displayAddress(state.address);
-    $("[data-waitlist-reason]").textContent = result.message || "We need to review this address before promising a pickup window.";
+    $("[data-waitlist-reason]").textContent = translateExternalText(
+      result.message || "We need to review this address before promising a pickup window.",
+    );
     showPanel("waitlist");
     return;
   }
   if (result.eligibility === "service_paused") {
+    trackFunnel("pud_address_ineligible", { reasonCategory: "capacity" });
     state.waitlistReason = "service_paused";
     $("#pud-waitlist-address").value = displayAddress(state.address);
     $("[data-waitlist-reason]").textContent = "Pickup service is paused. Join the waitlist and we will contact you when booking reopens.";
@@ -140,6 +150,7 @@ async function submitAddress(form) {
   }
   if (!state.addressProof) throw new Error("The address check expired. Please check the address again.");
   if (!state.routes.length) {
+    trackFunnel("pud_address_ineligible", { reasonCategory: "capacity" });
     state.waitlistReason = "route_full";
     $("#pud-waitlist-address").value = displayAddress(state.address);
     $("[data-waitlist-reason]").textContent = "Current pickup routes are full. Join the waitlist and we will contact you if space opens.";
@@ -244,7 +255,7 @@ async function submitCode(form) {
 }
 
 async function submitPayment() {
-  const setupIntent = await confirmPayment(`${location.origin}${PUD_CONFIG.statusPath}`);
+  const setupIntent = await confirmPayment(`${location.origin}${withLocalePath(PUD_CONFIG.statusPath)}`);
   state.setupIntentId = setupIntent.id;
   populateReview();
   trackFunnel("pud_card_saved");
@@ -284,14 +295,25 @@ async function submitOrder() {
     promotionCode: state.config.promotionsEnabled === true ? $("#pud-promotion-code")?.value.trim() || undefined : undefined,
     referralCode: state.config.referralsEnabled === true ? $("#pud-referral-code")?.value.trim() || undefined : undefined,
     recurringProposalId: state.reorderBootstrap?.recurringProposalId || undefined,
+    locale: getLocale?.() || undefined,
   };
   const orderKey = await stableActionKey("order", JSON.stringify([state.checkoutProof, state.setupIntentId, intent]));
   const result = await createOrder({ idempotencyKey: orderKey, ...intent }, orderKey);
   const token = result.statusToken;
   if (!token || !result.orderNumber) throw new Error("The order was created without a private status link. Contact support with the request ID.");
   $("[data-order-number]").textContent = result.orderNumber;
+  const selectedRoute = state.routes.find((item) => item.id === state.routeId);
+  state.calendarPickup = selectedRoute?.windowStartAt && selectedRoute?.windowEndAt
+    ? Object.freeze({
+        orderNumber: result.orderNumber,
+        windowStartAt: selectedRoute.windowStartAt,
+        windowEndAt: selectedRoute.windowEndAt,
+        locale: getLocale?.() || undefined,
+      })
+    : null;
+  $("[data-action=add-pickup-calendar]").hidden = !state.calendarPickup;
   const link = $("[data-status-link]");
-  link.href = `${PUD_CONFIG.statusPath}#${encodeURIComponent(token)}`;
+  link.href = `${withLocalePath(PUD_CONFIG.statusPath)}#${encodeURIComponent(token)}`;
   sessionStorage.removeItem(PUD_CONFIG.storageKey);
   clearWaitlistContinuation();
   clearReorderBootstrap();
@@ -313,11 +335,13 @@ async function submitWaitlist(form) {
     reason: state.waitlistReason || "out_of_zone",
     marketingEmailConsent: data.get("marketingEmail") === "yes",
     marketingSmsConsent: data.get("marketingSms") === "yes",
+    locale: getLocale?.() || undefined,
     attribution: state.attribution,
     consentVersions: state.config.consentVersions || { marketing_email: state.config.consentVersion || "owner-approval-required", marketing_sms: state.config.consentVersion || "owner-approval-required" },
   };
   const waitlistKey = await stableActionKey("waitlist", JSON.stringify(intent));
   await joinWaitlist(intent, waitlistKey);
+  trackFunnel("pud_waitlist_joined");
   form.replaceChildren(Object.assign(document.createElement("p"), { textContent: "You’re on the list. We’ll contact you if service opens for your address." }));
 }
 
@@ -342,6 +366,15 @@ async function onClick(event) {
       if (status) status.textContent = "Order number copied.";
     } catch (_error) {
       if (status) status.textContent = "Your browser could not copy the order number.";
+    }
+  }
+  if (button.dataset.action === "add-pickup-calendar") {
+    const status = $("[data-confirmation-action-status]");
+    try {
+      downloadPickupCalendar(state.calendarPickup);
+      if (status) status.textContent = "Calendar file downloaded. It contains only the pickup window and order number.";
+    } catch (_error) {
+      if (status) status.textContent = "Your browser could not create the calendar file. Keep the pickup window from your private order page handy.";
     }
   }
   if (button.dataset.action === "print-confirmation") window.print();
@@ -432,18 +465,18 @@ function renderRoutesForSelectedBags() {
 }
 
 function money(cents) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(cents || 0) / 100);
+  return formatCurrencyCents(cents);
 }
 
 function showUnavailable(message) {
-  $("[data-unavailable]").textContent = message;
+  $("[data-unavailable]").textContent = translateExternalText(message);
   showPanel("unavailable");
 }
 
 function populateReview() {
   $("[data-review-address]").textContent = displayAddress(state.address);
   const route = state.routes.find((item) => item.id === state.routeId);
-  $("[data-review-route]").textContent = route?.label || route?.windowCode || state.routeId;
+  $("[data-review-route]").textContent = route ? formatRoute(route) : state.routeId;
   $("[data-review-customer]").textContent = `${state.customer.firstName} ${state.customer.lastName} · •••• ${state.customer.phone.slice(-4)}`;
   $("[data-review-bags]").textContent = `${state.order.estimatedBags} estimated bag${state.order.estimatedBags === 1 ? "" : "s"}`;
 }
@@ -505,7 +538,7 @@ function resetTurnstile(form) {
 
 function showMessage(text, variant = "error") {
   const node = $("[data-message]");
-  node.textContent = text;
+  node.textContent = translateExternalText(text);
   node.dataset.variant = variant;
   node.hidden = !text;
   node.focus();
@@ -519,7 +552,10 @@ function fatal(error) {
   if (!root) return;
   const unavailable = $("[data-unavailable]");
   if (!unavailable) {
-    root.replaceChildren(Object.assign(document.createElement("p"), { className: "pud-alert", textContent: error?.message || "Booking could not load." }));
+    root.replaceChildren(Object.assign(document.createElement("p"), {
+      className: "pud-alert",
+      textContent: translateExternalText(error?.message || "Booking could not load."),
+    }));
     return;
   }
   showUnavailable(error?.message || "Booking could not load. Try again or call the store.");

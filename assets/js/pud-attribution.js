@@ -18,13 +18,13 @@ const touchFields = Object.freeze([
   "gclid", "gbraid", "wbraid", "fbclid", "msclkid", "referrer", "landingPath",
   "currentPath", "capturedAt",
 ]);
+let capturedAttributionTouch = null;
 
 function safeStorage() {
   try { return window.localStorage; } catch (_error) { return null; }
 }
 
-function snapshot() {
-  const url = new URL(window.location.href);
+function snapshot(url = new URL(window.location.href)) {
   const referrer = document.referrer || "";
   const data = {
     landingPath: safePath(url.pathname),
@@ -41,8 +41,39 @@ function snapshot() {
   return data;
 }
 
+export function prepareAttributionQueryForProviders() {
+  if (window.location.hash) return false;
+  if (!window.location.search) return true;
+
+  let url;
+  try { url = new URL(window.location.href); }
+  catch (_error) { return false; }
+  if (url.hash) return false;
+  const entries = [...url.searchParams.entries()];
+  if (!entries.length) return false;
+  for (const [queryKey, value] of entries) {
+    if (!Object.hasOwn(queryFieldMap, queryKey) || containsSensitiveUrlMaterial(value)) return false;
+  }
+
+  capturedAttributionTouch = snapshot(url);
+  ensureFirstTouch(capturedAttributionTouch);
+  try {
+    window.history.replaceState(window.history.state, "", url.pathname);
+  } catch (_error) {
+    return false;
+  }
+  return !window.location.search && !window.location.hash;
+}
+
 export function attribution() {
-  const currentTouch = snapshot();
+  const liveTouch = snapshot();
+  const currentTouch = capturedAttributionTouch?.currentPath === liveTouch.currentPath
+    ? capturedAttributionTouch
+    : liveTouch;
+  return { firstTouch: ensureFirstTouch(currentTouch), currentTouch };
+}
+
+function ensureFirstTouch(currentTouch) {
   const storage = safeStorage();
   let firstTouch = null;
   try { firstTouch = JSON.parse(storage?.getItem(PUD_CONFIG.firstTouchKey) || "null"); } catch (_error) { /* replace */ }
@@ -51,23 +82,14 @@ export function attribution() {
     firstTouch = currentTouch;
     try { storage?.setItem(PUD_CONFIG.firstTouchKey, JSON.stringify(firstTouch)); } catch (_error) { /* optional */ }
   }
-  return { firstTouch, currentTouch };
+  return firstTouch;
 }
 
 export function trackFunnel(eventName, parameters = {}) {
-  const safe = Object.fromEntries(Object.entries(parameters).filter(([key, value]) => (
-    !/name|email|phone|address|token|secret|client|proof/i.test(key) &&
-    ["string", "number", "boolean"].includes(typeof value)
-  )));
-  const payload = { pud: true, ...safe };
   const analytics = window.SnappyAnalytics;
   if (typeof analytics?.hasOptionalCookieConsent !== "function" || !analytics.hasOptionalCookieConsent()) return false;
   if (typeof analytics?.trackEvent === "function") {
-    analytics.trackEvent(eventName, payload);
-    return true;
-  }
-  if (typeof window.gtag === "function") {
-    window.gtag("event", eventName, payload);
+    analytics.trackEvent(eventName, parameters);
     return true;
   }
   return false;
@@ -130,8 +152,10 @@ function safeCampaignValue(value, limit) {
 function containsSensitiveUrlMaterial(value) {
   let decoded = String(value || "");
   try { decoded = decodeURIComponent(decoded); } catch (_error) { /* inspect the source */ }
-  return /(?:^|[?&#/])(?:email|e-mail|phone|mobile|name|address|token|secret|proof|code)=/i.test(decoded) ||
-    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(decoded);
+  return /(?:^|[?&#/;,])(?:email|e-mail|phone|mobile|name|address|token|secret|proof|code)=/i.test(decoded) ||
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(decoded) ||
+    /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/i.test(decoded) ||
+    /(?:^|\D)\+?1?\D*\d{3}\D*\d{3}\D*\d{4}(?:\D|$)/.test(decoded);
 }
 
 function normalizeAnalyticsUi() {

@@ -15,6 +15,7 @@ import {
   revokeStatusToken,
   rotateStatusToken,
   statusOrder,
+  submitFeedback,
   tipOrder,
   updatePreferences,
 } from "./pud-api.js";
@@ -36,6 +37,8 @@ import {
 } from "./pud-phone.js";
 import { storeReorderBootstrap } from "./pud-reorder.js";
 import { formatRoute } from "./pud-scheduling.js";
+import { downloadPickupCalendar } from "./pud-calendar.js";
+import { formatCentralDateTime, formatCurrencyCents, getLocale, translateExternalText, translateText, withLocalePath } from "./site-i18n.js";
 
 const root = document.querySelector("[data-pud-status]");
 const $ = (selector) => root.querySelector(selector);
@@ -138,9 +141,12 @@ let sessionExpiryTimer = 0;
 let turnstileSiteKey = "";
 let portalDetails = null;
 let portalPreferences = null;
+let rescheduledCalendarPickup = null;
 let portalLoyalty = null;
 let pendingRotation = null;
 let pendingConfirmation = null;
+let pendingFeedbackSatisfaction = "";
+let feedbackResult = null;
 let automaticRefreshTimer = 0;
 let automaticRefreshFailures = 0;
 
@@ -190,6 +196,8 @@ async function onSubmit(event) {
     clearVerifiedSession();
     clearStepUpVerification();
     closePaymentReplacement();
+    clearRescheduledCalendar();
+    clearFeedbackState();
     pendingRotation = null;
     token = submitted;
     replacePrivateLocation(token);
@@ -243,6 +251,19 @@ async function onClick(event) {
   }
   if (!token || !order) return message("Refresh the private order before using this control.");
 
+  if (action === "add-rescheduled-pickup-calendar") {
+    const status = $("[data-reschedule-calendar-status]");
+    try {
+      downloadPickupCalendar({ ...rescheduledCalendarPickup, locale: getLocale?.() || undefined });
+      if (status) status.textContent = "Calendar file downloaded. It contains only the new pickup window and order number.";
+    } catch (_error) {
+      if (status) status.textContent = "Your browser could not create the calendar file. Keep the updated pickup window from this page handy.";
+    }
+    return;
+  }
+
+  if (action === "submit-feedback") return runAction(() => submitFeedbackResponse(button));
+
   if (action === "copy-status-link") return runAction(copyPrivateLink);
   if (action === "cancel") {
     return openConfirmation({
@@ -285,12 +306,49 @@ async function onClick(event) {
 }
 
 async function copyPrivateLink() {
-  const privateLink = `${location.origin}${location.pathname}#${encodeURIComponent(token)}`;
+  const privateLink = `${location.origin}${withLocalePath(location.pathname)}#${encodeURIComponent(token)}`;
   if (!navigator.clipboard?.writeText) {
     throw new Error("Copying is unavailable in this browser. Use your browser’s address-bar copy control instead.");
   }
   await navigator.clipboard.writeText(privateLink);
   message("Private link copied. Share it only with someone you trust to view this order.", "success");
+}
+
+async function submitFeedbackResponse(button) {
+  if (!publicConfig?.feedbackEnabled || !order?.canSubmitFeedback) {
+    throw new Error("Feedback is not available for this order.");
+  }
+  const satisfaction = String(button.dataset.satisfaction || "");
+  if (!["satisfied", "needs_follow_up"].includes(satisfaction)) {
+    throw new Error("Choose one feedback response.");
+  }
+  const session = activeVerifiedSession();
+  if (!session) {
+    focusStepUp();
+    throw new Error("Verify the mobile number before submitting feedback.");
+  }
+  if (pendingFeedbackSatisfaction && pendingFeedbackSatisfaction !== satisfaction) {
+    throw new Error("Retry the first feedback response before choosing a different answer.");
+  }
+  pendingFeedbackSatisfaction = satisfaction;
+  const locale = order.locale || getLocale();
+  const key = await stableActionKey("feedback", `${order.orderNumber}:${locale}:${satisfaction}`);
+  try {
+    const result = await submitFeedback(token, session.value, satisfaction, locale, key);
+    feedbackResult = Object.freeze(result);
+    pendingFeedbackSatisfaction = "";
+    order = Object.freeze({ ...order, canSubmitFeedback: false, feedbackSubmitted: true });
+    renderFeedback(order);
+    const confirmation = result.supportRequested
+      ? "Thank you. Our support team will follow up using the contact information on the order."
+      : "Thank you. Your private response was received.";
+    message(confirmation, "success");
+    $("[data-feedback-result]")?.focus();
+  } catch (error) {
+    handleAuthorizationError(error);
+    if (!error?.retryable && !authorizationErrors.has(error?.code)) pendingFeedbackSatisfaction = "";
+    throw error;
+  }
 }
 
 function openConfirmation({ title, copy, confirmLabel, run }) {
@@ -479,7 +537,14 @@ async function submitReschedule(form) {
     const actionCapability = await issueCapability("reschedule_order");
     order = await requestReschedule(token, actionCapability, route.routeProof, order.version, reason, key);
     render(order);
-    message("Your pickup window was updated.", "success");
+    rescheduledCalendarPickup = Object.freeze({
+      orderNumber: order.orderNumber,
+      windowStartAt: route.windowStartAt,
+      windowEndAt: route.windowEndAt,
+    });
+    $("[data-reschedule-calendar]").hidden = false;
+    $("[data-reschedule-calendar-status]").textContent = "";
+    message("Your pickup window was updated. You can add the new time to your calendar below.", "success");
   } catch (error) {
     await handleVersionConflict(error);
   }
@@ -505,7 +570,7 @@ async function submitPaymentMethod() {
   if (!confirmedReplacementSetupIntentId) {
     // The return URL deliberately omits the bearer fragment. A redirecting
     // authentication flow can be reopened from the original private link.
-    const setupIntent = await confirmPaymentMethodReplacement(`${location.origin}${PUD_CONFIG.statusPath}`);
+    const setupIntent = await confirmPaymentMethodReplacement(`${location.origin}${withLocalePath(PUD_CONFIG.statusPath)}`);
     if (setupIntent.id !== recoverySetupIntentId) throw new Error("Stripe returned a different card setup session.");
     confirmedReplacementSetupIntentId = setupIntent.id;
   }
@@ -699,7 +764,7 @@ async function beginBookingBootstrap(proposalId = "", preferredRouteId = "") {
     ...(proposalId ? { recurringProposalId: bootstrap.recurringProposalId || proposalId } : {}),
     ...(preferredRouteId ? { preferredRouteId } : {}),
   });
-  location.assign(`${PUD_CONFIG.bookingPath}#${proposalId ? "proposal" : "reorder"}`);
+  location.assign(`${withLocalePath(PUD_CONFIG.bookingPath)}#${proposalId ? "proposal" : "reorder"}`);
 }
 
 async function openClaimForm() {
@@ -722,7 +787,7 @@ async function openClaimForm() {
     evidenceCapabilities,
     attemptId: getOrCreateClaimAttemptId(),
   });
-  location.assign(`${PUD_CONFIG.claimPath}#${encodeURIComponent(token)}`);
+  location.assign(`${withLocalePath(PUD_CONFIG.claimPath)}#${encodeURIComponent(token)}`);
 }
 
 async function issueActionCapabilityForTransit(purpose) {
@@ -821,6 +886,11 @@ async function revokePrivateLink() {
 }
 
 function render(value) {
+  if (rescheduledCalendarPickup &&
+      (rescheduledCalendarPickup.orderNumber !== value.orderNumber ||
+       !["submitted", "confirmed"].includes(value.fulfillmentStatus))) {
+    clearRescheduledCalendar();
+  }
   $("[data-status-content]").hidden = false;
   const tokenEntry = $("[data-token-entry]");
   if (tokenEntry) tokenEntry.open = false;
@@ -842,8 +912,30 @@ function render(value) {
   $("[data-claim-link]").hidden = !publicConfig?.claimsEnabled || !value.canClaim;
 
   renderReschedule(value.rescheduleOptions);
+  renderFeedback(value);
   renderTip(value);
   renderRecurring(value);
+}
+
+function renderFeedback(value) {
+  const panel = $("[data-feedback-panel]");
+  const question = $("[data-feedback-question]");
+  const resultPanel = $("[data-feedback-result]");
+  if (!panel || !question || !resultPanel) return;
+  const canSubmit = publicConfig?.feedbackEnabled === true && value.canSubmitFeedback === true && value.feedbackSubmitted !== true;
+  panel.hidden = !canSubmit && !feedbackResult;
+  question.hidden = !canSubmit || Boolean(feedbackResult);
+  resultPanel.hidden = !feedbackResult;
+  if (!feedbackResult) return;
+  const needsFollowUp = feedbackResult.supportRequested === true;
+  $("[data-feedback-result-title]").textContent = translateText(needsFollowUp ? "Support follow-up requested" : "Thank you for your feedback");
+  $("[data-feedback-result-copy]").textContent = translateText(needsFollowUp
+    ? "Our support team will follow up using the contact information already on the order."
+    : "Your private response was received.");
+  const reviewLink = $("[data-feedback-review-link]");
+  reviewLink.hidden = !feedbackResult.googleReviewUrl;
+  if (feedbackResult.googleReviewUrl) reviewLink.href = feedbackResult.googleReviewUrl;
+  else reviewLink.removeAttribute("href");
 }
 
 function renderJourney(value) {
@@ -1289,7 +1381,21 @@ function clearMemoryCredentials() {
   clearStepUpVerification();
   closePaymentReplacement();
   closeConfirmation();
+  clearRescheduledCalendar();
   pendingRotation = null;
+}
+
+function clearFeedbackState() {
+  pendingFeedbackSatisfaction = "";
+  feedbackResult = null;
+}
+
+function clearRescheduledCalendar() {
+  rescheduledCalendarPickup = null;
+  const panel = $("[data-reschedule-calendar]");
+  if (panel) panel.hidden = true;
+  const status = $("[data-reschedule-calendar-status]");
+  if (status) status.textContent = "";
 }
 
 function fragmentToken() {
@@ -1298,7 +1404,7 @@ function fragmentToken() {
 
 function replacePrivateLocation(value) {
   const hash = value ? `#${encodeURIComponent(value)}` : "";
-  history.replaceState(null, "", `${location.pathname}${hash}`);
+  history.replaceState(null, "", `${withLocalePath(location.pathname)}${hash}`);
 }
 
 async function setupTurnstile(siteKey) {
@@ -1386,7 +1492,7 @@ function textNode(tagName, text) {
 }
 
 function label(value, fallback = "Update available") {
-  return humanLabels[String(value || "")] || fallback;
+  return translateText(humanLabels[String(value || "")] || fallback);
 }
 
 function pickupWindowLabel(value) {
@@ -1399,16 +1505,15 @@ function pickupWindowLabel(value) {
 
 function formatDate(value) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "date unavailable";
-  return new Intl.DateTimeFormat("en-US", {
+  if (Number.isNaN(date.getTime())) return translateText("date unavailable");
+  return formatCentralDateTime(date, {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "America/Chicago",
-  }).format(date);
+  });
 }
 
 function money(cents) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(cents) / 100);
+  return formatCurrencyCents(cents);
 }
 
 function setBusy(busy) {
@@ -1418,7 +1523,7 @@ function setBusy(busy) {
 
 function message(text, variant = "error") {
   const node = $("[data-message]");
-  node.textContent = text;
+  node.textContent = translateExternalText(text);
   node.dataset.variant = variant;
   node.hidden = !text;
   if (text) node.focus();

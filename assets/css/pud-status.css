@@ -992,3 +992,16 @@ body:has(.pud-claim-page) {
     scroll-behavior: auto !important;
   }
 }
+.pud-feedback {
+  border-left: 5px solid var(--yellow);
+}
+
+.pud-feedback-result {
+  display: grid;
+  gap: 12px;
+}
+
+.pud-feedback-result h3,
+.pud-feedback-result p {
+  margin: 0;
+}

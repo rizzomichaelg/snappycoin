@@ -7,6 +7,7 @@ import {
   assertClaimEvidenceCapability,
   assertClaimEvidenceGrant,
   assertClaimResult,
+  assertFeedbackResult,
   assertLoyaltySummary,
   assertOrderStatus,
   assertPaymentSession,
@@ -19,6 +20,8 @@ import {
   assertRecurringResult,
   assertReorderBootstrap,
   assertStatusSession,
+  assertStatusRecoveryStart,
+  assertStatusRecoveryVerify,
   assertStatusTokenRevocation,
   assertStatusTokenRotation,
   assertTipResult,
@@ -100,12 +103,14 @@ const responseContracts = {
     required: [
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "totalCents", "refundedCents", "receipt",
       "paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim",
-      "canCreateRecurring", "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
+      "canCreateRecurring", "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
+      "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
     ],
     allowed: [
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "deliveryPromisedAt",
       "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired",
       "operationalAttentionRequired", "canCancel", "canTip", "canClaim", "canCreateRecurring",
+      "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
     ],
   },
@@ -162,6 +167,14 @@ const responseContracts = {
   PhoneVerifyData: {
     required: ["phoneProof", "expiresAt"],
     allowed: ["phoneProof", "expiresAt"],
+  },
+  StatusRecoveryStartData: {
+    required: ["accepted", "recoveryId", "phoneLast4", "expiresAt", "message"],
+    allowed: ["accepted", "recoveryId", "phoneLast4", "expiresAt", "message"],
+  },
+  StatusRecoveryVerifyData: {
+    required: ["accepted", "verified", "complete", "message"],
+    allowed: ["accepted", "verified", "complete", "message"],
   },
   PortalClaimSummary: {
     required: ["claimId", "claimType", "status", "requestedAmountCents", "approvedAmountCents", "openedAt", "resolvedAt"],
@@ -275,6 +288,11 @@ function verifyResponseGuards() {
     canTip: true,
     canClaim: true,
     canCreateRecurring: true,
+    canSubmitFeedback: true,
+    feedbackSubmitted: false,
+    locale: "en-US",
+    timezone: "America/Chicago",
+    currency: "USD",
     recurringDefaults,
     rescheduleOptions: [route],
     recurringSchedules: [{
@@ -295,7 +313,11 @@ function verifyResponseGuards() {
   };
   const publicConfig = {
     publicEnabled: true,
+    productAnalyticsEnabled: true,
+    productExperimentEnabled: false,
     bookingEnabled: true,
+    statusRecoveryEnabled: true,
+    feedbackEnabled: true,
     recurringEnabled: true,
     tipsEnabled: true,
     promotionsEnabled: true,
@@ -303,6 +325,10 @@ function verifyResponseGuards() {
     claimsEnabled: true,
     loyaltyEnabled: true,
     claimEvidenceEnabled: true,
+    supportedLocales: ["en-US", "es-US"],
+    defaultLocale: "en-US",
+    currency: "USD",
+    support: { email: "support@example.com", phone: "+13146281001" },
     stripePublishableKey: "pk_test_from_server",
     turnstileSiteKey: "turnstile-from-server",
     timezone: "America/Chicago",
@@ -409,6 +435,19 @@ function verifyResponseGuards() {
     phoneProof: "phone-proof-memory-only",
     expiresAt: "2026-07-13T18:10:00Z",
   };
+  const statusRecoveryStart = {
+    accepted: true,
+    recoveryId: "recovery_1",
+    phoneLast4: "1212",
+    expiresAt: "2026-07-13T18:10:00Z",
+    message: "If those details match an order, use the verification code sent to that phone.",
+  };
+  const statusRecoveryVerify = {
+    accepted: true,
+    verified: true,
+    complete: true,
+    message: "If those details matched an order, a fresh private status link has been sent by email and text.",
+  };
   const portalPreferences = {
     sourceOrderNumber: "PUD-1001",
     detergent: "free_clear",
@@ -444,10 +483,19 @@ function verifyResponseGuards() {
     preferences: portalPreferences,
   };
   const preferencesUpdate = { preferences: portalPreferences, status, duplicate: false };
+  const feedback = {
+    feedbackId: "feedback_1",
+    satisfaction: "satisfied",
+    submittedAt: "2026-07-13T18:00:00Z",
+    duplicate: false,
+    supportRequested: false,
+    googleReviewUrl: "https://g.page/r/example/review",
+  };
 
   for (const [label, guard, value] of [
     ["public config", assertPublicConfig, publicConfig],
     ["safe order status", assertOrderStatus, status],
+    ["feedback", assertFeedbackResult, feedback],
     ["payment recovery", assertPaymentSession, payment],
     ["reorder bootstrap", assertReorderBootstrap, reorder],
     ["tip", assertTipResult, tip],
@@ -464,6 +512,8 @@ function verifyResponseGuards() {
     ["phone start", assertPhoneStart, phoneStart],
     ["phone resend", assertPhoneResend, phoneResend],
     ["phone verify", assertPhoneVerify, phoneVerify],
+    ["status recovery start", assertStatusRecoveryStart, statusRecoveryStart],
+    ["status recovery verify", assertStatusRecoveryVerify, statusRecoveryVerify],
     ["portal history", assertPortalHistory, portalHistory],
     ["preference update", assertPreferencesUpdate, preferencesUpdate],
   ]) {
@@ -472,7 +522,10 @@ function verifyResponseGuards() {
 
   expectGuardFailure("public config feature flags", () => assertPublicConfig({ ...publicConfig, referralsEnabled: undefined }));
   expectGuardFailure("public config promotions flag", () => assertPublicConfig({ ...publicConfig, promotionsEnabled: undefined }));
+  expectGuardFailure("public config analytics flag", () => assertPublicConfig({ ...publicConfig, productAnalyticsEnabled: undefined }));
+  expectGuardFailure("public config experiment flag", () => assertPublicConfig({ ...publicConfig, productExperimentEnabled: undefined }));
   expectGuardFailure("route proofs", () => assertOrderStatus({ ...status, rescheduleOptions: [{ ...route, routeProof: "" }] }));
+  expectGuardFailure("feedback URL", () => assertFeedbackResult({ ...feedback, googleReviewUrl: "javascript:alert(1)" }));
   expectGuardFailure("private status fields", () => assertOrderStatus({ ...status, phoneCiphertext: "must-not-leak" }));
   expectGuardFailure("recurring defaults", () => assertOrderStatus({ ...status, recurringDefaults: null }));
   expectGuardFailure("payment client secret", () => assertPaymentSession({ ...payment, setupIntentClientSecret: undefined }));
@@ -488,6 +541,8 @@ function verifyResponseGuards() {
   expectGuardFailure("loyalty balance", () => assertLoyaltySummary({ ...loyalty, balanceCents: -1 }));
   expectGuardFailure("claim status", () => assertClaimResult({ ...claim, status: "secret_internal_state" }));
   expectGuardFailure("revocation flag", () => assertStatusTokenRevocation({ ...revocation, revoked: false }));
+  expectGuardFailure("status-recovery start match disclosure", () => assertStatusRecoveryStart({ ...statusRecoveryStart, matched: true }));
+  expectGuardFailure("status-recovery verify token disclosure", () => assertStatusRecoveryVerify({ ...statusRecoveryVerify, statusToken: "must-not-leak" }));
   expectGuardFailure("phone start last four", () => assertPhoneStart({ ...phoneStart, phoneLast4: "12" }));
   expectGuardFailure("phone verify proof", () => assertPhoneVerify({ ...phoneVerify, phoneProof: "" }));
   expectGuardFailure("history cursor requirement", () => assertPortalHistory({ ...portalHistory, nextCursor: undefined }));

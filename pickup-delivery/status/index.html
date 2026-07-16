@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/assets/css/pud.css?v=20260715-2">
   <link rel="stylesheet" href="/assets/css/pud-status.css?v=20260715-2">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
+  <script type="module" src="/assets/js/site-i18n.js?v=20260716-2"></script>
 </head>
 <body>
   <a class="skip-link" href="#private-order">Skip to order status</a>
@@ -39,6 +40,7 @@
           </label>
           <button class="pud-button pud-button-primary" type="submit">Open order</button>
         </form>
+        <p class="pud-fine-print"><a href="/pickup-delivery/recover/">Lost your private link? Verify your phone to get a new one.</a></p>
       </details>
 
       <div data-status-content hidden>
@@ -112,11 +114,38 @@
           </form>
         </section>
 
+        <section class="pud-status-section" data-reschedule-calendar hidden aria-labelledby="reschedule-calendar-heading">
+          <p class="pud-step-label">Pickup updated</p>
+          <h3 id="reschedule-calendar-heading">Save your new pickup window</h3>
+          <p>The calendar file contains only the pickup time window and generic order number. It never includes your address, private link, contact details, or pickup notes.</p>
+          <button class="pud-button pud-button-secondary" type="button" data-action="add-rescheduled-pickup-calendar">Add pickup to calendar</button>
+          <p class="pud-fine-print" data-reschedule-calendar-status role="status" aria-live="polite"></p>
+        </section>
+
         <div class="pud-actions pud-status-actions" aria-label="Available order actions">
           <button class="pud-button pud-button-secondary" type="button" data-reorder-action data-action="reorder" hidden>Book this order again</button>
           <button class="pud-button pud-button-danger" type="button" data-cancel-action data-action="cancel" hidden>Cancel order</button>
           <button class="pud-button pud-button-link" type="button" data-claim-link data-action="open-claim" hidden>Report an order issue</button>
         </div>
+
+        <section class="pud-status-section pud-feedback" data-feedback-panel hidden aria-labelledby="feedback-heading">
+          <div data-feedback-question>
+            <p class="pud-step-label">After your delivery</p>
+            <h3 id="feedback-heading">Were you satisfied with this order?</h3>
+            <p>Choose one private answer. If you need follow-up, we will route the order to our support team.</p>
+            <div class="pud-actions" aria-label="Satisfaction choices">
+              <button class="pud-button pud-button-primary" type="button" data-action="submit-feedback" data-satisfaction="satisfied">Yes, I was satisfied</button>
+              <button class="pud-button pud-button-secondary" type="button" data-action="submit-feedback" data-satisfaction="needs_follow_up">I need follow-up</button>
+            </div>
+            <p class="pud-fine-print">Phone verification is required to submit this one-time response. No written review or sensitive details are collected here.</p>
+          </div>
+          <div class="pud-feedback-result" data-feedback-result role="status" tabindex="-1" hidden>
+            <h3 data-feedback-result-title></h3>
+            <p data-feedback-result-copy></p>
+            <a class="pud-button pud-button-secondary" data-feedback-review-link href="#" target="_blank" rel="noopener noreferrer" hidden>Leave a public review (optional)</a>
+            <p class="pud-fine-print">The optional public-review link is offered after either answer. Your private response is not sent to Google.</p>
+          </div>
+        </section>
 
         <section class="pud-status-section pud-step-up" aria-labelledby="step-up-heading" data-step-up>
           <p class="pud-step-label">Protected actions</p>
@@ -281,6 +310,6 @@
       <p class="pud-fine-print pud-privacy-note"><strong>Keep this page private.</strong> The order token stays in the URL fragment and is never sent to analytics. Changes require fresh phone verification and a one-time authorization.</p>
     </section>
   </main>
-  <script type="module" src="/assets/js/pud-status.js?v=20260715-4"></script>
+  <script type="module" src="/assets/js/pud-status.js?v=20260715-5"></script>
 </body>
 </html>

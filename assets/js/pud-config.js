@@ -12,6 +12,7 @@ export const PUD_CONFIG = Object.freeze({
   preferenceAttemptStorageKey: "snappyPudPreferenceAttemptV1",
   bookingPath: "/pickup-delivery/",
   statusPath: "/pickup-delivery/status/",
+  recoveryPath: "/pickup-delivery/recover/",
   claimPath: "/pickup-delivery/claims/",
   turnstileScript: "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
   stripeScript: "https://js.stripe.com/v3/",

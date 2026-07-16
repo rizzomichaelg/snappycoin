@@ -10,6 +10,7 @@ import {
   validateClaimEvidenceFiles,
 } from "./pud-claim-evidence.js";
 import { retireActionKey, stableActionKey } from "./pud-idempotency.js";
+import { translateExternalText, translateText, withLocalePath } from "./site-i18n.js";
 
 const form = document.querySelector("[data-pud-claim-form]");
 
@@ -22,7 +23,7 @@ if (form && window.top !== window.self) {
   let token = fragmentToken();
   // Remove the status bearer from the address bar before the customer can
   // type claim details. It remains only in this module's memory.
-  history.replaceState(null, "", location.pathname);
+  history.replaceState(null, "", withLocalePath(location.pathname));
   let capabilities = takeClaimCapabilities();
   let uploadedEvidence = [];
   let selectedEvidenceFiles = [];
@@ -40,7 +41,7 @@ if (form && window.top !== window.self) {
     link.addEventListener("click", (event) => {
       if (!token) return;
       event.preventDefault();
-      location.assign(`/pickup-delivery/status/#${encodeURIComponent(token)}`);
+      location.assign(`${withLocalePath("/pickup-delivery/status/")}#${encodeURIComponent(token)}`);
     });
   });
 
@@ -290,7 +291,7 @@ if (form && window.top !== window.self) {
     });
     const statusLink = document.createElement("a");
     statusLink.className = "pud-button pud-button-link";
-    statusLink.href = "/pickup-delivery/status/";
+    statusLink.href = withLocalePath("/pickup-delivery/status/");
     statusLink.textContent = "Open order page";
     actions.append(copyButton, statusLink);
     const note = document.createElement("p");
@@ -302,7 +303,7 @@ if (form && window.top !== window.self) {
   }
 
   function show(text, variant = "error") {
-    message.textContent = text;
+    message.textContent = translateExternalText(text);
     message.dataset.variant = variant;
     message.hidden = !text;
     if (text) message.focus();

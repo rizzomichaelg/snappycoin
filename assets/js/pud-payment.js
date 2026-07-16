@@ -1,5 +1,6 @@
 import { setupPayment } from "./pud-api.js";
 import { PUD_CONFIG } from "./pud-config.js";
+import { getLocale, translateText } from "./site-i18n.js";
 
 let stripe;
 let elements;
@@ -43,7 +44,7 @@ export async function preparePayment({ publicConfig, checkoutAttemptId, phonePro
   if (!publishableKey || !clientSecret || !result.checkoutProof) throw new Error("Card setup is not available yet.");
   await loadScript(PUD_CONFIG.stripeScript);
   stripe = globalThis.Stripe(publishableKey);
-  elements = stripe.elements({ clientSecret, appearance: { theme: "stripe" } });
+  elements = stripe.elements({ clientSecret, locale: stripeLocale(), appearance: { theme: "stripe" } });
   paymentElement = elements.create("payment", { layout: "tabs" });
   paymentElement.mount(mount);
   return { setupIntentId: result.setupIntentId, checkoutProof: result.checkoutProof };
@@ -52,7 +53,7 @@ export async function preparePayment({ publicConfig, checkoutAttemptId, phonePro
 export async function confirmPayment(returnUrl) {
   if (!stripe || !elements || !paymentElement) throw new Error("Secure payment fields are not ready.");
   const result = await stripe.confirmSetup({ elements, redirect: "if_required", confirmParams: { return_url: returnUrl } });
-  if (result.error) throw new Error(result.error.message || "Card setup failed.");
+  if (result.error) throw new Error(paymentError(result.error, "Card setup failed."));
   if (!result.setupIntent || result.setupIntent.status !== "succeeded") throw new Error("Card setup needs additional confirmation.");
   return result.setupIntent;
 }
@@ -63,7 +64,7 @@ export async function confirmPaymentRemediation(publicConfig, clientSecret) {
   await loadScript(PUD_CONFIG.stripeScript);
   const remediationStripe = globalThis.Stripe(publishableKey);
   const result = await remediationStripe.confirmCardPayment(clientSecret);
-  if (result.error) throw new Error(result.error.message || "Payment authentication failed.");
+  if (result.error) throw new Error(paymentError(result.error, "Payment authentication failed."));
   if (!result.paymentIntent || !["processing", "succeeded"].includes(result.paymentIntent.status)) {
     throw new Error("Payment authentication is not complete.");
   }
@@ -76,7 +77,7 @@ export async function preparePaymentMethodReplacement(publicConfig, clientSecret
   destroyPaymentMethodReplacement();
   await loadScript(PUD_CONFIG.stripeScript);
   replacementStripe = globalThis.Stripe(publishableKey);
-  replacementElements = replacementStripe.elements({ clientSecret, appearance: { theme: "stripe" } });
+  replacementElements = replacementStripe.elements({ clientSecret, locale: stripeLocale(), appearance: { theme: "stripe" } });
   replacementPaymentElement = replacementElements.create("payment", { layout: "tabs" });
   replacementPaymentElement.mount(mount);
 }
@@ -90,7 +91,7 @@ export async function confirmPaymentMethodReplacement(returnUrl) {
     redirect: "if_required",
     confirmParams: { return_url: returnUrl },
   });
-  if (result.error) throw new Error(result.error.message || "Replacement card authentication failed.");
+  if (result.error) throw new Error(paymentError(result.error, "Replacement card authentication failed."));
   if (!result.setupIntent || result.setupIntent.status !== "succeeded") {
     throw new Error("Replacement card authentication is not complete.");
   }
@@ -109,4 +110,13 @@ export function destroyPayment() {
   stripe = undefined;
   elements = undefined;
   paymentElement = undefined;
+}
+
+function stripeLocale() {
+  return getLocale() === "es-US" ? "es" : "en";
+}
+
+function paymentError(providerError, fallback) {
+  if (getLocale() === "es-US") return translateText(fallback, "es-US");
+  return providerError?.message || fallback;
 }

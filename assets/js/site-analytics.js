@@ -1,3 +1,15 @@
+import {
+  analyticsPageKey,
+  classifyCta,
+  isPrivateAnalyticsPath,
+  navigationType,
+  providerSafeRoute,
+  safeProviderEvent,
+  trackProductEvent,
+} from "./pud-product-analytics.js";
+import { prepareAttributionQueryForProviders } from "./pud-attribution.js";
+import { translateText } from "./site-i18n.js";
+
 (() => {
   const canTrack =
     window.location &&
@@ -23,8 +35,23 @@
 let initialized = false;
 let optionalAnalyticsStarted = false;
 let ctaTrackingAttached = false;
-let usingFirebase = false;
-let firebaseTrack = null;
+let providerLocationPrepared = false;
+let providerLocationSafe = false;
+
+function prepareProviderLocation() {
+  if (providerLocationPrepared) return;
+  providerLocationSafe = prepareAttributionQueryForProviders();
+  providerLocationPrepared = true;
+}
+
+function providerSafeContext() {
+  if (isPrivateAnalyticsPath() || !providerLocationPrepared || !providerLocationSafe) return null;
+  // Provider SDKs can inspect document.location independently of our event
+  // fields. Safe campaign queries are captured and removed before this point;
+  // unknown, sensitive, or fragment-bearing locations stay blocked.
+  if (window.location.search || window.location.hash) return null;
+  return providerSafeRoute();
+}
 
 function browserStorage(name) {
   try {
@@ -111,8 +138,6 @@ function expireAnalyticsCookies() {
 function revokeOptionalAnalytics() {
   initialized = false;
   optionalAnalyticsStarted = false;
-  usingFirebase = false;
-  firebaseTrack = null;
   storageRemove(browserStorage("sessionStorage"), PENDING_META_LEAD_KEY);
 
   if (typeof window.gtag === "function") {
@@ -145,18 +170,18 @@ function renderCookieBanner(force = false) {
   banner.className = "cookie-consent-banner";
   banner.setAttribute("role", "dialog");
   banner.setAttribute("aria-live", "polite");
-  banner.setAttribute("aria-label", "Cookie consent");
+  banner.setAttribute("aria-label", translateText("Cookie consent"));
   banner.innerHTML = `
     <div class="cookie-consent-copy">
-      <strong>Cookie choices</strong>
+      <strong>${translateText("Cookie choices")}</strong>
       <p>
-        Optional analytics help us measure visits and promo claims. Essential tools work either way.
-        <a href="/cookies.html">Cookie details</a>
+        ${translateText("Optional analytics help us measure visits and promo claims. Essential tools work either way.")}
+        <a href="/cookies.html">${translateText("Cookie details")}</a>
       </p>
     </div>
     <div class="cookie-consent-actions">
-      <button class="cookie-consent-button secondary" type="button" data-cookie-consent="decline">Decline</button>
-      <button class="cookie-consent-button primary" type="button" data-cookie-consent="accept">Accept</button>
+      <button class="cookie-consent-button secondary" type="button" data-cookie-consent="decline">${translateText("Decline")}</button>
+      <button class="cookie-consent-button primary" type="button" data-cookie-consent="accept">${translateText("Accept")}</button>
     </div>
   `;
 
@@ -189,6 +214,9 @@ function bootstrapMetaPixel() {
     return;
   }
 
+  const route = providerSafeContext();
+  if (!route) return;
+
   if (window.__SNAPPY_META_PIXEL_INITIALIZED__) {
     return;
   }
@@ -212,6 +240,7 @@ function bootstrapMetaPixel() {
     const script = document.createElement("script");
     script.async = true;
     script.src = META_SRC;
+    script.referrerPolicy = "no-referrer";
     const firstScript = document.getElementsByTagName("script")[0];
     if (firstScript && firstScript.parentNode) {
       firstScript.parentNode.insertBefore(script, firstScript);
@@ -221,11 +250,15 @@ function bootstrapMetaPixel() {
   }
 
   window.fbq("init", META_PIXEL_ID);
-  window.fbq("track", "PageView");
+  window.fbq("trackCustom", "SitePageViewed", {
+    page_key: route.pageKey,
+    page_path: route.pagePath,
+  });
 }
 
 function trackMetaLead() {
   if (!hasOptionalCookieConsent()) return false;
+  if (!providerSafeContext()) return false;
   if (typeof window.fbq !== "function") bootstrapMetaPixel();
   if (typeof window.fbq !== "function") return false;
   window.fbq("track", "Lead", {
@@ -236,6 +269,7 @@ function trackMetaLead() {
 
 function trackGoogleAdsSignupConversion() {
   if (!hasOptionalCookieConsent()) return false;
+  if (!providerSafeContext()) return false;
 
   const sendConversion = () => {
     if (typeof window.gtag !== "function") return;
@@ -349,10 +383,12 @@ window.SnappyAnalytics = {
   trackMetaLead,
   trackGoogleAdsSignupConversion,
   trackCouponClaimSuccess,
-  hasOptionalCookieConsent
+  hasOptionalCookieConsent,
+  trackEvent,
 };
 
 function bootstrapGtag() {
+  if (!providerSafeContext()) return Promise.resolve();
   if (typeof window.gtag === "function") {
     return Promise.resolve();
   }
@@ -372,6 +408,7 @@ function bootstrapGtag() {
     const script = document.createElement("script");
     script.async = true;
     script.src = GA_SRC;
+    script.referrerPolicy = "no-referrer";
     script.onload = resolve;
     script.onerror = () => reject(new Error("Failed to load GA script"));
     document.head.appendChild(script);
@@ -379,6 +416,11 @@ function bootstrapGtag() {
 }
 
 function initGoogleAnalytics() {
+  const route = providerSafeContext();
+  if (!route) {
+    initialized = false;
+    return Promise.resolve();
+  }
   return bootstrapGtag()
     .then(() => {
       if (!hasOptionalCookieConsent()) {
@@ -386,8 +428,12 @@ function initGoogleAnalytics() {
         return;
       }
       window.gtag("js", new Date());
-      window.gtag("config", GA_MEASUREMENT_ID);
-      window.gtag("config", GOOGLE_ADS_ID);
+      window.gtag("config", GA_MEASUREMENT_ID, {
+        send_page_view: false,
+        page_location: route.pagePath,
+        page_path: route.pagePath,
+      });
+      window.gtag("config", GOOGLE_ADS_ID, { send_page_view: false });
       initialized = true;
     })
     .catch(() => {
@@ -395,39 +441,21 @@ function initGoogleAnalytics() {
     });
 }
 
-async function tryInitFirebase() {
-  if (!hasOptionalCookieConsent()) return false;
-  const cfg = window.__SNAPPY_ANALYTICS_CONFIG__;
-  if (!cfg || !cfg.apiKey || !cfg.appId || !cfg.projectId) {
-    return false;
-  }
-
-  try {
-    const appMod = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js");
-    const analyticsMod = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js");
-    if (!hasOptionalCookieConsent()) return false;
-    const app = appMod.initializeApp(cfg);
-    const analytics = analyticsMod.getAnalytics(app);
-    firebaseTrack = (name, params) => analyticsMod.logEvent(analytics, name, params);
-    usingFirebase = true;
-    initialized = true;
-    return true;
-  } catch (_err) {
-    return false;
-  }
-}
-
 function trackEvent(name, params = {}) {
-  if (!initialized || !hasOptionalCookieConsent()) return;
+  if (!hasOptionalCookieConsent() || !analyticsPageKey()) return false;
 
-  if (usingFirebase && typeof firebaseTrack === "function") {
-    firebaseTrack(name, params);
-    return;
-  }
+  void trackProductEvent(name, params, { consent: true });
+
+  if (!initialized || !providerSafeContext()) return true;
+
+  let providerEvent;
+  try { providerEvent = safeProviderEvent(name, params); }
+  catch (_error) { return false; }
 
   if (typeof window.gtag === "function") {
-    window.gtag("event", name, params);
+    window.gtag("event", providerEvent.name, providerEvent.parameters);
   }
+  return true;
 }
 
 function trackCtaClicks() {
@@ -437,10 +465,7 @@ function trackCtaClicks() {
     const target = event.target.closest("a.button, .btn-cta");
     if (!target) return;
 
-    trackEvent("cta_click", {
-      link_text: (target.textContent || "").trim(),
-      link_href: target.getAttribute("href") || "",
-    });
+    trackEvent("cta_clicked", classifyCta(target));
   });
 }
 
@@ -450,26 +475,20 @@ async function initOptionalAnalytics() {
   }
 
   optionalAnalyticsStarted = true;
-  bootstrapMetaPixel();
-
-  const firebaseConfigured = await tryInitFirebase();
-  if (!firebaseConfigured) {
+  if (providerSafeContext()) {
+    bootstrapMetaPixel();
+    // Firebase Analytics automatically observes the live document URL. The
+    // explicit GA path below is used instead so route-only fields are provable.
     await initGoogleAnalytics();
   }
 
-  if (!initialized || !hasOptionalCookieConsent()) {
-    return;
-  }
-
   trackCtaClicks();
-  trackEvent("page_view", {
-    page_title: document.title,
-    page_location: `${window.location.origin}${window.location.pathname}${window.location.search}`,
-  });
+  trackEvent("site_page_viewed", { navigationType: navigationType() });
   processPendingCouponClaimSuccess();
 }
 
 function init() {
+  prepareProviderLocation();
   renderCookieBanner();
   document.querySelectorAll("[data-cookie-preferences]").forEach((button) => {
     button.addEventListener("click", () => renderCookieBanner(true));

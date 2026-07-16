@@ -15,7 +15,7 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
   "/api/pud/waitlist": define(
     "WaitlistRequest",
     ["address", "turnstileToken", "addressProof", "firstName", "lastName", "phone", "reason", "marketingEmailConsent", "marketingSmsConsent", "consentVersions"],
-    ["attribution", "email", "requestedRouteId"],
+    ["attribution", "email", "requestedRouteId", "locale"],
   ),
   "/api/pud/phone/start": define("PhoneStartRequest", ["phone", "turnstileToken"]),
   "/api/pud/phone/resend": define("PhoneResendRequest", ["verificationId", "turnstileToken"]),
@@ -29,11 +29,25 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
   "/api/pud/orders": define(
     "CreateOrderRequest",
     ["idempotencyKey", "checkoutProof", "setupIntentId", "routeId", "firstName", "lastName", "address", "preferences", "consents"],
-    ["email", "promotionCode", "referralCode", "recurringProposalId", "attribution"],
+    ["email", "promotionCode", "referralCode", "recurringProposalId", "attribution", "locale"],
     { idempotent: true },
   ),
   "/api/pud/orders/status": define("StatusTokenRequest", ["token"]),
+  "/api/pud/orders/feedback": define(
+    "FeedbackSubmitRequest",
+    ["token", "statusSession", "locale", "satisfaction", "idempotencyKey"],
+    [],
+    { idempotent: true },
+  ),
   "/api/pud/orders/status-session": define("StatusSessionRequest", ["token", "phoneProof"]),
+  "/api/pud/orders/status-recovery/start": define(
+    "StatusRecoveryStartRequest",
+    ["email", "phone", "turnstileToken"],
+  ),
+  "/api/pud/orders/status-recovery/verify": define(
+    "StatusRecoveryVerifyRequest",
+    ["recoveryId", "code"],
+  ),
   "/api/pud/orders/history": define("PortalHistoryRequest", ["token", "statusSession"], ["cursor", "limit"]),
   "/api/pud/loyalty": define("LoyaltyCustomerRequest", ["token", "statusSession"], ["limit"]),
   "/api/pud/orders/action-capability": define("ActionCapabilityRequest", ["token", "statusSession", "purpose"]),
@@ -142,13 +156,20 @@ export function contractBody(path, input) {
 export function assertPublicConfig(value) {
   const result = object(value, "PublicConfig");
   for (const field of [
-    "publicEnabled", "bookingEnabled", "recurringEnabled", "tipsEnabled", "promotionsEnabled", "referralsEnabled",
+    "publicEnabled", "productAnalyticsEnabled", "productExperimentEnabled", "bookingEnabled", "statusRecoveryEnabled", "feedbackEnabled", "recurringEnabled", "tipsEnabled", "promotionsEnabled", "referralsEnabled",
     "claimsEnabled", "loyaltyEnabled", "claimEvidenceEnabled",
   ]) {
     boolean(result[field], `PublicConfig.${field}`);
   }
   if (result.stripePublishableKey !== null && result.stripePublishableKey !== undefined) string(result.stripePublishableKey, "PublicConfig.stripePublishableKey");
   if (result.turnstileSiteKey !== null && result.turnstileSiteKey !== undefined) string(result.turnstileSiteKey, "PublicConfig.turnstileSiteKey");
+  if (!Array.isArray(result.supportedLocales) || result.supportedLocales.length < 1) throw new TypeError("PublicConfig.supportedLocales must be a non-empty array.");
+  result.supportedLocales.forEach((locale) => oneOf(locale, ["en-US", "es-US"], "PublicConfig.supportedLocales locale"));
+  oneOf(result.defaultLocale, ["en-US", "es-US"], "PublicConfig.defaultLocale");
+  oneOf(result.currency, ["USD"], "PublicConfig.currency");
+  const support = object(result.support, "PublicConfig.support");
+  string(support.email, "PublicConfig.support.email");
+  if (support.phone !== null) string(support.phone, "PublicConfig.support.phone");
   oneOf(result.timezone, ["America/Chicago"], "PublicConfig.timezone");
   const pricing = object(result.pricing, "PublicConfig.pricing");
   for (const field of ["pricePerLbCents", "minimumCents", "deliveryFeeCents"]) nonnegativeInteger(pricing[field], `PublicConfig.pricing.${field}`);
@@ -180,6 +201,31 @@ export function assertPhoneVerify(value) {
   return result;
 }
 
+export function assertStatusRecoveryStart(value) {
+  const result = object(value, "StatusRecoveryStartData");
+  exactFields(result, ["accepted", "recoveryId", "phoneLast4", "expiresAt", "message", "requestId"], "StatusRecoveryStartData");
+  if (result.accepted !== true) throw new TypeError("StatusRecoveryStartData.accepted must be true.");
+  string(result.recoveryId, "StatusRecoveryStartData.recoveryId");
+  if (!/^\d{4}$/.test(string(result.phoneLast4, "StatusRecoveryStartData.phoneLast4"))) {
+    throw new TypeError("StatusRecoveryStartData.phoneLast4 must contain four digits.");
+  }
+  timestamp(result.expiresAt, "StatusRecoveryStartData.expiresAt");
+  string(result.message, "StatusRecoveryStartData.message");
+  if (result.requestId !== undefined) string(result.requestId, "StatusRecoveryStartData.requestId");
+  return result;
+}
+
+export function assertStatusRecoveryVerify(value) {
+  const result = object(value, "StatusRecoveryVerifyData");
+  exactFields(result, ["accepted", "verified", "complete", "message", "requestId"], "StatusRecoveryVerifyData");
+  if (result.accepted !== true) throw new TypeError("StatusRecoveryVerifyData.accepted must be true.");
+  boolean(result.verified, "StatusRecoveryVerifyData.verified");
+  boolean(result.complete, "StatusRecoveryVerifyData.complete");
+  string(result.message, "StatusRecoveryVerifyData.message");
+  if (result.requestId !== undefined) string(result.requestId, "StatusRecoveryVerifyData.requestId");
+  return result;
+}
+
 export function assertOrderStatus(value) {
   const result = object(value, "SafeOrderStatus");
   string(result.orderNumber, "SafeOrderStatus.orderNumber");
@@ -187,10 +233,13 @@ export function assertOrderStatus(value) {
   oneOf(result.fulfillmentStatus, ["submitted", "confirmed", "picked_up", "weighed", "ready", "out_for_delivery", "delivered", "canceled"], "SafeOrderStatus.fulfillmentStatus");
   paymentStatus(result.paymentStatus, "SafeOrderStatus.paymentStatus");
   string(result.updatedAt, "SafeOrderStatus.updatedAt");
-  for (const field of ["paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim"]) {
+  for (const field of ["paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim", "canSubmitFeedback", "feedbackSubmitted"]) {
     boolean(result[field], `SafeOrderStatus.${field}`);
   }
   boolean(result.canCreateRecurring, "SafeOrderStatus.canCreateRecurring");
+  oneOf(result.locale, ["en-US", "es-US"], "SafeOrderStatus.locale");
+  oneOf(result.timezone, ["America/Chicago"], "SafeOrderStatus.timezone");
+  oneOf(result.currency, ["USD"], "SafeOrderStatus.currency");
   for (const field of ["totalCents", "refundedCents"]) nonnegativeInteger(result[field], `SafeOrderStatus.${field}`);
   assertItemizedReceipt(result.receipt);
   if (!Array.isArray(result.rescheduleOptions)) throw new TypeError("SafeOrderStatus.rescheduleOptions must be an array.");
@@ -212,6 +261,24 @@ export function assertStatusSession(value) {
   timestamp(result.expiresAt, "StatusSessionData.expiresAt");
   timestamp(result.phoneVerifiedAt, "StatusSessionData.phoneVerifiedAt");
   positiveInteger(result.orderVersion, "StatusSessionData.orderVersion");
+  return result;
+}
+
+export function assertFeedbackResult(value) {
+  const result = object(value, "FeedbackSubmitData");
+  exactFields(result, ["feedbackId", "satisfaction", "submittedAt", "duplicate", "supportRequested", "googleReviewUrl", "requestId"], "FeedbackSubmitData");
+  string(result.feedbackId, "FeedbackSubmitData.feedbackId");
+  oneOf(result.satisfaction, ["satisfied", "needs_follow_up"], "FeedbackSubmitData.satisfaction");
+  timestamp(result.submittedAt, "FeedbackSubmitData.submittedAt");
+  boolean(result.duplicate, "FeedbackSubmitData.duplicate");
+  boolean(result.supportRequested, "FeedbackSubmitData.supportRequested");
+  if (result.googleReviewUrl !== null) {
+    string(result.googleReviewUrl, "FeedbackSubmitData.googleReviewUrl");
+    let reviewUrl;
+    try { reviewUrl = new URL(result.googleReviewUrl); } catch (_error) { throw new TypeError("FeedbackSubmitData.googleReviewUrl must be an HTTPS URL."); }
+    if (reviewUrl.protocol !== "https:" || reviewUrl.username || reviewUrl.password) throw new TypeError("FeedbackSubmitData.googleReviewUrl must be an HTTPS URL.");
+  }
+  if (result.requestId !== undefined) string(result.requestId, "FeedbackSubmitData.requestId");
   return result;
 }
 
@@ -487,6 +554,12 @@ function assertRecurringDefaults(value) {
 
 function object(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} must be an object.`);
+  return value;
+}
+
+function exactFields(value, allowed, label) {
+  const unexpected = Object.keys(value).filter((field) => !allowed.includes(field));
+  if (unexpected.length) throw new TypeError(`${label} contains an unexpected field: ${unexpected.join(", ")}.`);
   return value;
 }
 

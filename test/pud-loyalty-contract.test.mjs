@@ -41,7 +41,11 @@ test("loyalty request strips unknown data and public config requires feature fla
 
   const config = {
     publicEnabled: true,
+    productAnalyticsEnabled: true,
+    productExperimentEnabled: false,
     bookingEnabled: true,
+    statusRecoveryEnabled: true,
+    feedbackEnabled: true,
     recurringEnabled: true,
     tipsEnabled: true,
     promotionsEnabled: true,
@@ -49,6 +53,10 @@ test("loyalty request strips unknown data and public config requires feature fla
     claimsEnabled: true,
     loyaltyEnabled: true,
     claimEvidenceEnabled: true,
+    supportedLocales: ["en-US", "es-US"],
+    defaultLocale: "en-US",
+    currency: "USD",
+    support: { email: "support@example.com", phone: "+13146281001" },
     stripePublishableKey: null,
     turnstileSiteKey: "site-key",
     timezone: "America/Chicago",
@@ -59,4 +67,6 @@ test("loyalty request strips unknown data and public config requires feature fla
   assert.throws(() => assertPublicConfig({ ...config, promotionsEnabled: undefined }), /must be a boolean/);
   assert.throws(() => assertPublicConfig({ ...config, loyaltyEnabled: undefined }), /must be a boolean/);
   assert.throws(() => assertPublicConfig({ ...config, claimEvidenceEnabled: undefined }), /must be a boolean/);
+  assert.throws(() => assertPublicConfig({ ...config, productAnalyticsEnabled: undefined }), /must be a boolean/);
+  assert.throws(() => assertPublicConfig({ ...config, productExperimentEnabled: undefined }), /must be a boolean/);
 });

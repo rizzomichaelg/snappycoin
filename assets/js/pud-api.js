@@ -1,10 +1,12 @@
 import { apiUrl } from "./pud-config.js";
+import { translateExternalText } from "./site-i18n.js";
 import {
   assertActionCapability,
   assertClaimEvidenceAsset,
   assertClaimEvidenceCapability,
   assertClaimEvidenceGrant,
   assertClaimResult,
+  assertFeedbackResult,
   assertLoyaltySummary,
   assertOrderStatus,
   assertPaymentSession,
@@ -17,6 +19,8 @@ import {
   assertRecurringResult,
   assertReorderBootstrap,
   assertStatusSession,
+  assertStatusRecoveryStart,
+  assertStatusRecoveryVerify,
   assertStatusTokenRevocation,
   assertStatusTokenRotation,
   assertTipResult,
@@ -26,7 +30,7 @@ import {
 export class PudApiError extends Error {
   constructor(status, payload, requestId) {
     const error = payload?.error;
-    super(error?.message || payload?.message || "We could not complete that request.");
+    super(translateExternalText(error?.message || payload?.message || "We could not complete that request."));
     this.name = "PudApiError";
     this.status = status;
     this.code = error?.code || payload?.error || "PUD_REQUEST_FAILED";
@@ -227,9 +231,28 @@ export const verifyPhone = async (input) => assertPhoneVerify(await postContract
 export const setupPayment = (input, key) => postContract("/api/pud/payment/setup", input, key);
 export const createOrder = (input, key) => postContract("/api/pud/orders", input, key);
 export const statusOrder = async (token) => assertOrderStatus(await postContract("/api/pud/orders/status", { token }));
+export const submitFeedback = async (token, statusSession, satisfaction, locale, key) => {
+  if (!["satisfied", "needs_follow_up"].includes(satisfaction)) throw new TypeError("Choose one supported satisfaction response.");
+  if (!["en-US", "es-US"].includes(locale)) throw new TypeError("A supported feedback locale is required.");
+  return assertFeedbackResult(await postContract("/api/pud/orders/feedback", {
+    token,
+    statusSession,
+    satisfaction,
+    locale,
+    idempotencyKey: key,
+  }, key));
+};
 export const createStatusSession = async (token, phoneProof) => assertStatusSession(await postContract(
   "/api/pud/orders/status-session",
   { token, phoneProof },
+));
+export const startStatusRecovery = async (input) => assertStatusRecoveryStart(await postContract(
+  "/api/pud/orders/status-recovery/start",
+  input,
+));
+export const verifyStatusRecovery = async (recoveryId, code) => assertStatusRecoveryVerify(await postContract(
+  "/api/pud/orders/status-recovery/verify",
+  { recoveryId, code },
 ));
 export const portalHistory = async (token, statusSession, { cursor, limit = 10 } = {}) => assertPortalHistory(await postContract(
   "/api/pud/orders/history",
