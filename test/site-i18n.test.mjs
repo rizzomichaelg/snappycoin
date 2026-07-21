@@ -54,6 +54,7 @@ const nonUiRuntimeLiterals = new Set([
   "Unrecognized status payload shape",
   "Invalid recurring proposal bootstrap.",
   "Invalid preferred route bootstrap.",
+  "Google Maps",
 ]);
 
 const nonUiRuntimeTemplates = new Set([

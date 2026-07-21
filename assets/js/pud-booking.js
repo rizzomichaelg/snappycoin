@@ -54,6 +54,7 @@ async function boot() {
   if (!state.config.publicEnabled) return showUnavailable(state.config.message || "Pickup and delivery is not accepting bookings yet.");
   const price = state.config.pricing || {};
   $("[data-pud-price]").textContent = `${money(price.pricePerLbCents ?? 199)}/lb · ${money(price.minimumCents ?? 3500)} minimum${price.deliveryFeeCents ? ` · ${money(price.deliveryFeeCents)} delivery` : ""}`;
+  $("[data-pud-service-area-offer]").hidden = price.deliveryFeeCents !== 0;
   if (!state.config.bookingEnabled) return showUnavailable("Online booking is temporarily paused. Existing orders remain available from the status page.");
   await setupTurnstile(state.config.turnstileSiteKey);
   showStep(state.step);
@@ -99,6 +100,7 @@ async function submitAddress(form) {
     throw new Error("The address service returned an invalid eligibility result.");
   }
   state.address = result.normalizedAddress || address;
+  renderAddressAttribution(result.addressValidationAttribution);
   state.addressProof = result.addressProof || "";
   state.routeId = "";
   state.phoneProof = "";
@@ -164,6 +166,13 @@ async function submitAddress(form) {
   }
   trackFunnel("pud_address_eligible");
   go("details");
+}
+
+function renderAddressAttribution(attributionValue) {
+  const showGoogleMaps = attributionValue === "Google Maps";
+  root.querySelectorAll("[data-address-attribution]").forEach((element) => {
+    element.hidden = !showGoogleMaps;
+  });
 }
 
 async function submitDetails(form) {

@@ -9,9 +9,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://www.facebook.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self'; script-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net http://127.0.0.1:8787 http://localhost:8787; font-src 'self';">
   <title>Pickup &amp; Delivery | Snappy Coin Laundry</title>
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
-  <link rel="stylesheet" href="/assets/css/pud.css?v=20260715-2">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260721-1">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260716-2"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20260721-1"></script>
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
 </head>
 <body>
@@ -29,6 +29,7 @@
       <p class="pud-eyebrow">Pickup · Wash · Dry · Fold</p>
       <h1 id="pud-title">Your laundry, picked up and brought home.</h1>
       <p class="pud-hero-lead">Start with your address. We’ll show only pickup windows with room, then weigh, wash, fold, and return everything to you.</p>
+      <p class="pud-service-area-offer" data-pud-service-area-offer hidden>Free pickup and delivery within our service area.</p>
       <ul class="pud-trust-list">
         <li><span>Price</span><strong data-pud-price>$1.99/lb · $35 minimum</strong></li>
         <li><span>Payment</span><strong>Charged once, after weighing</strong></li>
@@ -74,6 +75,7 @@
           <p class="pud-step-label">Step 2 of 5</p>
           <h2 tabindex="-1">Pickup and laundry details</h2>
           <p class="pud-confirmed-address"><span aria-hidden="true">✓</span> <span data-normalized-address></span></p>
+          <p class="pud-address-attribution" data-address-attribution hidden><span>Address validation provided by</span> <span translate="no" data-i18n-skip>Google Maps</span></p>
           <form id="pud-details-form" class="pud-form">
             <div class="pud-route-planner">
               <label>Estimated bags <select id="pud-estimated-bags" name="estimatedBags"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
@@ -177,6 +179,7 @@
         <p data-waitlist-reason></p>
         <form id="pud-waitlist-form" class="pud-form">
           <label>Address <input id="pud-waitlist-address" name="address" readonly></label>
+          <p class="pud-address-attribution" data-address-attribution hidden><span>Address validation provided by</span> <span translate="no" data-i18n-skip>Google Maps</span></p>
           <div class="pud-field-row"><label>First name <input name="firstName" autocomplete="given-name" required></label><label>Last name <input name="lastName" autocomplete="family-name" required></label></div>
           <label>Mobile phone <input name="phone" type="tel" autocomplete="tel" required></label>
           <label>Email <input name="email" type="email" autocomplete="email" required></label>
@@ -188,6 +191,7 @@
           <div class="pud-turnstile" data-turnstile></div>
           <button class="pud-button pud-button-primary" type="submit">Join waitlist</button>
           <button class="pud-button pud-button-link" type="button" data-action="start-over">Check another address</button>
+          <a class="pud-button pud-button-secondary" href="/">See self-service hours and directions</a>
         </form>
       </div>
 
@@ -210,6 +214,6 @@
 
   <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
   <script type="module" src="/assets/js/site-analytics.js?v=20260715-5"></script>
-  <script type="module" src="/assets/js/pud-booking.js?v=20260715-3"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20260721-1"></script>
 </body>
 </html>

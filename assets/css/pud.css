@@ -371,6 +371,25 @@ h4 {
   line-height: 1.45;
 }
 
+.pud-address-attribution {
+  color: #5e5e5e;
+  font-family: Roboto, sans-serif;
+  font-size: .75rem;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.4;
+  margin: -8px 0 0;
+}
+
+.pud-address-attribution [translate="no"] {
+  white-space: nowrap;
+}
+
+.pud-service-area-offer {
+  font-weight: 850;
+}
+
 .pud-form input,
 .pud-form select,
 .pud-form textarea {
