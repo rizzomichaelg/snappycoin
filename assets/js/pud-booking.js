@@ -55,9 +55,11 @@ async function boot() {
   const price = state.config.pricing || {};
   $("[data-pud-price]").textContent = `${money(price.pricePerLbCents ?? 199)}/lb · ${money(price.minimumCents ?? 3500)} minimum${price.deliveryFeeCents ? ` · ${money(price.deliveryFeeCents)} delivery` : ""}`;
   $("[data-pud-service-area-offer]").hidden = price.deliveryFeeCents !== 0;
-  if (!state.config.bookingEnabled) return showUnavailable("Online booking is temporarily paused. Existing orders remain available from the status page.");
   await setupTurnstile(state.config.turnstileSiteKey);
   showStep(state.step);
+  if (!state.config.bookingEnabled) {
+    showMessage("Address checks are available, but online booking is temporarily paused. You can still see whether an address is eligible or join the waitlist.", "success");
+  }
   trackFunnel("pud_page_viewed");
 }
 
@@ -151,6 +153,11 @@ async function submitAddress(form) {
     return;
   }
   if (!state.addressProof) throw new Error("The address check expired. Please check the address again.");
+  if (!state.config.bookingEnabled) {
+    trackFunnel("pud_address_eligible");
+    showMessage("This address is eligible. Online booking is temporarily paused, so no pickup request can be submitted yet. You can check another address or return when booking reopens.", "success");
+    return showStep("address");
+  }
   if (!state.routes.length) {
     trackFunnel("pud_address_ineligible", { reasonCategory: "capacity" });
     state.waitlistReason = "route_full";

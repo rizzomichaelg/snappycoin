@@ -19,6 +19,13 @@ test("address validation stays first and exposes clear eligible and ineligible p
   assert.match(html, /See self-service hours and directions/);
 });
 
+test("address checks stay testable while booking is paused", async () => {
+  const booking = await readFile(new URL("assets/js/pud-booking.js", root), "utf8");
+  assert.match(booking, /Address checks are available, but online booking is temporarily paused/);
+  assert.match(booking, /This address is eligible\. Online booking is temporarily paused/);
+  assert.doesNotMatch(booking, /if \(!state\.config\.bookingEnabled\) return showUnavailable/);
+});
+
 test("Google attribution is conditional, adjacent to address results, and not localized", async () => {
   const [html, booking, css] = await Promise.all([
     readFile(new URL("pickup-delivery/index.html", root), "utf8"),
