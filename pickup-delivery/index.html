@@ -32,7 +32,7 @@
       <p class="pud-service-area-offer" data-pud-service-area-offer hidden>Free pickup and delivery within our service area.</p>
       <ul class="pud-trust-list">
         <li><span>Price</span><strong data-pud-price>$1.99/lb · $35 minimum</strong></li>
-        <li><span>Payment</span><strong>Charged once, after weighing</strong></li>
+        <li><span>Payment</span><strong data-payment-summary>Pay in person after final weighing</strong></li>
         <li><span>Updates</span><strong>Private order updates and receipt</strong></li>
       </ul>
       <div class="pud-how-it-works" aria-label="How pickup and delivery works">
@@ -47,7 +47,7 @@
         <li data-progress-step="address" aria-current="step">Address</li>
         <li data-progress-step="details">Details</li>
         <li data-progress-step="phone">Phone</li>
-        <li data-progress-step="payment">Card</li>
+        <li data-progress-step="payment" data-payment-step>Card</li>
         <li data-progress-step="review">Review</li>
       </ol>
 
@@ -101,7 +101,8 @@
               <label class="pud-check"><input name="terms" type="checkbox" value="yes" required> I accept the <a href="/pickup-delivery/terms/" target="_blank" rel="noopener">service terms</a>.</label>
               <label class="pud-check"><input name="privacy" type="checkbox" value="yes" required> I acknowledge the <a href="/pickup-delivery/privacy/" target="_blank" rel="noopener">privacy notice</a>.</label>
               <label class="pud-check"><input name="transactionalSms" type="checkbox" value="yes" required> I agree to transactional texts about this order. Consent is not marketing consent.</label>
-              <label class="pud-check"><input name="savedPaymentMethod" type="checkbox" value="yes" required> I authorize securely saving this card and charging the final price after weighing.</label>
+              <label class="pud-check" data-saved-payment-consent><input name="savedPaymentMethod" type="checkbox" value="yes" required> I authorize securely saving this card and charging the final price after weighing.</label>
+              <p class="pud-fine-print" data-in-person-payment-copy hidden>Final total is based on actual weight. Pay in person after your order is weighed; no card is collected online.</p>
             </fieldset>
             <fieldset><legend>Optional marketing</legend>
               <label class="pud-check"><input name="marketingEmail" type="checkbox" value="yes"> Email me offers. I can unsubscribe anytime.</label>
@@ -153,7 +154,7 @@
               <label data-promotion-field hidden>Promotion code <input id="pud-promotion-code" maxlength="40" autocapitalize="characters"></label>
               <label data-referral-field hidden>Referral code <input id="pud-referral-code" maxlength="40" autocapitalize="characters"></label>
             </div>
-            <p class="pud-fine-print">Submitting reserves route capacity. Your card is charged only after weighing, using the price and minimum shown above plus any configured tax or disclosed fee.</p>
+            <p class="pud-fine-print" data-review-payment-copy>Submitting reserves route capacity. Final total is based on actual weight; pay in person after weighing. No card is collected online.</p>
             <button class="pud-button pud-button-primary" type="submit">Submit pickup request</button>
           </form>
         </section>

@@ -44,6 +44,7 @@ test("loyalty request strips unknown data and public config requires feature fla
     productAnalyticsEnabled: true,
     productExperimentEnabled: false,
     bookingEnabled: true,
+    inPersonPaymentEnabled: false,
     statusRecoveryEnabled: true,
     feedbackEnabled: true,
     recurringEnabled: true,

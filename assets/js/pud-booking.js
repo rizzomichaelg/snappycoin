@@ -50,6 +50,8 @@ async function boot() {
     showMessage("Your waitlist invitation is ready. Recheck the address, verify the invited phone, and complete secure checkout for the reserved pickup window.", "success");
   }
   state.config = await getPublicConfig();
+  root.dataset.paymentCollection = state.config.inPersonPaymentEnabled === true ? "in_person" : "online";
+  configurePaymentCollection();
   configureCodeFields();
   if (!state.config.publicEnabled) return showUnavailable(state.config.message || "Pickup and delivery is not accepting bookings yet.");
   const price = state.config.pricing || {};
@@ -218,8 +220,11 @@ async function submitDetails(form) {
     marketingSms: data.get("marketingSms") === "yes",
     consentVersion: state.config.consentVersion || "owner-approval-required",
   };
-  if (!state.consents.terms || !state.consents.privacy || !state.consents.transactionalSms || !state.consents.savedPaymentMethod) {
-    throw new Error("Accept the required service, privacy, messaging, and saved-card terms.");
+  if (!state.consents.terms || !state.consents.privacy || !state.consents.transactionalSms ||
+      (state.config.inPersonPaymentEnabled !== true && !state.consents.savedPaymentMethod)) {
+    throw new Error(state.config.inPersonPaymentEnabled === true
+      ? "Accept the required service, privacy, and messaging terms."
+      : "Accept the required service, privacy, messaging, and saved-card terms.");
   }
   const result = await beginPhoneVerification(state.customer.phone, turnstileValue(form));
   resetTurnstile(form);
@@ -238,6 +243,10 @@ async function submitCode(form) {
   const result = await confirmPhoneVerification(state.verificationId, code);
   state.phoneProof = result.phoneProof;
   trackFunnel("pud_phone_verified");
+  if (state.config.inPersonPaymentEnabled === true) {
+    populateReview();
+    return go("review");
+  }
   go("payment");
   const paymentMount = $("#pud-payment-element");
   paymentMount.replaceChildren();
@@ -280,14 +289,24 @@ async function submitPayment() {
 
 async function submitOrder() {
   const consentVersion = state.config.consentVersions || {};
+  const inPerson = state.config.inPersonPaymentEnabled === true;
+  const route = state.routes.find((item) => item.id === state.routeId);
+  if (inPerson && !route?.routeProof) throw new Error("The selected pickup window expired. Please check the address again.");
   const intent = {
     firstName: state.customer.firstName,
     lastName: state.customer.lastName,
     email: state.customer.email,
     address: state.address,
     routeId: state.routeId,
-    setupIntentId: state.setupIntentId,
-    checkoutProof: state.checkoutProof,
+    ...(inPerson ? {
+      paymentCollectionMethod: "in_person",
+      phoneProof: state.phoneProof,
+      addressProof: state.addressProof,
+      routeProof: route.routeProof,
+    } : {
+      setupIntentId: state.setupIntentId,
+      checkoutProof: state.checkoutProof,
+    }),
     preferences: {
       estimatedBags: state.order.estimatedBags,
       detergent: state.order.detergent,
@@ -313,7 +332,7 @@ async function submitOrder() {
     recurringProposalId: state.reorderBootstrap?.recurringProposalId || undefined,
     locale: getLocale?.() || undefined,
   };
-  const orderKey = await stableActionKey("order", JSON.stringify([state.checkoutProof, state.setupIntentId, intent]));
+  const orderKey = await stableActionKey("order", JSON.stringify([state.checkoutProof, state.setupIntentId, state.phoneProof, state.addressProof, route?.routeProof, intent]));
   const result = await createOrder({ idempotencyKey: orderKey, ...intent }, orderKey);
   const token = result.statusToken;
   if (!token || !result.orderNumber) throw new Error("The order was created without a private status link. Contact support with the request ID.");
@@ -449,6 +468,25 @@ function configureCodeFields() {
   if (promotionField) promotionField.hidden = state.config?.promotionsEnabled !== true;
   if (referralField) referralField.hidden = state.config?.referralsEnabled !== true;
   if (codeFields) codeFields.hidden = promotionField?.hidden !== false && referralField?.hidden !== false;
+}
+
+function configurePaymentCollection() {
+  const inPerson = state.config?.inPersonPaymentEnabled === true;
+  const paymentStep = $("[data-payment-step]");
+  const savedPaymentConsent = $("[data-saved-payment-consent]");
+  const inPersonCopy = $("[data-in-person-payment-copy]");
+  const paymentSummary = $("[data-payment-summary]");
+  const reviewPaymentCopy = $("[data-review-payment-copy]");
+  if (paymentStep) paymentStep.hidden = inPerson;
+  if (savedPaymentConsent) {
+    savedPaymentConsent.hidden = inPerson;
+    savedPaymentConsent.querySelector("input").required = !inPerson;
+  }
+  if (inPersonCopy) inPersonCopy.hidden = !inPerson;
+  if (paymentSummary) paymentSummary.textContent = inPerson ? "Pay in person after final weighing" : "Charged once, after weighing";
+  if (reviewPaymentCopy) reviewPaymentCopy.textContent = inPerson
+    ? "Submitting reserves route capacity. Final total is based on actual weight; pay in person after weighing. No card is collected online."
+    : "Submitting reserves route capacity. Your card is charged only after weighing, using the price and minimum shown above plus any configured tax or disclosed fee.";
 }
 
 function routesForBagCount(bagCount) {

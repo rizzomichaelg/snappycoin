@@ -156,7 +156,7 @@ export function contractBody(path, input) {
 export function assertPublicConfig(value) {
   const result = object(value, "PublicConfig");
   for (const field of [
-    "publicEnabled", "productAnalyticsEnabled", "productExperimentEnabled", "bookingEnabled", "statusRecoveryEnabled", "feedbackEnabled", "recurringEnabled", "tipsEnabled", "promotionsEnabled", "referralsEnabled",
+    "publicEnabled", "productAnalyticsEnabled", "productExperimentEnabled", "bookingEnabled", "inPersonPaymentEnabled", "statusRecoveryEnabled", "feedbackEnabled", "recurringEnabled", "tipsEnabled", "promotionsEnabled", "referralsEnabled",
     "claimsEnabled", "loyaltyEnabled", "claimEvidenceEnabled",
   ]) {
     boolean(result[field], `PublicConfig.${field}`);
