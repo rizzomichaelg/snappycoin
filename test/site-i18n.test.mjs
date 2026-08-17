@@ -8,17 +8,13 @@ import {
   SUPPORTED_LOCALES,
   configurePublicLocales,
   enabledPublicLocales,
+  formatCentralDateTime,
   translateExternalText,
   translateText,
 } from "../assets/js/site-i18n.js";
 
 const root = new URL("../", import.meta.url);
-const requiredPages = Object.freeze([
-  "index.html",
-  "privacy.html",
-  "terms.html",
-  "cookies.html",
-  "promos/free-weekday-wash/index.html",
+const requiredPudPages = Object.freeze([
   "pickup-delivery/index.html",
   "pickup-delivery/status/index.html",
   "pickup-delivery/claims/index.html",
@@ -28,7 +24,6 @@ const requiredPages = Object.freeze([
 ]);
 
 const runtimeModules = Object.freeze([
-  "assets/js/availability-widget.js",
   "assets/js/pud-booking.js",
   "assets/js/pud-status.js",
   "assets/js/pud-claims.js",
@@ -62,16 +57,14 @@ const nonUiRuntimeTemplates = new Set([
 ]);
 
 const runtimeTemplateSamples = new Map([
-  ["Updated {value}", ["Updated hace menos de 1 minuto"]],
-  ["Opening in {value}", ["Opening in 2 minutes", "Opening in 1 hour 2 minutes"]],
-  ["Reviewing a recurring pickup from {value}. Recheck the address, route, phone, and card before confirming it.", ["Reviewing a recurring pickup from PUD-20260715-AB12CD34. Recheck the address, route, phone, and card before confirming it."]],
-  ["Reordering {value}. Recheck the address, phone, and card to create a new order.", ["Reordering PUD-20260715-AB12CD34. Recheck the address, phone, and card to create a new order."]],
-  ["{value}/lb · {value} minimum{value}", ["$1.99/lb · $35.00 minimum", "$1.99/lb · $35.00 minimum · $5.00 delivery"]],
+  ["Reviewing a recurring pickup from {value}. Recheck the address, pickup and delivery times, phone, and card before confirming it.", ["Reviewing a recurring pickup from PUD-20260715-AB12CD34. Recheck the address, pickup and delivery times, phone, and card before confirming it."]],
+  ["Reordering {value}. Recheck the address, schedule, phone, and card to create a new order.", ["Reordering PUD-20260715-AB12CD34. Recheck the address, schedule, phone, and card to create a new order."]],
+  ["Detergent: {value} · Softener: {value}{value}", ["Detergent: premium · Softener: liquid", "Detergent: free clear · Softener: none · fragrance-free"]],
+  ["Payment pending final weight{value}", ["Payment pending final weight · VISA ending 1111"]],
+  ["Paid · {value}{value}", ["Paid · $15.00 · VISA ending 1111"]],
+  ["Payment Failed · Action Required{value}", ["Payment Failed · Action Required · VISA ending 1111"]],
+  ["{value} minimum", ["$15.00 minimum"]],
   ["For security, re-enter and verify the mobile number ending in {value}.", ["For security, re-enter and verify the mobile number ending in 0101."]],
-  ["That pickup window does not have room for {value} estimated bag{value}. Choose another window or a lower bag estimate.", ["That pickup window does not have room for 2 estimated bags. Choose another window or a lower bag estimate."]],
-  ["{value} pickup window{value} can currently take {value} estimated bag{value}.", ["1 pickup window can currently take 1 estimated bag.", "2 pickup windows can currently take 3 estimated bags."]],
-  ["No listed pickup window has room for {value} estimated bag{value}. Choose a lower estimate or call the store.", ["No listed pickup window has room for 3 estimated bags. Choose a lower estimate or call the store."]],
-  ["{value} estimated bag{value}", ["2 estimated bags"]],
   ["A code was sent to the mobile number ending in {value}.", ["A code was sent to the mobile number ending in 0101."]],
   ["Phone verified. Protected actions are unlocked, but {value} could not load. Try verifying again if the problem continues.", ["Phone verified. Protected actions are unlocked, but order history and preferences and rewards could not load. Try verifying again if the problem continues."]],
   ["Phone verified. Protected actions, {value}order history, receipts, claims, and preferences are unlocked for this short browser session.", ["Phone verified. Protected actions, order history, receipts, claims, and preferences are unlocked for this short browser session.", "Phone verified. Protected actions, rewards, order history, receipts, claims, and preferences are unlocked for this short browser session."]],
@@ -82,6 +75,11 @@ const runtimeTemplateSamples = new Map([
   ["The private link for {value} was revoked.", ["The private link for PUD-20260715-AB12CD34 was revoked."]],
   ["{value} bag{value} in this order", ["2 bags in this order"]],
   ["Server status updated {value}.", ["Server status updated Jul 15, 2026, 9:00 AM."]],
+  ["Picked up {value}", ["Picked up Jul 15, 2026, 9:00 AM"]],
+  ["Ready {value}", ["Ready Jul 15, 2026, 9:00 AM"]],
+  ["In progress since {value}", ["In progress since Jul 15, 2026, 9:00 AM"]],
+  ["Delivered {value}", ["Delivered Jul 15, 2026, 9:00 AM"]],
+  ["Out for delivery since {value}", ["Out for delivery since Jul 15, 2026, 9:00 AM"]],
   ["Order journey. Current stage: {value}.", ["Order journey. Current stage: Laundry picked up."]],
   ["{value}/lb", ["$1.99/lb"]],
   ["Pricing {value} · tax rule {value} · minimum {value}.", ["Pricing pricing-v1 · tax rule tax-v1 · minimum $35.00."]],
@@ -118,6 +116,13 @@ test("English and reviewed US Spanish catalogs have exact key parity", () => {
   }
   assert.equal(CENTRAL_TIME_ZONE, "America/Chicago");
   assert.equal(DISPLAY_CURRENCY, "USD");
+});
+
+test("pickup and delivery windows render in Central Time regardless of the viewer time zone", () => {
+  configurePublicLocales(["en-US"]);
+  const options = { hour: "numeric", minute: "2-digit", hour12: true };
+  assert.equal(formatCentralDateTime("2026-08-17T14:00:00.000Z", options), "9:00 AM");
+  assert.equal(formatCentralDateTime("2026-08-17T15:00:00.000Z", options), "10:00 AM");
 });
 
 test("public locale activation is exactly off until the rollout config enables Spanish", async () => {
@@ -160,8 +165,8 @@ test("runtime outage and cookie-consent copy has reviewed Spanish text", () => {
   assert.equal(translateText("Plenty available (delayed)", "es-US"), "Muchas disponibles (con demora)");
 });
 
-test("every required public, booking, status, claims, and legal page loads the human-authored locale module", async () => {
-  for (const page of requiredPages) {
+test("every pickup, status, claims, recovery, and PUD legal page loads the human-authored locale module", async () => {
+  for (const page of requiredPudPages) {
     const html = await readFile(new URL(page, root), "utf8");
     assert.match(html, /assets\/js\/site-i18n\.js/, `${page} is missing locale support`);
   }
@@ -171,9 +176,24 @@ test("every required public, booking, status, claims, and legal page loads the h
   }
 });
 
+test("pickup attribution fields default to no selection", async () => {
+  const markup = await readFile(new URL("pickup-delivery/index.html", root), "utf8");
+  const sourceFields = [...markup.matchAll(/<select name="selfReportedSource">([\s\S]*?)<\/select>/g)];
+
+  assert.equal(sourceFields.length, 2);
+  for (const [, options] of sourceFields) {
+    assert.match(
+      options,
+      /^<option value="" selected disabled aria-label="No selection"><\/option>/
+    );
+    assert.doesNotMatch(options, /^<option value="" selected[^>]* hidden/);
+    assert.doesNotMatch(options, /<option value="[^"]+" selected/);
+  }
+});
+
 test("every visible static customer phrase has a reviewed Spanish catalog entry", async () => {
   const missing = [];
-  for (const page of requiredPages) {
+  for (const page of requiredPudPages) {
     const html = (await readFile(new URL(page, root), "utf8")).replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
     for (const match of html.matchAll(/>([^<>]+)</g)) {
       const phrase = match[1]
@@ -228,8 +248,6 @@ test("locale implementation is local, explicit, and sends locale snapshots with 
   const localeSource = await readFile(new URL("assets/js/site-i18n.js", root), "utf8");
   const bookingSource = await readFile(new URL("assets/js/pud-booking.js", root), "utf8");
   const schedulingSource = await readFile(new URL("assets/js/pud-scheduling.js", root), "utf8");
-  const availabilitySource = await readFile(new URL("assets/js/availability-widget.js", root), "utf8");
-  const homeSource = await readFile(new URL("index.html", root), "utf8");
   assert.doesNotMatch(localeSource, /translate\.google|deepl|microsofttranslator|fetch\s*\(/i);
   assert.match(localeSource, /localStorage\.setItem\(LOCALE_STORAGE_KEY/);
   assert.match(localeSource, /url\.searchParams\.set\("lang", "es"\)/);
@@ -238,10 +256,6 @@ test("locale implementation is local, explicit, and sends locale snapshots with 
   assert.match(bookingSource, /locale: getLocale\?\.\(\) \|\| undefined/g);
   assert.match(schedulingSource, /formatCentralDateTime/);
   assert.match(bookingSource, /formatCurrencyCents/);
-  assert.match(availabilitySource, /CENTRAL_TIME_ZONE/);
-  assert.match(availabilitySource, /new Intl\.DateTimeFormat\(getLocale\(\)/);
-  assert.doesNotMatch(availabilitySource, /Intl\.DateTimeFormat\("en-US"/);
-  assert.match(homeSource, /type="module" src="assets\/js\/availability-widget\.js/);
 });
 
 test("Spanish calendar copy remains generic and contains no private fields", async () => {
@@ -268,15 +282,21 @@ test("malformed route windows fail closed before a server label can reach locali
   const { routeOptions } = await import("../assets/js/pud-scheduling.js");
   const base = {
     routeId: "route-1",
+    routeDate: "2026-07-20",
+    windowCode: "morning",
     routeProof: "proof-1",
     label: "Monday morning",
     windowStartAt: "2026-07-20T14:00:00Z",
     windowEndAt: "2026-07-20T17:00:00Z",
+    expectedReturnAt: "2026-07-22T01:00:00Z",
   };
   assert.equal(routeOptions({ routes: [base] }).length, 1);
   assert.deepEqual(routeOptions({ routes: [{ ...base, windowStartAt: "" }] }), []);
   assert.deepEqual(routeOptions({ routes: [{ ...base, windowEndAt: "legacy-window" }] }), []);
   assert.deepEqual(routeOptions({ routes: [{ ...base, windowEndAt: "2026-07-20T13:00:00Z" }] }), []);
+  assert.deepEqual(routeOptions({ routes: [{ ...base, expectedReturnAt: "" }] }), []);
+  assert.deepEqual(routeOptions({ routes: [{ ...base, expectedReturnAt: "2026-07-20T16:00:00Z" }] }), []);
+  assert.equal(routeOptions({ deliveryRoutes: [{ ...base, expectedReturnAt: "" }] }, "deliveryRoutes").length, 1);
 });
 
 function isRuntimeProse(value) {

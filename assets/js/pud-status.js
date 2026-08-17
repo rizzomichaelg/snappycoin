@@ -13,7 +13,6 @@ import {
   replacePaymentMethod,
   requestReschedule,
   revokeStatusToken,
-  rotateStatusToken,
   statusOrder,
   submitFeedback,
   tipOrder,
@@ -26,7 +25,10 @@ import {
   confirmPaymentMethodReplacement,
   confirmPaymentRemediation,
   destroyPaymentMethodReplacement,
+  destroySquareCardReplacement,
   preparePaymentMethodReplacement,
+  prepareSquareCardReplacement,
+  tokenizeSquareCardReplacement,
 } from "./pud-payment.js";
 import { PUD_CONFIG } from "./pud-config.js";
 import {
@@ -68,11 +70,11 @@ const fulfillmentLabels = Object.freeze({
   canceled: "Order canceled",
 });
 const nextStepByFulfillment = Object.freeze({
-  submitted: "We’re checking the order details. Your pickup window will appear here once it is confirmed.",
+  submitted: "We received your order. Your scheduled pickup is shown below while our team reviews the details.",
   confirmed: "Your pickup is reserved. Have your bags ready during the pickup window shown below.",
   picked_up: "Your laundry is with our team. We’ll weigh it before washing so the final price is accurate.",
   weighed: "Your laundry has been weighed and is moving through wash, dry, and fold.",
-  ready: "Everything is clean, folded, and packed. We’re preparing the return route.",
+  ready: "Everything is clean, folded, and packed. We’re preparing its return.",
   out_for_delivery: "Your order is with our driver and headed back to you.",
   delivered: "Your laundry is back. Your final receipt and support options are available below.",
   canceled: "No further pickup or delivery is scheduled for this order.",
@@ -83,7 +85,7 @@ const humanLabels = Object.freeze({
   processing: "Payment processing",
   succeeded: "Paid",
   requires_action: "Card confirmation needed",
-  failed: "Payment needs attention",
+  failed: "Payment Failed · Action Required",
   partially_refunded: "Partially refunded",
   refunded: "Refunded",
   disputed: "Payment under review",
@@ -123,9 +125,14 @@ const humanLabels = Object.freeze({
   expired: "Expired",
   blocked: "Choose another pickup window",
   canceled: "Canceled",
-  standard: "Standard",
+  premium: "Premium",
+  gain: "Gain",
+  tide: "Tide",
   free_clear: "Free and clear",
-  customer_supplied: "Customer supplied",
+  customer_supplied: "Customer provided",
+  liquid: "Liquid",
+  dryer_sheets: "Dryer sheets",
+  standard: "Legacy standard preference",
   none: "None",
 });
 
@@ -135,6 +142,7 @@ let publicConfig = null;
 let actionInFlight = false;
 let recoverySetupIntentId = "";
 let confirmedReplacementSetupIntentId = "";
+let recoveryPaymentProvider = "stripe";
 let verificationId = "";
 let verifiedSession = null;
 let sessionExpiryTimer = 0;
@@ -143,7 +151,6 @@ let portalDetails = null;
 let portalPreferences = null;
 let rescheduledCalendarPickup = null;
 let portalLoyalty = null;
-let pendingRotation = null;
 let pendingConfirmation = null;
 let pendingFeedbackSatisfaction = "";
 let feedbackResult = null;
@@ -164,8 +171,22 @@ async function boot() {
   replacePrivateLocation(token);
   bind();
   renderStepUpState();
+  try {
+    publicConfig = await getPublicConfig();
+    renderRecoveryAvailability(publicConfig);
+  } catch (_error) {
+    renderRecoveryAvailability(null);
+  }
   if (!token) return message("Open the private status link from your confirmation message.");
   await refresh();
+}
+
+function renderRecoveryAvailability(config) {
+  const enabled = config?.statusRecoveryEnabled === true;
+  const link = document.querySelector("[data-status-recovery-link]");
+  const unavailable = document.querySelector("[data-status-recovery-unavailable]");
+  if (link) link.hidden = !enabled;
+  if (unavailable) unavailable.hidden = enabled;
 }
 
 function bind() {
@@ -198,7 +219,6 @@ async function onSubmit(event) {
     closePaymentReplacement();
     clearRescheduledCalendar();
     clearFeedbackState();
-    pendingRotation = null;
     token = submitted;
     replacePrivateLocation(token);
     publicConfig = null;
@@ -279,14 +299,6 @@ async function onClick(event) {
   if (action === "payment-replace-cancel") {
     closePaymentReplacement();
     return;
-  }
-  if (action === "rotate-status-token") {
-    return openConfirmation({
-      title: "Replace this private link?",
-      copy: "The current link will stop working immediately. Confirmation messages containing the old link will not update, so copy the replacement before leaving.",
-      confirmLabel: "Replace link",
-      run: rotatePrivateLink,
-    });
   }
   if (action === "revoke-status-token") {
     return openConfirmation({
@@ -378,11 +390,13 @@ async function refresh({ silent = false } = {}) {
       statusOrder(token),
     ]);
     publicConfig = config;
+    renderRecoveryAvailability(config);
     order = status;
     // Background refreshes must not erase card details while a customer is
     // actively completing the replacement-card form.
     if (!silent) closePaymentReplacement();
     render(status);
+    if (!silent) message("");
     automaticRefreshFailures = 0;
     scheduleAutomaticRefresh();
     try {
@@ -392,7 +406,10 @@ async function refresh({ silent = false } = {}) {
       renderStepUpState("Read-only status is available, but protected actions cannot load phone verification right now.");
     }
   } catch (error) {
-    if (["PUD_ORDER_TOKEN_INVALID", "PUD_ORDER_TOKEN_REVOKED"].includes(error?.code)) clearVerifiedSession();
+    if (["PUD_ORDER_TOKEN_INVALID", "PUD_ORDER_TOKEN_REVOKED"].includes(error?.code)) {
+      clearVerifiedSession();
+      clearOrderLoadedState();
+    }
     if (!silent) message(error?.message || "Order status could not be refreshed.");
     throw error;
   }
@@ -553,20 +570,33 @@ async function submitReschedule(form) {
 async function startPaymentReplacement() {
   const actionCapability = await issueCapability("payment_session");
   const session = await paymentSession(token, actionCapability);
-  recoverySetupIntentId = session.setupIntentId;
+  recoveryPaymentProvider = session.provider === "square" ? "square" : "stripe";
+  recoverySetupIntentId = session.setupIntentId || "square";
   confirmedReplacementSetupIntentId = "";
   const form = $("#pud-payment-method-form");
   const mount = $("#pud-payment-method-element");
   mount.replaceChildren();
-  await preparePaymentMethodReplacement(publicConfig, session.setupIntentClientSecret, mount);
+  if (recoveryPaymentProvider === "square") await prepareSquareCardReplacement(publicConfig, mount);
+  else await preparePaymentMethodReplacement(publicConfig, session.setupIntentClientSecret, mount);
   form.hidden = false;
   $("[data-payment-actions]").hidden = true;
   form.querySelector("button[type=submit]")?.focus();
-  message("Secure replacement-card fields are ready. Confirm the card to retry the same payment.", "success");
+  message("Secure replacement-card fields are ready. Saving a new card does not charge it.", "success");
 }
 
 async function submitPaymentMethod() {
   if (!recoverySetupIntentId) throw new Error("Start card replacement again before confirming.");
+  if (recoveryPaymentProvider === "square") {
+    const squareCardToken = await tokenizeSquareCardReplacement();
+    const signature = `${order.orderNumber}:square-replacement`;
+    const key = await stableActionKey("payment-method", signature);
+    const actionCapability = await issueCapability("replace_payment_method");
+    order = await replacePaymentMethod(token, actionCapability, { squareCardToken, consentAccepted: true }, key);
+    closePaymentReplacement();
+    render(order);
+    message("The replacement card was saved. Staff can now retry the final charge.", "success");
+    return;
+  }
   if (!confirmedReplacementSetupIntentId) {
     // The return URL deliberately omits the bearer fragment. A redirecting
     // authentication flow can be reopened from the original private link.
@@ -577,7 +607,7 @@ async function submitPaymentMethod() {
   const signature = `${order.orderNumber}:${confirmedReplacementSetupIntentId}`;
   const key = await stableActionKey("payment-method", signature);
   const actionCapability = await issueCapability("replace_payment_method");
-  order = await replacePaymentMethod(token, actionCapability, confirmedReplacementSetupIntentId, key);
+  order = await replacePaymentMethod(token, actionCapability, { setupIntentId: confirmedReplacementSetupIntentId }, key);
   closePaymentReplacement();
   render(order);
   message("The replacement card was saved and the original payment was retried. Refresh if payment is still processing.", "success");
@@ -824,46 +854,6 @@ async function issueClaimEvidenceCapabilityForTransit(session) {
   }
 }
 
-async function rotatePrivateLink() {
-  const currentToken = token;
-  const expectedVersion = order.version;
-  let pending = pendingRotation;
-  if (!pending || pending.token !== currentToken || pending.expectedVersion !== expectedVersion) {
-    const signature = `${order.orderNumber}:${expectedVersion}:rotate`;
-    pending = {
-      token: currentToken,
-      expectedVersion,
-      key: await stableActionKey("status-token-rotate", signature),
-      actionCapability: await issueCapability("rotate_status_token"),
-    };
-    pendingRotation = pending;
-  }
-  try {
-    const result = await rotateStatusToken(
-      pending.token,
-      pending.actionCapability,
-      pending.expectedVersion,
-      pending.key,
-    );
-    pendingRotation = null;
-    token = result.statusToken;
-    order = result.status;
-    replacePrivateLocation(token);
-    clearVerifiedSession();
-    clearStepUpVerification();
-    closePaymentReplacement();
-    render(order);
-    renderStepUpState();
-    message("Your private link was rotated. This page now contains the replacement link; the old link no longer works.", "success");
-  } catch (error) {
-    // A network timeout is ambiguous: the Worker may have committed. Retain
-    // the exact in-memory capability/key so the recovery receipt can return
-    // the same replacement token. Definitive API responses clear the attempt.
-    if (error?.status !== 0) pendingRotation = null;
-    await handleVersionConflict(error);
-  }
-}
-
 async function revokePrivateLink() {
   const orderNumber = order.orderNumber;
   const signature = `${orderNumber}:${order.version}:revoke`;
@@ -874,6 +864,7 @@ async function revokePrivateLink() {
     clearMemoryCredentials();
     token = "";
     order = null;
+    clearOrderLoadedState();
     replacePrivateLocation("");
     $("#pud-status-form").reset();
     $("[data-status-content]").hidden = true;
@@ -886,6 +877,7 @@ async function revokePrivateLink() {
 }
 
 function render(value) {
+  root.dataset.orderLoaded = "true";
   if (rescheduledCalendarPickup &&
       (rescheduledCalendarPickup.orderNumber !== value.orderNumber ||
        !["submitted", "confirmed"].includes(value.fulfillmentStatus))) {
@@ -895,17 +887,42 @@ function render(value) {
   const tokenEntry = $("[data-token-entry]");
   if (tokenEntry) tokenEntry.open = false;
   $("[data-order-number]").textContent = value.orderNumber || "Your order";
-  $("[data-payment-status]").textContent = label(value.paymentStatus);
+  const card = value.paymentMethod?.last4 ? ` · ${value.paymentMethod.brand || "Card"} ending ${value.paymentMethod.last4}` : "";
+  $("[data-payment-status]").textContent = value.paymentStatus === "uncharged"
+    ? `Payment pending final weight${card}`
+    : ["succeeded", "succeeded_external"].includes(value.paymentStatus)
+      ? `Paid · ${money(value.paymentAmountCents ?? value.totalCents)}${card}`
+      : value.paymentStatus === "failed"
+        ? `Payment Failed · Action Required${card}`
+        : `${label(value.paymentStatus)}${card}`;
   $("[data-payment-status]").parentElement.dataset.state = paymentTone(value.paymentStatus);
-  $("[data-pickup-window]").textContent = pickupWindowLabel(value.pickupWindowCode);
-  $("[data-delivery-promise]").textContent = value.deliveryPromisedAt ? formatDate(value.deliveryPromisedAt) : "Pending after intake";
+  const milestones = value.milestones || {};
+  $("[data-pickup-window]").textContent = milestones.pickedUpAt
+    ? `Picked up ${formatDate(milestones.pickedUpAt)}`
+    : formatSavedWindow(value.pickupWindowStartAt, value.pickupWindowEndAt, pickupWindowLabel(value.pickupWindowCode));
+  $("[data-processing-status]").textContent = milestones.readyAt
+    ? `Ready ${formatDate(milestones.readyAt)}`
+    : milestones.weighedAt
+      ? `In progress since ${formatDate(milestones.weighedAt)}`
+      : milestones.pickedUpAt ? "Awaiting intake" : "Not started";
+  $("[data-delivery-status]").textContent = milestones.deliveredAt
+    ? `Delivered ${formatDate(milestones.deliveredAt)}`
+    : milestones.outForDeliveryAt
+      ? `Out for delivery since ${formatDate(milestones.outForDeliveryAt)}`
+      : "Not started";
+  $("[data-expected-completion]").textContent = formatSavedWindow(
+    value.deliveryWindowStartAt,
+    value.deliveryWindowEndAt,
+    value.expectedCompletionAt ? formatDate(value.expectedCompletionAt) : "Not scheduled yet"
+  );
   $("[data-bag-status]").textContent = value.actualBags == null ? "Confirmed after pickup" : `${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`;
   $("[data-total]").textContent = value.weightTenths == null ? "Calculated after weighing" : money(value.totalCents);
   $("[data-last-updated]").textContent = value.updatedAt ? `Server status updated ${formatDate(value.updatedAt)}.` : "";
   renderJourney(value);
 
   renderReceipt(value.receipt, value.paymentStatus);
-  const paymentVisible = value.paymentAttentionRequired && ["requires_action", "failed"].includes(value.paymentStatus) && Boolean(publicConfig?.stripePublishableKey);
+  const paymentVisible = value.paymentAttentionRequired && ["requires_action", "failed"].includes(value.paymentStatus)
+    && Boolean(publicConfig?.squareApplicationId || publicConfig?.stripePublishableKey);
   $("[data-payment-panel]").hidden = !paymentVisible;
   $("[data-cancel-action]").hidden = !value.canCancel;
   $("[data-reorder-action]").hidden = value.fulfillmentStatus !== "delivered" || !publicConfig?.bookingEnabled;
@@ -944,8 +961,8 @@ function renderJourney(value) {
   const status = $("[data-fulfillment-status]");
   const nextStep = $("[data-next-step]");
   const timeline = $("[data-fulfillment-timeline]");
-  status.textContent = fulfillmentLabels[stage] || "Order update available";
-  nextStep.textContent = nextStepByFulfillment[stage] || "Refresh for the latest update from our team.";
+  status.textContent = translateText(fulfillmentLabels[stage] || "Order update available");
+  nextStep.textContent = translateText(nextStepByFulfillment[stage] || "Refresh for the latest update from our team.");
   timeline.dataset.state = stage === "canceled" ? "canceled" : "active";
   timeline.setAttribute(
     "aria-label",
@@ -975,7 +992,8 @@ function renderAttention(value) {
   const copy = $("[data-attention-copy]");
   const paymentNeedsHelp = Boolean(value.paymentAttentionRequired);
   const orderNeedsHelp = Boolean(value.operationalAttentionRequired);
-  const canRepairPayment = ["requires_action", "failed"].includes(value.paymentStatus) && Boolean(publicConfig?.stripePublishableKey);
+  const canRepairPayment = ["requires_action", "failed"].includes(value.paymentStatus)
+    && Boolean(publicConfig?.squareApplicationId || publicConfig?.stripePublishableKey);
   panel.hidden = !paymentNeedsHelp && !orderNeedsHelp;
   if (panel.hidden) {
     title.textContent = "";
@@ -990,11 +1008,11 @@ function renderAttention(value) {
       ? "Please update payment below. Our team is also reviewing an order detail and will contact you if anything else is needed."
       : "Our team is reviewing the payment and an order detail. We’ll contact you using the information on the order if anything is needed.";
   } else if (paymentNeedsHelp) {
-    title.textContent = "Payment needs your attention";
+    title.textContent = "Payment Failed · Action Required";
     copy.textContent = canRepairPayment
       ? value.paymentStatus === "requires_action"
         ? "Your card needs confirmation. Use the secure payment section below to keep this order moving."
-        : "The card could not be charged. Update it below; this retries the same order and does not create a duplicate charge."
+        : "The card could not be charged. Update your payment method below; staff will retry the same order charge."
       : "The payment is being reviewed. We’ll contact you using the information on the order if anything is needed.";
   } else {
     title.textContent = "Our team is reviewing an order detail";
@@ -1204,11 +1222,11 @@ function proposalCard(schedule, proposal) {
   if (proposal.expiresAt) card.append(textNode("p", `Respond by ${formatDate(proposal.expiresAt)}.`));
   if (proposal.blockedReason) card.append(textNode("p", "That pickup window is no longer available. Choose another open time to continue."));
   const actions = actionGroup();
-  if (proposal.routeId) actions.append(actionButton("Continue with proposed route", "proposal-confirm", {
+  if (proposal.routeId) actions.append(actionButton("Continue with proposed pickup time", "proposal-confirm", {
     proposalId: proposal.proposalId,
     routeId: proposal.routeId,
   }));
-  actions.append(actionButton(proposal.routeId ? "Choose another route" : "Choose a route", "proposal-change-route", {
+  actions.append(actionButton(proposal.routeId ? "Choose another pickup time" : "Choose a pickup time", "proposal-change-route", {
     proposalId: proposal.proposalId,
   }, "secondary"));
   if (proposal.status === "proposed") actions.append(actionButton("Skip this pickup", "recurring-skip", {
@@ -1366,8 +1384,10 @@ function focusStepUp() {
 
 function closePaymentReplacement() {
   destroyPaymentMethodReplacement();
+  destroySquareCardReplacement();
   recoverySetupIntentId = "";
   confirmedReplacementSetupIntentId = "";
+  recoveryPaymentProvider = "stripe";
   const form = $("#pud-payment-method-form");
   if (form) form.hidden = true;
   const actions = $("[data-payment-actions]");
@@ -1382,7 +1402,10 @@ function clearMemoryCredentials() {
   closePaymentReplacement();
   closeConfirmation();
   clearRescheduledCalendar();
-  pendingRotation = null;
+}
+
+function clearOrderLoadedState() {
+  delete root.dataset.orderLoaded;
 }
 
 function clearFeedbackState() {
@@ -1503,6 +1526,14 @@ function pickupWindowLabel(value) {
   return "Scheduled pickup window";
 }
 
+function formatSavedWindow(startAt, endAt, fallback) {
+  if (!startAt) return translateText(fallback);
+  const start = formatDate(startAt);
+  if (!endAt) return start;
+  const end = formatDate(endAt);
+  return `${start} – ${end}`;
+}
+
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return translateText("date unavailable");
@@ -1525,6 +1556,8 @@ function message(text, variant = "error") {
   const node = $("[data-message]");
   node.textContent = translateExternalText(text);
   node.dataset.variant = variant;
+  node.setAttribute("role", variant === "error" ? "alert" : "status");
+  node.setAttribute("aria-live", variant === "error" ? "assertive" : "polite");
   node.hidden = !text;
-  if (text) node.focus();
+  if (text && variant === "error") node.focus();
 }

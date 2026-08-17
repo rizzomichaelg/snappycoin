@@ -1,10 +1,10 @@
 import { PUD_CONFIG } from "./pud-config.js";
 import { createOrder, getPublicConfig, joinWaitlist } from "./pud-api.js";
 import { attribution, setSelfReportedSource, trackFunnel } from "./pud-attribution.js";
-import { displayAddress, validateAddress } from "./pud-address.js";
-import { formatRoute, renderRoutes, routeOptions } from "./pud-scheduling.js";
-import { beginPhoneVerification, confirmPhoneVerification, normalizeUsPhone, resendPhoneVerification } from "./pud-phone.js";
-import { confirmPayment, destroyPayment, preparePayment } from "./pud-payment.js";
+import { displayAddress, enableAddressAutocomplete, validateAddress } from "./pud-address.js";
+import { eligibleDeliveryRoutes, formatRoute, renderRouteDays, renderRouteTimes, routeOptions } from "./pud-scheduling.js";
+import { beginPhoneVerification, bindPhoneFormatting, confirmPhoneVerification, normalizeUsPhone, resendPhoneVerification } from "./pud-phone.js";
+import { destroySquareCard, prepareSquareCard, tokenizeSquareCard } from "./pud-payment.js";
 import { stableActionKey } from "./pud-idempotency.js";
 import { clearReorderBootstrap, prefillReorderAddress, prefillReorderDetails, takeReorderBootstrap } from "./pud-reorder.js";
 import { downloadPickupCalendar } from "./pud-calendar.js";
@@ -20,18 +20,18 @@ const state = {
   address: null,
   addressProof: "",
   routes: [],
+  deliveryRoutes: [],
   routeId: "",
+  deliveryRouteId: "",
   verificationId: "",
   phoneProof: "",
-  setupIntentId: "",
-  checkoutProof: "",
   reorderBootstrap: null,
   waitlistContinuationToken: waitlistBootstrap?.token || "",
   waitlistRouteId: waitlistBootstrap?.routeId || "",
   calendarPickup: null,
 };
 
-const steps = ["address", "details", "phone", "payment", "review", "complete"];
+const allSteps = ["address", "details", "phone", "review", "complete"];
 const $ = (selector) => root.querySelector(selector);
 let turnstileSiteKey = "";
 let submissionInFlight = false;
@@ -43,19 +43,20 @@ async function boot() {
   state.reorderBootstrap = takeReorderBootstrap();
   if (state.reorderBootstrap) {
     prefillReorderAddress($("#pud-address-form"), state.reorderBootstrap);
-    showMessage(state.reorderBootstrap.recurringProposalId
-      ? `Reviewing a recurring pickup from ${state.reorderBootstrap.priorOrderNumber}. Recheck the address, route, phone, and card before confirming it.`
-      : `Reordering ${state.reorderBootstrap.priorOrderNumber}. Recheck the address, phone, and card to create a new order.`, "success");
-  } else if (state.waitlistContinuationToken) {
-    showMessage("Your waitlist invitation is ready. Recheck the address, verify the invited phone, and complete secure checkout for the reserved pickup window.", "success");
   }
   state.config = await getPublicConfig();
-  root.dataset.paymentCollection = state.config.inPersonPaymentEnabled === true ? "in_person" : "online";
-  configurePaymentCollection();
+  enableAddressAutocomplete($("#pud-address-form"), state.config.addressAutocompleteEnabled === true);
+  root.dataset.paymentCollection = "square_card_on_file";
+  showResumeMessage();
   configureCodeFields();
+  configureHandoff();
   if (!state.config.publicEnabled) return showUnavailable(state.config.message || "Pickup and delivery is not accepting bookings yet.");
   const price = state.config.pricing || {};
-  $("[data-pud-price]").textContent = `${money(price.pricePerLbCents ?? 199)}/lb · ${money(price.minimumCents ?? 3500)} minimum${price.deliveryFeeCents ? ` · ${money(price.deliveryFeeCents)} delivery` : ""}`;
+  const pricePerLbCents = price.pricePerLbCents ?? 135;
+  $("[data-pud-current-price]").textContent = `${money(pricePerLbCents)}/lb`;
+  $("[data-pud-minimum]").textContent = `${compactMoney(price.minimumCents ?? 1500)} minimum`;
+  const promotion = $("[data-pud-promotion]");
+  if (promotion) promotion.hidden = pricePerLbCents !== 135;
   $("[data-pud-service-area-offer]").hidden = price.deliveryFeeCents !== 0;
   await setupTurnstile(state.config.turnstileSiteKey);
   showStep(state.step);
@@ -65,11 +66,17 @@ async function boot() {
   trackFunnel("pud_page_viewed");
 }
 
+function compactMoney(cents) {
+  const value = Number(cents);
+  return Number.isInteger(value) && value % 100 === 0 ? `$${value / 100}` : money(value);
+}
+
 function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
   root.addEventListener("change", onChange);
-  window.addEventListener("popstate", () => showStep(history.state?.pudStep || state.step, false));
+  window.addEventListener("popstate", () => showStep(history.state?.pudStep || state.step, true));
+  bindPhoneFormatting(root);
 }
 
 async function onSubmit(event) {
@@ -78,18 +85,18 @@ async function onSubmit(event) {
   if (!(form instanceof HTMLFormElement) || submissionInFlight) return;
   submissionInFlight = true;
   clearMessage();
+  clearFieldErrors(form);
   setBusy(form, true);
   try {
     if (form.id === "pud-address-form") await submitAddress(form);
     if (form.id === "pud-details-form") await submitDetails(form);
     if (form.id === "pud-phone-form") await submitPhone(form);
     if (form.id === "pud-code-form") await submitCode(form);
-    if (form.id === "pud-payment-form") await submitPayment();
     if (form.id === "pud-review-form") await submitOrder();
     if (form.id === "pud-waitlist-form") await submitWaitlist(form);
   } catch (error) {
     resetTurnstile(form);
-    showError(error);
+    showError(error, form);
   } finally {
     submissionInFlight = false;
     setBusy(form, false);
@@ -97,21 +104,18 @@ async function onSubmit(event) {
 }
 
 async function submitAddress(form) {
-  const turnstileToken = turnstileValue(form);
-  const { address, result } = await validateAddress(form, turnstileToken, state.attribution);
-  resetTurnstile(form);
+  const { address, result } = await validateAddress(form, undefined, state.attribution);
   if (!result || !["eligible", "out_of_zone", "review_required", "service_paused"].includes(result.eligibility)) {
     throw new Error("The address service returned an invalid eligibility result.");
   }
   state.address = result.normalizedAddress || address;
-  renderAddressAttribution(result.addressValidationAttribution);
   state.addressProof = result.addressProof || "";
   state.routeId = "";
+  state.deliveryRouteId = "";
   state.phoneProof = "";
-  state.checkoutProof = "";
-  state.setupIntentId = "";
-  destroyPayment();
+  destroySquareCard();
   state.routes = routeOptions(result);
+  state.deliveryRoutes = routeOptions(result, "deliveryRoutes");
   if (state.waitlistContinuationToken) {
     const invitedRoute = state.routes.find((route) => route.id === state.waitlistRouteId);
     if (!invitedRoute) {
@@ -121,7 +125,7 @@ async function submitAddress(form) {
     state.routeId = invitedRoute.id;
   }
   $("[data-normalized-address]").textContent = displayAddress(state.address);
-  renderRoutesForSelectedBags();
+  renderSchedulingChoices();
   const preferredRouteId = state.reorderBootstrap?.preferredRouteId;
   if (preferredRouteId && [...$("#pud-route").options].some((option) => option.value === preferredRouteId)) {
     state.routeId = preferredRouteId;
@@ -129,105 +133,123 @@ async function submitAddress(form) {
   }
   if (result.eligibility === "out_of_zone") {
     trackFunnel("pud_address_ineligible", { reasonCategory: "outside_area" });
-    state.waitlistReason = "out_of_zone";
-    $("#pud-waitlist-address").value = displayAddress(state.address);
-    $("[data-waitlist-reason]").textContent = translateExternalText(
-      result.message || "This address is outside our current service area.",
-    );
-    return showPanel("waitlist");
+    return showWaitlist({
+      reason: "out_of_zone",
+      title: "Outside our service area",
+      message: "We do not currently serve this address. Joining the waitlist records your interest but does not reserve a pickup time or promise future service."
+    });
   }
   if (result.eligibility === "review_required") {
     trackFunnel("pud_address_ineligible", { reasonCategory: "needs_review" });
-    state.waitlistReason = "address_review";
-    $("#pud-waitlist-address").value = displayAddress(state.address);
-    $("[data-waitlist-reason]").textContent = translateExternalText(
-      result.message || "We need to review this address before promising a pickup window.",
-    );
-    showPanel("waitlist");
-    return;
+    return showWaitlist({
+      reason: "address_review",
+      title: "We need a more precise address",
+      message: "We could not confidently match this address to a pickup location. Check the street, city, ZIP, and apartment or unit. You can edit it now or join the waitlist for staff review; joining does not reserve a pickup time."
+    });
   }
   if (result.eligibility === "service_paused") {
-    trackFunnel("pud_address_ineligible", { reasonCategory: "capacity" });
-    state.waitlistReason = "service_paused";
-    $("#pud-waitlist-address").value = displayAddress(state.address);
-    $("[data-waitlist-reason]").textContent = "Pickup service is paused. Join the waitlist and we will contact you when booking reopens.";
-    showPanel("waitlist");
-    return;
+    trackFunnel("pud_address_ineligible", { reasonCategory: "unknown" });
+    return showWaitlist({
+      reason: "service_paused",
+      title: "Pickup service is temporarily paused",
+      message: "Pickup service is paused. Join the waitlist and we will contact you when booking reopens."
+    });
   }
   if (!state.addressProof) throw new Error("The address check expired. Please check the address again.");
   if (!state.config.bookingEnabled) {
     trackFunnel("pud_address_eligible");
     showMessage("This address is eligible. Online booking is temporarily paused, so no pickup request can be submitted yet. You can check another address or return when booking reopens.", "success");
-    return showStep("address");
+    return showStep("address", true);
   }
   if (!state.routes.length) {
-    trackFunnel("pud_address_ineligible", { reasonCategory: "capacity" });
-    state.waitlistReason = "route_full";
-    $("#pud-waitlist-address").value = displayAddress(state.address);
-    $("[data-waitlist-reason]").textContent = "Current pickup routes are full. Join the waitlist and we will contact you if space opens.";
-    showPanel("waitlist");
-    return;
+    trackFunnel("pud_address_ineligible", { reasonCategory: "unknown" });
+    const outcome = result.availability?.status;
+    if (outcome === "turnaround_unconfigured") {
+      return showWaitlist({
+        reason: "service_paused",
+        title: "Pickup times are awaiting schedule confirmation",
+        message: "This address is eligible, but the configured pickup windows do not yet have an approved return time. We cannot offer one until that operating decision is recorded. Join the waitlist to be contacted when booking opens."
+      });
+    }
+    if (outcome === "cutoff_passed") {
+      return showWaitlist({
+        reason: "route_full",
+        title: "The booking cutoff has passed",
+        message: "This address is eligible, but the cutoff has passed for the configured pickup windows. Join the waitlist to be considered when another approved window opens."
+      });
+    }
+    if (outcome === "not_configured") {
+      return showWaitlist({
+        reason: "service_paused",
+        title: "No pickup windows are scheduled yet",
+        message: "This address is eligible, but no future pickup window is currently configured. Join the waitlist to be contacted after the schedule is approved and opened."
+      });
+    }
+    return showWaitlist({
+      reason: "service_paused",
+      title: "Pickup times are unavailable",
+      message: "This address is eligible, but no valid pickup time is currently available. Join the waitlist and we will contact you when scheduling reopens."
+    });
   }
   if (state.reorderBootstrap) {
     prefillReorderDetails($("#pud-details-form"), state.reorderBootstrap);
-    renderRoutesForSelectedBags();
+    renderSchedulingChoices();
     $("[data-reorder-phone-last4]").textContent = `For security, re-enter and verify the mobile number ending in ${state.reorderBootstrap.customer.phoneLast4}.`;
   }
   trackFunnel("pud_address_eligible");
   go("details");
 }
 
-function renderAddressAttribution(attributionValue) {
-  const showGoogleMaps = attributionValue === "Google Maps";
-  root.querySelectorAll("[data-address-attribution]").forEach((element) => {
-    element.hidden = !showGoogleMaps;
-  });
+function showWaitlist({ reason, title, message }) {
+  state.waitlistReason = reason;
+  $("#pud-waitlist-address").value = displayAddress(state.address);
+  $("[data-waitlist-title]").textContent = translateExternalText(title);
+  $("[data-waitlist-reason]").textContent = translateExternalText(message);
+  showPanel("waitlist");
 }
 
 async function submitDetails(form) {
   const data = new FormData(form);
-  const estimatedBags = Number(data.get("estimatedBags") || 1);
-  const availableRoutes = routesForBagCount(estimatedBags);
   state.routeId = state.waitlistContinuationToken
     ? state.waitlistRouteId
     : String(data.get("routeId") || "");
+  state.deliveryRouteId = String(data.get("deliveryRouteId") || "");
   if (!state.routeId) throw new Error("Choose a pickup window.");
-  if (!availableRoutes.some((route) => route.id === state.routeId)) {
-    throw new Error(`That pickup window does not have room for ${estimatedBags} estimated bag${estimatedBags === 1 ? "" : "s"}. Choose another window or a lower bag estimate.`);
-  }
+  const pickupRoute = state.routes.find((route) => route.id === state.routeId);
+  const deliveryRoute = eligibleDeliveryRoutes(state.deliveryRoutes, pickupRoute, state.config.scheduling?.minimumDeliveryDelayHours ?? 24)
+    .find((route) => route.id === state.deliveryRouteId);
+  if (!pickupRoute) throw new Error("That pickup window is no longer available.");
+  if (!deliveryRoute) throw new Error("Choose a delivery window at least 24 hours after pickup.");
   state.customer = {
     firstName: String(data.get("firstName") || "").trim(),
     lastName: String(data.get("lastName") || "").trim(),
     email: String(data.get("email") || "").trim(),
     phone: normalizeUsPhone(data.get("phone")),
   };
-  setSelfReportedSource(state.attribution, data.get("selfReportedSource"));
+  const unattendedPickup = data.get("pickupHandoff") === "unattended";
+  const unattendedPickupAuthorized = data.get("unattendedPickupAuthorization") === "yes";
+  if (unattendedPickup && !unattendedPickupAuthorized) {
+    throw new Error("Authorize pickup from the secure location or choose to hand the bags to the driver.");
+  }
   state.order = {
-    estimatedBags,
-    detergent: String(data.get("detergent") || "standard"),
-    softenerPref: String(data.get("softenerPref") || "none"),
+    detergent: String(data.get("detergent") || "premium"),
+    softenerPref: String(data.get("softenerPref") || "liquid"),
     specialInstructions: String(data.get("specialInstructions") || "").trim(),
-    unattendedPickup: data.get("unattendedPickup") === "yes",
-    accessNotes: String(data.get("accessNotes") || "").trim(),
+    unattendedPickup,
+    accessNotes: unattendedPickup ? String(data.get("accessNotes") || "").trim() : "",
   };
   state.consents = {
     terms: data.get("terms") === "yes",
-    privacy: data.get("privacy") === "yes",
-    transactionalSms: data.get("transactionalSms") === "yes",
-    savedPaymentMethod: data.get("savedPaymentMethod") === "yes",
-    unattendedPickup: data.get("unattendedPickup") === "yes",
-    marketingEmail: data.get("marketingEmail") === "yes",
-    marketingSms: data.get("marketingSms") === "yes",
+    privacy: true,
+    transactionalSms: true,
+    savedPaymentMethod: false,
+    unattendedPickup: unattendedPickupAuthorized,
+    marketingEmail: false,
+    marketingSms: false,
     consentVersion: state.config.consentVersion || "owner-approval-required",
   };
-  if (!state.consents.terms || !state.consents.privacy || !state.consents.transactionalSms ||
-      (state.config.inPersonPaymentEnabled !== true && !state.consents.savedPaymentMethod)) {
-    throw new Error(state.config.inPersonPaymentEnabled === true
-      ? "Accept the required service, privacy, and messaging terms."
-      : "Accept the required service, privacy, messaging, and saved-card terms.");
-  }
-  const result = await beginPhoneVerification(state.customer.phone, turnstileValue(form));
-  resetTurnstile(form);
+  if (!state.consents.terms) throw new Error("Accept the service terms.");
+  const result = await beginPhoneVerification(state.customer.phone);
   state.verificationId = result.verificationId;
   $("[data-phone-last4]").textContent = state.customer.phone.slice(-4);
   trackFunnel("pud_booking_started");
@@ -243,72 +265,52 @@ async function submitCode(form) {
   const result = await confirmPhoneVerification(state.verificationId, code);
   state.phoneProof = result.phoneProof;
   trackFunnel("pud_phone_verified");
-  if (state.config.inPersonPaymentEnabled === true) {
-    populateReview();
-    return go("review");
-  }
-  go("payment");
+  populateReview();
+  go("review");
   const paymentMount = $("#pud-payment-element");
   paymentMount.replaceChildren();
-  const route = state.routes.find((item) => item.id === state.routeId);
-  if (!route?.routeProof) throw new Error("The selected pickup window expired. Please check the address again.");
-  // These proofs are hashed into the browser-session action fingerprint; they
-  // are never persisted by stableActionKey.
-  const setupSignature = JSON.stringify([
-    state.phoneProof, state.addressProof, route.routeProof,
-    state.customer.firstName, state.customer.lastName, state.customer.email,
-    state.waitlistContinuationToken || null,
-  ]);
-  const setupKey = await stableActionKey("payment-setup", setupSignature);
-  const checkoutAttemptId = await stableActionKey("checkout-attempt", setupSignature);
-  const prepared = await preparePayment({
-    publicConfig: state.config,
-    checkoutAttemptId,
-    phoneProof: state.phoneProof,
-    addressProof: state.addressProof,
-    routeProof: route.routeProof,
-    firstName: state.customer.firstName,
-    lastName: state.customer.lastName,
-    email: state.customer.email || undefined,
-    attribution: state.attribution,
-    waitlistContinuationToken: state.waitlistContinuationToken || undefined,
-    idempotencyKey: setupKey,
-    mount: paymentMount,
-  });
-  state.setupIntentId = prepared.setupIntentId;
-  state.checkoutProof = prepared.checkoutProof;
-}
-
-async function submitPayment() {
-  const setupIntent = await confirmPayment(`${location.origin}${withLocalePath(PUD_CONFIG.statusPath)}`);
-  state.setupIntentId = setupIntent.id;
-  populateReview();
-  trackFunnel("pud_card_saved");
-  go("review");
+  try {
+    await prepareSquareCard(state.config, paymentMount);
+  } catch (error) {
+    const paymentError = $("[data-payment-form-error]");
+    paymentError.textContent = error.message;
+    paymentError.hidden = false;
+    throw error;
+  }
 }
 
 async function submitOrder() {
   const consentVersion = state.config.consentVersions || {};
-  const inPerson = state.config.inPersonPaymentEnabled === true;
   const route = state.routes.find((item) => item.id === state.routeId);
-  if (inPerson && !route?.routeProof) throw new Error("The selected pickup window expired. Please check the address again.");
+  const deliveryRoute = state.deliveryRoutes.find((item) => item.id === state.deliveryRouteId);
+  if (!route?.routeProof || !deliveryRoute?.routeProof) throw new Error("The selected pickup or delivery window expired. Please check the address again.");
+  const optionalData = new FormData($("#pud-review-form"));
+  const source = optionalData.get("selfReportedSource");
+  const sourceDetail = String(optionalData.get("selfReportedSourceDetail") || "").trim();
+  setSelfReportedSource(state.attribution, source, sourceDetail || undefined);
+  state.consents.marketingEmail = optionalData.get("marketingEmail") === "yes";
+  state.consents.savedPaymentMethod = optionalData.get("savedPaymentMethod") === "yes";
+  if (!state.consents.savedPaymentMethod) throw new Error("Accept the saved-card authorization to book pickup.");
+  const squareCardToken = await tokenizeSquareCard({
+    givenName: state.customer.firstName,
+    familyName: state.customer.lastName,
+    email: state.customer.email,
+    countryCode: "US",
+  });
   const intent = {
     firstName: state.customer.firstName,
     lastName: state.customer.lastName,
     email: state.customer.email,
     address: state.address,
     routeId: state.routeId,
-    ...(inPerson ? {
-      paymentCollectionMethod: "in_person",
-      phoneProof: state.phoneProof,
-      addressProof: state.addressProof,
-      routeProof: route.routeProof,
-    } : {
-      setupIntentId: state.setupIntentId,
-      checkoutProof: state.checkoutProof,
-    }),
+    deliveryRouteId: state.deliveryRouteId,
+    phoneProof: state.phoneProof,
+    addressProof: state.addressProof,
+    routeProof: route.routeProof,
+    deliveryRouteProof: deliveryRoute.routeProof,
+    squareCardToken,
+    turnstileToken: turnstileValue($("#pud-review-form")),
     preferences: {
-      estimatedBags: state.order.estimatedBags,
       detergent: state.order.detergent,
       softenerPref: state.order.softenerPref,
       unattendedPickup: state.order.unattendedPickup,
@@ -330,12 +332,22 @@ async function submitOrder() {
     promotionCode: state.config.promotionsEnabled === true ? $("#pud-promotion-code")?.value.trim() || undefined : undefined,
     referralCode: state.config.referralsEnabled === true ? $("#pud-referral-code")?.value.trim() || undefined : undefined,
     recurringProposalId: state.reorderBootstrap?.recurringProposalId || undefined,
+    waitlistContinuationToken: state.waitlistContinuationToken || undefined,
     locale: getLocale?.() || undefined,
   };
-  const orderKey = await stableActionKey("order", JSON.stringify([state.checkoutProof, state.setupIntentId, state.phoneProof, state.addressProof, route?.routeProof, intent]));
+  const stableIntent = { ...intent, squareCardToken: "[square-token]", turnstileToken: "[turnstile-token]" };
+  const orderKey = await stableActionKey("order", JSON.stringify([state.phoneProof, state.addressProof, route.routeProof, deliveryRoute.routeProof, stableIntent]));
   const result = await createOrder({ idempotencyKey: orderKey, ...intent }, orderKey);
   const token = result.statusToken;
   if (!token || !result.orderNumber) throw new Error("The order was created without a private status link. Contact support with the request ID.");
+  try {
+    await window.SnappyAnalytics?.trackWdfPickupBookingCompleted?.({
+      orderNumber: result.orderNumber,
+      duplicate: result.duplicate === true,
+    });
+  } catch (_error) {
+    // Measurement must never turn a valid booking into a customer-facing failure.
+  }
   $("[data-order-number]").textContent = result.orderNumber;
   const selectedRoute = state.routes.find((item) => item.id === state.routeId);
   state.calendarPickup = selectedRoute?.windowStartAt && selectedRoute?.windowEndAt
@@ -353,6 +365,7 @@ async function submitOrder() {
   clearWaitlistContinuation();
   clearReorderBootstrap();
   trackFunnel("pud_order_submitted", { duplicate: Boolean(result.duplicate) });
+  clearMessage();
   go("complete");
 }
 
@@ -375,9 +388,26 @@ async function submitWaitlist(form) {
     consentVersions: state.config.consentVersions || { marketing_email: state.config.consentVersion || "owner-approval-required", marketing_sms: state.config.consentVersion || "owner-approval-required" },
   };
   const waitlistKey = await stableActionKey("waitlist", JSON.stringify(intent));
-  await joinWaitlist(intent, waitlistKey);
+  const result = await joinWaitlist(intent, waitlistKey);
   trackFunnel("pud_waitlist_joined");
-  form.replaceChildren(Object.assign(document.createElement("p"), { textContent: "You’re on the list. We’ll contact you if service opens for your address." }));
+  const confirmation = document.createElement("div");
+  confirmation.className = "pud-waitlist-confirmation";
+  confirmation.setAttribute("role", "status");
+  confirmation.setAttribute("tabindex", "-1");
+  confirmation.append(
+    Object.assign(document.createElement("h3"), { textContent: "Waitlist request recorded" }),
+    Object.assign(document.createElement("p"), {
+      textContent: "We saved your request. This is not a booking or reserved pickup time. Staff will contact you if an approved opening becomes available."
+    }),
+    Object.assign(document.createElement("p"), {
+      className: "pud-fine-print",
+      textContent: result?.confirmationEmailQueued
+        ? "A confirmation email has been queued."
+        : "No confirmation email is sent from the current waitlist workflow; keep this on-screen confirmation."
+    })
+  );
+  form.replaceWith(confirmation);
+  confirmation.focus();
 }
 
 async function onClick(event) {
@@ -413,7 +443,10 @@ async function onClick(event) {
     }
   }
   if (button.dataset.action === "print-confirmation") window.print();
-  if (button.dataset.action === "back") go(button.dataset.step || steps[Math.max(0, steps.indexOf(state.step) - 1)]);
+  if (button.dataset.action === "back") {
+    const activeSteps = activeBookingSteps();
+    go(button.dataset.step || activeSteps[Math.max(0, activeSteps.indexOf(state.step) - 1)]);
+  }
   if (button.dataset.action === "edit") go(button.dataset.step);
   if (button.dataset.action === "resend") {
     const resendForm = $("#pud-resend-form");
@@ -435,25 +468,60 @@ async function onClick(event) {
 }
 
 function onChange(event) {
-  if (event.target?.matches?.('[name="estimatedBags"]')) renderRoutesForSelectedBags();
+  if (event.target?.matches?.('[name="pickupDay"]')) renderPickupTimes();
+  if (event.target?.matches?.('[name="routeId"]')) renderDeliveryChoices();
+  if (event.target?.matches?.('[name="deliveryDay"]')) renderDeliveryTimes();
+  if (event.target?.matches?.('[name="deliveryRouteId"]')) renderSelectedSchedule();
+  if (event.target?.matches?.('[name="pickupHandoff"]')) configureHandoff();
+  if (event.target?.matches?.('[name="selfReportedSource"]')) configureReferralOther(event.target);
 }
 
 function go(step, push = true) {
-  if (!steps.includes(step)) return;
+  if (!allowedBookingSteps().includes(step)) return;
   state.step = step;
-  showStep(step);
+  showStep(step, true);
+  root.scrollIntoView({ behavior: "smooth", block: "start" });
   if (push) history.pushState({ pudStep: step }, "", `#${step}`);
 }
 
-function showStep(step) {
+function showStep(step, focusHeading = false) {
+  const activeSteps = activeBookingSteps();
+  const progress = root.querySelector(".pud-progress");
+  if (progress) progress.style.setProperty("--pud-progress-count", String(activeSteps.length));
   root.querySelectorAll("[data-step]").forEach((panel) => { panel.hidden = panel.dataset.step !== step; });
   root.querySelectorAll("[data-progress-step]").forEach((item) => {
-    const active = steps.indexOf(item.dataset.progressStep) <= steps.indexOf(step);
-    item.dataset.complete = active ? "true" : "false";
-    if (item.dataset.progressStep === step) item.setAttribute("aria-current", "step"); else item.removeAttribute("aria-current");
+    const index = activeSteps.indexOf(item.dataset.progressStep);
+    const visible = index >= 0 && step !== "complete";
+    item.hidden = !visible;
+    item.dataset.complete = visible && index < activeSteps.indexOf(step) ? "true" : "false";
+    if (visible && item.dataset.progressStep === step) item.setAttribute("aria-current", "step");
+    else item.removeAttribute("aria-current");
   });
-  root.querySelector(`[data-step="${step}"] h2`)?.focus?.();
+  root.querySelectorAll("[data-step-position]").forEach((label) => {
+    const position = progressPosition(label.dataset.stepPosition || step);
+    label.textContent = position ? progressLabel(position) : "";
+  });
+  if (progress) progress.hidden = step === "complete";
+  if (focusHeading) root.querySelector(`[data-step="${step}"] h2`)?.focus?.();
   ensureTurnstile(root.querySelector(`[data-step="${step}"]`));
+}
+
+function activeBookingSteps() {
+  return allSteps.filter((step) => step !== "complete");
+}
+
+function allowedBookingSteps() {
+  return [...activeBookingSteps(), "complete"];
+}
+
+function progressPosition(step) {
+  const steps = activeBookingSteps();
+  const index = steps.indexOf(step);
+  return index >= 0 ? { current: index + 1, total: steps.length } : null;
+}
+
+function progressLabel({ current, total }) {
+  return `${translateText("Step")} ${current} ${translateText("of")} ${total}`;
 }
 
 function showPanel(name) {
@@ -470,52 +538,91 @@ function configureCodeFields() {
   if (codeFields) codeFields.hidden = promotionField?.hidden !== false && referralField?.hidden !== false;
 }
 
-function configurePaymentCollection() {
-  const inPerson = state.config?.inPersonPaymentEnabled === true;
-  const paymentStep = $("[data-payment-step]");
-  const savedPaymentConsent = $("[data-saved-payment-consent]");
-  const inPersonCopy = $("[data-in-person-payment-copy]");
-  const paymentSummary = $("[data-payment-summary]");
-  const reviewPaymentCopy = $("[data-review-payment-copy]");
-  if (paymentStep) paymentStep.hidden = inPerson;
-  if (savedPaymentConsent) {
-    savedPaymentConsent.hidden = inPerson;
-    savedPaymentConsent.querySelector("input").required = !inPerson;
-  }
-  if (inPersonCopy) inPersonCopy.hidden = !inPerson;
-  if (paymentSummary) paymentSummary.textContent = inPerson ? "Pay in person after final weighing" : "Charged once, after weighing";
-  if (reviewPaymentCopy) reviewPaymentCopy.textContent = inPerson
-    ? "Submitting reserves route capacity. Final total is based on actual weight; pay in person after weighing. No card is collected online."
-    : "Submitting reserves route capacity. Your card is charged only after weighing, using the price and minimum shown above plus any configured tax or disclosed fee.";
+function configureHandoff() {
+  const details = $("[data-unattended-pickup-details]");
+  const unattended = $('[name="pickupHandoff"]:checked')?.value === "unattended";
+  if (!details) return;
+  details.hidden = !unattended;
+  const notes = details.querySelector('[name="accessNotes"]');
+  const authorization = details.querySelector('[name="unattendedPickupAuthorization"]');
+  if (notes) notes.required = unattended;
+  if (authorization) authorization.required = unattended;
 }
 
-function routesForBagCount(bagCount) {
-  if (state.waitlistContinuationToken) return state.routes;
-  return state.routes.filter((route) => {
-    const remainingBags = Number(route.remainingBags);
-    return !Number.isFinite(remainingBags) || remainingBags >= bagCount;
-  });
+function showResumeMessage() {
+  if (state.reorderBootstrap) {
+    const priorOrder = state.reorderBootstrap.priorOrderNumber;
+    showMessage(state.reorderBootstrap.recurringProposalId
+      ? `Reviewing a recurring pickup from ${priorOrder}. Recheck the address, pickup and delivery times, phone, and card before confirming it.`
+      : `Reordering ${priorOrder}. Recheck the address, schedule, phone, and card to create a new order.`, "success");
+    return;
+  }
+  if (state.waitlistContinuationToken) {
+    showMessage("Your waitlist invitation is ready. Recheck the address, verify the invited phone, and complete secure card setup for the reserved pickup window.", "success");
+  }
 }
 
-function renderRoutesForSelectedBags() {
-  const select = $("#pud-route");
-  if (!select) return [];
-  const bagCount = Math.max(1, Number($("#pud-estimated-bags")?.value || 1));
-  const selectedRouteId = select.value || state.routeId;
-  const availableRoutes = routesForBagCount(bagCount);
-  renderRoutes(select, availableRoutes);
-  if (selectedRouteId && availableRoutes.some((route) => route.id === selectedRouteId)) {
-    select.value = selectedRouteId;
-  } else if (state.routeId === selectedRouteId) {
-    state.routeId = "";
+function renderSchedulingChoices() {
+  renderRouteDays($("#pud-pickup-day"), state.routes, "Choose a pickup day");
+  renderRouteTimes($("#pud-route"), [], "", "Choose a pickup time");
+  renderRouteDays($("#pud-delivery-day"), [], "Choose a delivery day");
+  renderRouteTimes($("#pud-delivery-route"), [], "", "Choose a delivery time");
+  const preferred = state.routes.find((route) => route.id === (state.waitlistRouteId || state.reorderBootstrap?.preferredRouteId));
+  if (preferred) {
+    $("#pud-pickup-day").value = preferred.routeDate;
+    renderPickupTimes();
+    $("#pud-route").value = preferred.id;
+    renderDeliveryChoices();
   }
-  const note = $("[data-route-capacity-note]");
-  if (note) {
-    note.textContent = availableRoutes.length
-      ? `${availableRoutes.length} pickup window${availableRoutes.length === 1 ? "" : "s"} can currently take ${bagCount} estimated bag${bagCount === 1 ? "" : "s"}.`
-      : `No listed pickup window has room for ${bagCount} estimated bag${bagCount === 1 ? "" : "s"}. Choose a lower estimate or call the store.`;
-  }
-  return availableRoutes;
+}
+
+function renderPickupTimes() {
+  const date = $("#pud-pickup-day").value;
+  renderRouteTimes($("#pud-route"), state.routes, date, "Choose a pickup time");
+  state.routeId = "";
+  renderDeliveryChoices();
+}
+
+function renderDeliveryChoices() {
+  state.routeId = $("#pud-route").value;
+  const pickup = state.routes.find((route) => route.id === state.routeId);
+  const eligible = eligibleDeliveryRoutes(state.deliveryRoutes, pickup, state.config?.scheduling?.minimumDeliveryDelayHours ?? 24);
+  renderRouteDays($("#pud-delivery-day"), eligible, "Choose a delivery day");
+  renderRouteTimes($("#pud-delivery-route"), [], "", "Choose a delivery time");
+  state.deliveryRouteId = "";
+  $("[data-route-availability-note]").textContent = pickup
+    ? "Choose a delivery day and time."
+    : "Choose a day first, then an available one-hour window.";
+  renderSelectedSchedule();
+}
+
+function renderDeliveryTimes() {
+  const pickup = state.routes.find((route) => route.id === state.routeId);
+  const eligible = eligibleDeliveryRoutes(state.deliveryRoutes, pickup, state.config?.scheduling?.minimumDeliveryDelayHours ?? 24);
+  renderRouteTimes($("#pud-delivery-route"), eligible, $("#pud-delivery-day").value, "Choose a delivery time");
+  state.deliveryRouteId = "";
+  renderSelectedSchedule();
+}
+
+function renderSelectedSchedule() {
+  const pickupTarget = $("[data-selected-pickup]");
+  const returnTarget = $("[data-selected-return]");
+  if (!pickupTarget || !returnTarget) return;
+  state.deliveryRouteId = $("#pud-delivery-route")?.value || "";
+  const pickup = state.routes.find((route) => route.id === state.routeId);
+  const delivery = state.deliveryRoutes.find((route) => route.id === state.deliveryRouteId);
+  pickupTarget.textContent = pickup ? formatRoute(pickup) : "Choose a pickup day and time.";
+  returnTarget.textContent = delivery ? formatRoute(delivery) : "Choose pickup first, then select delivery.";
+}
+
+function configureReferralOther(select) {
+  const field = $("[data-referral-other]");
+  if (!field) return;
+  const visible = select.value === "other";
+  field.hidden = !visible;
+  const input = field.querySelector("input");
+  input.required = false;
+  if (!visible) input.value = "";
 }
 
 function money(cents) {
@@ -530,9 +637,13 @@ function showUnavailable(message) {
 function populateReview() {
   $("[data-review-address]").textContent = displayAddress(state.address);
   const route = state.routes.find((item) => item.id === state.routeId);
+  const deliveryRoute = state.deliveryRoutes.find((item) => item.id === state.deliveryRouteId);
   $("[data-review-route]").textContent = route ? formatRoute(route) : state.routeId;
+  $("[data-review-return]").textContent = deliveryRoute ? formatRoute(deliveryRoute) : state.deliveryRouteId;
   $("[data-review-customer]").textContent = `${state.customer.firstName} ${state.customer.lastName} · •••• ${state.customer.phone.slice(-4)}`;
-  $("[data-review-bags]").textContent = `${state.order.estimatedBags} estimated bag${state.order.estimatedBags === 1 ? "" : "s"}`;
+  const detergent = state.order.detergent.replaceAll("_", " ");
+  const softener = state.order.softenerPref.replaceAll("_", " ");
+  $("[data-review-laundry]").textContent = `Detergent: ${detergent} · Softener: ${softener}${state.order.specialInstructions ? ` · ${state.order.specialInstructions}` : ""}`;
 }
 
 function setBusy(form, busy) {
@@ -594,13 +705,53 @@ function showMessage(text, variant = "error") {
   const node = $("[data-message]");
   node.textContent = translateExternalText(text);
   node.dataset.variant = variant;
+  node.setAttribute("role", variant === "error" ? "alert" : "status");
+  node.setAttribute("aria-live", variant === "error" ? "assertive" : "polite");
   node.hidden = !text;
-  node.focus();
+  if (text && variant === "error") node.focus();
 }
 
 function clearMessage() { showMessage(""); }
-function showError(error) {
+function clearFieldErrors(form) {
+  if (!(form instanceof HTMLFormElement)) return;
+  form.querySelectorAll("[data-field-error]").forEach((node) => node.remove());
+  Array.from(form.elements).forEach((field) => {
+    if (!(field instanceof HTMLElement)) return;
+    field.removeAttribute("aria-invalid");
+    const describedBy = (field.getAttribute("aria-describedby") || "")
+      .split(/\s+/)
+      .filter((id) => id && !id.startsWith("pud-field-error-"));
+    if (describedBy.length) field.setAttribute("aria-describedby", describedBy.join(" "));
+    else field.removeAttribute("aria-describedby");
+  });
+}
+
+function renderFieldErrors(form, fieldErrors) {
+  if (!(form instanceof HTMLFormElement) || !fieldErrors || typeof fieldErrors !== "object") return;
+  let errorIndex = 0;
+  for (const [rawName, rawMessage] of Object.entries(fieldErrors)) {
+    const fieldName = String(rawName).split(".").at(-1);
+    const field = Array.from(form.elements).find((element) => element.name === rawName || element.name === fieldName);
+    if (!(field instanceof HTMLElement)) continue;
+    const message = Array.isArray(rawMessage) ? rawMessage[0] : rawMessage;
+    if (!message) continue;
+    const errorId = `pud-field-error-${form.id || "form"}-${errorIndex += 1}`;
+    const errorNode = document.createElement("small");
+    errorNode.id = errorId;
+    errorNode.className = "pud-field-error";
+    errorNode.dataset.fieldError = fieldName;
+    errorNode.textContent = translateExternalText(String(message));
+    field.setAttribute("aria-invalid", "true");
+    field.setAttribute("aria-describedby", [field.getAttribute("aria-describedby"), errorId].filter(Boolean).join(" "));
+    const fieldLabel = field.closest("label");
+    if (fieldLabel) fieldLabel.append(errorNode);
+    else field.insertAdjacentElement("afterend", errorNode);
+  }
+}
+
+function showError(error, form) {
   showMessage(error?.message || "Something went wrong. Please try again.");
+  renderFieldErrors(form, error?.fieldErrors);
 }
 function fatal(error) {
   if (!root) return;

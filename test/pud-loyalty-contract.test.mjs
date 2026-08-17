@@ -41,10 +41,10 @@ test("loyalty request strips unknown data and public config requires feature fla
 
   const config = {
     publicEnabled: true,
+    addressAutocompleteEnabled: true,
     productAnalyticsEnabled: true,
     productExperimentEnabled: false,
     bookingEnabled: true,
-    inPersonPaymentEnabled: false,
     statusRecoveryEnabled: true,
     feedbackEnabled: true,
     recurringEnabled: true,
@@ -59,9 +59,13 @@ test("loyalty request strips unknown data and public config requires feature fla
     currency: "USD",
     support: { email: "support@example.com", phone: "+13146281001" },
     stripePublishableKey: null,
+    squareApplicationId: "sandbox-square-app",
+    squareLocationId: "sandbox-location",
+    squareEnvironment: "sandbox",
     turnstileSiteKey: "site-key",
     timezone: "America/Chicago",
     pricing: { pricePerLbCents: 199, minimumCents: 2500, deliveryFeeCents: 0, version: "2026-07" },
+    scheduling: { pickupLeadTimeHours: 3, sameDayBookingCutoff: "14:00", latestPickupSlotStart: "17:00", pickupSlotDurationMinutes: 60, minimumDeliveryDelayHours: 24 },
     consentVersions: { privacy: "2026-07" },
   };
   assert.equal(assertPublicConfig(config), config);

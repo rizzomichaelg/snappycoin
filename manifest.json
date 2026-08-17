@@ -1,14 +1,19 @@
 {
   "name": "Snappy Coin Laundry",
   "short_name": "Snappy Laundry",
-  "start_url": "/",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#f7f2e7",
-  "theme_color": "#153cc7",
+  "background_color": "#ffffff",
+  "theme_color": "#0069c0",
   "icons": [
     {
       "src": "assets/logo.png",
-      "sizes": "800x800",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]

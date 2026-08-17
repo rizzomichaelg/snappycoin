@@ -36,6 +36,8 @@ if (form && window.top !== window.self) {
   const evidenceHelp = document.querySelector("[data-claim-evidence-help]");
   const evidenceReview = document.querySelector("[data-evidence-review]");
   const evidenceList = document.querySelector("[data-evidence-list]");
+  const unavailablePanel = document.querySelector("[data-claim-unavailable]");
+  const unavailableCopy = document.querySelector("[data-claim-unavailable-copy]");
 
   document.querySelectorAll("[data-return-status]").forEach((link) => {
     link.addEventListener("click", (event) => {
@@ -73,10 +75,10 @@ if (form && window.top !== window.self) {
 
   if (!token || !capabilities) {
     clearMemoryCredentials();
-    disableForm("Return to the private status page, verify the mobile number, and choose Open a claim again.");
+    showClaimUnavailable("Return to the private status page, verify the mobile number, and choose Open a claim again.");
   } else if (Date.parse(capabilities.claimExpiresAt) <= Date.now()) {
     clearMemoryCredentials();
-    disableForm("The one-time claim authorization expired. Verify again from the private status page.");
+    showClaimUnavailable("The one-time claim authorization expired. Verify again from the private status page.");
   } else if (capabilities.evidenceCapabilities.length) {
     evidenceField.hidden = false;
     evidenceHelp.hidden = false;
@@ -86,18 +88,18 @@ if (form && window.top !== window.self) {
   window.addEventListener("pageshow", (event) => {
     if (!event.persisted) return;
     clearMemoryCredentials();
-    disableForm("Return to the private status page, verify the mobile number, and choose Open a claim again.");
+    showClaimUnavailable("Return to the private status page, verify the mobile number, and choose Open a claim again.");
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (submitting || evidenceUploadTerminalFailure) return;
     if (!token || !capabilities) {
-      disableForm("Return to the private status page and verify again before opening a claim.");
+      showUnavailableOrLock("Return to the private status page and verify again before opening a claim.");
       return;
     }
     if (Date.parse(capabilities.claimExpiresAt) <= Date.now()) {
       clearMemoryCredentials();
-      disableForm("The one-time claim authorization expired. Verify again from the private status page.");
+      showUnavailableOrLock("The one-time claim authorization expired. Verify again from the private status page.");
       return;
     }
     let input = pendingClaimInput;
@@ -165,13 +167,13 @@ if (form && window.top !== window.self) {
           await retireActionKey("claim", attemptId);
         }
         clearMemoryCredentials();
-        disableForm("An earlier claim request used different details and may already have been received. Check order history before opening another claim.");
+        lockClaimAttempt("An earlier claim request used different details and may already have been received. Check order history before opening another claim.");
         return;
       }
       if (["PUD_ACTION_CAPABILITY_INVALID", "PUD_ACTION_CAPABILITY_REPLAYED"].includes(error?.code) ||
           (error?.status > 0 && !error?.retryable)) {
         clearMemoryCredentials();
-        disableForm("That one-time claim authorization can no longer be used. Verify again from the private status page. Any evidence uploaded during this attempt was not submitted with a claim.");
+        lockClaimAttempt("That one-time claim authorization can no longer be used. Verify again from the private status page. Any evidence uploaded during this attempt was not submitted with a claim.");
       } else {
         const evidenceNote = uploadedEvidence.length
           ? " The secured evidence references remain only in this page and will be reused without another upload when you retry."
@@ -191,7 +193,7 @@ if (form && window.top !== window.self) {
       const evidenceCapability = capabilities.evidenceCapabilities[index];
       if (!evidenceCapability || Date.parse(evidenceCapability.expiresAt) <= Date.now()) {
         evidenceUploadTerminalFailure = true;
-        disableForm("An evidence authorization expired before the claim was submitted. Your claim was not submitted; return to the private status page and verify again.");
+        lockClaimAttempt("An evidence authorization expired before the claim was submitted. Your claim was not submitted; return to the private status page and verify again.");
         throw new Error("Evidence authorization expired.");
       }
       try {
@@ -205,16 +207,39 @@ if (form && window.top !== window.self) {
         references.push(claimEvidenceReference(asset));
       } catch (error) {
         evidenceUploadTerminalFailure = true;
-        disableForm(`The claim was not submitted because evidence file ${index + 1} could not be secured. Your entered claim details remain on this page. Return to the private status page and verify again before retrying; do not resubmit a claim just to compensate for this upload failure. ${error?.message || ""}`.trim());
+        lockClaimAttempt(`The claim was not submitted because evidence file ${index + 1} could not be secured. Your entered claim details remain on this page. Return to the private status page and verify again before retrying; do not resubmit a claim just to compensate for this upload failure. ${error?.message || ""}`.trim());
         throw error;
       }
     }
     return Object.freeze(references);
   }
 
-  function disableForm(text) {
+  function showClaimUnavailable(text) {
+    show(text, "warning");
+    form.hidden = true;
+    if (unavailablePanel) {
+      unavailablePanel.hidden = false;
+      if (unavailableCopy) unavailableCopy.textContent = translateExternalText(text);
+      unavailablePanel.querySelector("h2")?.focus?.();
+    }
+  }
+
+  function lockClaimAttempt(text) {
     show(text);
+    form.hidden = false;
+    if (unavailablePanel) unavailablePanel.hidden = true;
     form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
+  }
+
+  function showUnavailableOrLock(text) {
+    if (hasClaimAttemptContent()) lockClaimAttempt(text);
+    else showClaimUnavailable(text);
+  }
+
+  function hasClaimAttemptContent() {
+    return Boolean(pendingClaimInput || selectedEvidenceFiles.length || uploadedEvidence.length ||
+      String(form.elements.namedItem("description")?.value || "").trim() ||
+      String(form.elements.namedItem("requestedAmount")?.value || "").trim());
   }
 
   function clearMemoryCredentials() {
@@ -305,8 +330,10 @@ if (form && window.top !== window.self) {
   function show(text, variant = "error") {
     message.textContent = translateExternalText(text);
     message.dataset.variant = variant;
+    message.setAttribute("role", variant === "error" ? "alert" : "status");
+    message.setAttribute("aria-live", variant === "error" ? "assertive" : "polite");
     message.hidden = !text;
-    if (text) message.focus();
+    if (text && variant === "error") message.focus();
   }
 }
 

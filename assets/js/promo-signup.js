@@ -441,12 +441,12 @@
     if (els.promoLayout) els.promoLayout.classList.toggle("is-promo-hidden", !active);
     if (els.promoNavItem) els.promoNavItem.hidden = !active;
     if (els.heroPromoCta) {
-      els.heroPromoCta.textContent = active ? "Claim free weekday wash" : "Check live machines";
-      els.heroPromoCta.setAttribute("href", active ? "#free-weekday-wash" : "#live-machines");
+      els.heroPromoCta.textContent = active ? "Claim Free Wash" : "Plan Your Visit";
+      els.heroPromoCta.setAttribute("href", active ? "#free-weekday-wash" : "#contact-section");
     }
     if (els.heroPlanCta) {
-      els.heroPlanCta.textContent = "Book pickup & delivery";
-      els.heroPlanCta.setAttribute("href", "pickup-delivery/");
+      els.heroPlanCta.textContent = active ? "Plan Your Visit" : "Explore Services";
+      els.heroPlanCta.setAttribute("href", active ? "#contact-section" : "#services");
     }
   }
 

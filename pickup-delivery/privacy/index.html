@@ -3,34 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'none';">
   <title>Pickup &amp; Delivery Privacy | Snappy Coin Laundry</title>
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
-  <link rel="stylesheet" href="/assets/css/pud.css?v=20260721-1">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260727-2">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260721-1"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20260816-1"></script>
+  <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
 </head>
-<body>
+<body class="pud-page pud-page--policy pud-page--privacy">
   <a class="skip-link" href="#policy">Skip to privacy notice</a>
   <header class="pud-header">
-    <a class="pud-brand" href="/"><img src="/assets/logo-96.webp" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
-    <a class="pud-status-link" href="/pickup-delivery/">Return to booking</a>
+    <div class="pud-header__inner">
+      <a class="pud-brand" href="/"><img src="/assets/logo-96.webp" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
+      <nav class="pud-header-actions" aria-label="Pickup and delivery">
+        <a class="pud-status-link" href="/pickup-delivery/">Return to booking</a>
+      </nav>
+      <div class="pud-header__locale" data-locale-switcher-host></div>
+    </div>
   </header>
   <main id="policy" class="pud-policy">
     <article class="pud-card">
-      <p class="pud-eyebrow">Draft · not approved for launch</p>
+      <p class="pud-eyebrow">Effective August 16, 2026</p>
       <h1>Pickup &amp; delivery privacy notice</h1>
-      <p class="pud-alert">This operational draft is not a substitute for approved legal language. Public booking remains feature-flagged off until the owner approves the final notice.</p>
       <h2>Data used to provide service</h2>
-      <p>The system is designed to use contact details, service address, route and bag records, preferences, consents, payment-provider identifiers, order events, and attribution needed to fulfill and support an order. Recoverable sensitive fields are encrypted; exact-match lookups use keyed hashes.</p>
+      <p>The system is designed to use contact details, service address, pickup and delivery records, preferences, consents, order events, payment metadata, and attribution needed to fulfill and support an order. Recoverable sensitive fields are encrypted; exact-match lookups use keyed hashes. Snappy does not receive or store raw card numbers.</p>
       <h2>Service providers</h2>
-      <p>Cloudflare hosts the API and operational database. Stripe handles card setup and payment. Twilio handles verification and operational texts. Resend handles transactional email.</p>
-      <p>When configured, Google Address Validation receives the pickup address to validate and geocode it. Snappy applies its own service-area boundary to determine eligibility. Exact Google coordinates and Google-standardized address content are not retained; only an allowed place identifier and Snappy’s eligibility decision may be stored.</p>
+      <p>Cloudflare hosts the API and operational database. Square securely collects and stores card details and processes the final order charge. Twilio handles verification and operational texts when enabled. Resend handles transactional email when enabled.</p>
+      <p>When configured, Google Places Autocomplete receives the street-address text needed to show address suggestions, and Google Address Validation receives the selected pickup address to validate and geocode it. Snappy applies its own service-area boundary to determine eligibility. Exact Google coordinates and Google-standardized address content are not retained; only an allowed place identifier and Snappy’s eligibility decision may be stored.</p>
       <p><span>Use of address validation is subject to the</span> <a href="https://cloud.google.com/maps-platform/terms" rel="noopener noreferrer" target="_blank">Google Maps Platform Terms</a> <span>and</span> <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">Google Privacy Policy</a>.</p>
       <h2>Your choices</h2>
-      <p>Marketing email and SMS choices are separate and optional. Transactional messages are used to perform requested service. Contact Snappy Coin Laundry using the approved support details once published to request access, correction, or deletion subject to operational and legal retention needs.</p>
+      <p>Marketing email and SMS choices are separate and optional. Transactional messages are used to perform requested service. Contact Snappy Coin Laundry at snappycoinlaundry@gmail.com or (314) 628-1001 to request access, correction, or deletion subject to operational and legal retention needs.</p>
       <p><a class="pud-button pud-button-secondary" href="/pickup-delivery/">Return to booking</a></p>
     </article>
   </main>

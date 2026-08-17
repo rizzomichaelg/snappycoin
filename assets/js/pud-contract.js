@@ -11,13 +11,15 @@ const define = (schema, required, optional = [], { idempotent = false } = {}) =>
  * cannot silently leak into a request.
  */
 export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
-  "/api/pud/address/check": define("AddressCheckRequest", ["address", "turnstileToken"], ["attribution"]),
+  "/api/pud/address/autocomplete": define("AddressAutocompleteRequest", ["query", "sessionToken"]),
+  "/api/pud/address/autocomplete/select": define("AddressAutocompleteSelectionRequest", ["placeId", "sessionToken"]),
+  "/api/pud/address/check": define("AddressCheckRequest", ["address"], ["turnstileToken", "attribution"]),
   "/api/pud/waitlist": define(
     "WaitlistRequest",
     ["address", "turnstileToken", "addressProof", "firstName", "lastName", "phone", "reason", "marketingEmailConsent", "marketingSmsConsent", "consentVersions"],
     ["attribution", "email", "requestedRouteId", "locale"],
   ),
-  "/api/pud/phone/start": define("PhoneStartRequest", ["phone", "turnstileToken"]),
+  "/api/pud/phone/start": define("PhoneStartRequest", ["phone"], ["turnstileToken"]),
   "/api/pud/phone/resend": define("PhoneResendRequest", ["verificationId", "turnstileToken"]),
   "/api/pud/phone/verify": define("PhoneVerifyRequest", ["verificationId", "code"]),
   "/api/pud/payment/setup": define(
@@ -28,8 +30,12 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
   ),
   "/api/pud/orders": define(
     "CreateOrderRequest",
-    ["idempotencyKey", "checkoutProof", "setupIntentId", "routeId", "firstName", "lastName", "address", "preferences", "consents"],
-    ["email", "promotionCode", "referralCode", "recurringProposalId", "attribution", "locale"],
+    ["idempotencyKey", "routeId", "firstName", "lastName", "address", "preferences", "consents"],
+    [
+      "paymentCollectionMethod", "checkoutProof", "setupIntentId", "phoneProof", "addressProof",
+      "routeProof", "deliveryRouteId", "deliveryRouteProof", "squareCardToken", "turnstileToken", "waitlistContinuationToken",
+      "email", "promotionCode", "referralCode", "recurringProposalId", "attribution", "locale",
+    ],
     { idempotent: true },
   ),
   "/api/pud/orders/status": define("StatusTokenRequest", ["token"]),
@@ -71,8 +77,8 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
   "/api/pud/orders/payment-session": define("PaymentSessionRequest", ["token", "actionCapability"]),
   "/api/pud/orders/payment-method": define(
     "PaymentMethodRequest",
-    ["token", "actionCapability", "setupIntentId", "idempotencyKey"],
-    [],
+    ["token", "actionCapability", "idempotencyKey"],
+    ["setupIntentId", "squareCardToken", "consentAccepted"],
     { idempotent: true },
   ),
   "/api/pud/orders/preferences": define(
@@ -156,12 +162,16 @@ export function contractBody(path, input) {
 export function assertPublicConfig(value) {
   const result = object(value, "PublicConfig");
   for (const field of [
-    "publicEnabled", "productAnalyticsEnabled", "productExperimentEnabled", "bookingEnabled", "inPersonPaymentEnabled", "statusRecoveryEnabled", "feedbackEnabled", "recurringEnabled", "tipsEnabled", "promotionsEnabled", "referralsEnabled",
+    "publicEnabled", "addressAutocompleteEnabled", "productAnalyticsEnabled", "productExperimentEnabled", "bookingEnabled", "statusRecoveryEnabled", "feedbackEnabled", "recurringEnabled", "tipsEnabled", "promotionsEnabled", "referralsEnabled",
     "claimsEnabled", "loyaltyEnabled", "claimEvidenceEnabled",
   ]) {
     boolean(result[field], `PublicConfig.${field}`);
   }
   if (result.stripePublishableKey !== null && result.stripePublishableKey !== undefined) string(result.stripePublishableKey, "PublicConfig.stripePublishableKey");
+  for (const field of ["squareApplicationId", "squareLocationId"]) {
+    if (result[field] !== null && result[field] !== undefined) string(result[field], `PublicConfig.${field}`);
+  }
+  oneOf(result.squareEnvironment, ["sandbox", "production"], "PublicConfig.squareEnvironment");
   if (result.turnstileSiteKey !== null && result.turnstileSiteKey !== undefined) string(result.turnstileSiteKey, "PublicConfig.turnstileSiteKey");
   if (!Array.isArray(result.supportedLocales) || result.supportedLocales.length < 1) throw new TypeError("PublicConfig.supportedLocales must be a non-empty array.");
   result.supportedLocales.forEach((locale) => oneOf(locale, ["en-US", "es-US"], "PublicConfig.supportedLocales locale"));
@@ -175,6 +185,35 @@ export function assertPublicConfig(value) {
   for (const field of ["pricePerLbCents", "minimumCents", "deliveryFeeCents"]) nonnegativeInteger(pricing[field], `PublicConfig.pricing.${field}`);
   string(pricing.version, "PublicConfig.pricing.version");
   object(result.consentVersions, "PublicConfig.consentVersions");
+  const scheduling = object(result.scheduling, "PublicConfig.scheduling");
+  for (const field of ["pickupLeadTimeHours", "pickupSlotDurationMinutes", "minimumDeliveryDelayHours"]) nonnegativeInteger(scheduling[field], `PublicConfig.scheduling.${field}`);
+  for (const field of ["sameDayBookingCutoff", "latestPickupSlotStart"]) string(scheduling[field], `PublicConfig.scheduling.${field}`);
+  return result;
+}
+
+export function assertAddressAutocomplete(value) {
+  const result = object(value, "AddressAutocompleteData");
+  exactFields(result, ["suggestions", "requestId"], "AddressAutocompleteData");
+  if (!Array.isArray(result.suggestions)) throw new TypeError("AddressAutocompleteData.suggestions must be an array.");
+  if (result.suggestions.length > 5) throw new TypeError("AddressAutocompleteData.suggestions exceeds the maximum.");
+  result.suggestions.forEach((suggestion) => {
+    const item = object(suggestion, "AddressAutocompleteSuggestion");
+    exactFields(item, ["placeId", "text"], "AddressAutocompleteSuggestion");
+    string(item.placeId, "AddressAutocompleteSuggestion.placeId");
+    string(item.text, "AddressAutocompleteSuggestion.text");
+  });
+  if (result.requestId !== undefined) string(result.requestId, "AddressAutocompleteData.requestId");
+  return result;
+}
+
+export function assertAddressAutocompleteSelection(value) {
+  const result = object(value, "AddressAutocompleteSelectionData");
+  exactFields(result, ["address", "requestId"], "AddressAutocompleteSelectionData");
+  const address = object(result.address, "AddressAutocompleteSelectionData.address");
+  exactFields(address, ["line1", "line2", "city", "state", "postalCode"], "AddressAutocompleteSelectionData.address");
+  for (const field of ["line1", "city", "state", "postalCode"]) string(address[field], `AddressAutocompleteSelectionData.address.${field}`);
+  if (address.line2 !== undefined) string(address.line2, "AddressAutocompleteSelectionData.address.line2");
+  if (result.requestId !== undefined) string(result.requestId, "AddressAutocompleteSelectionData.requestId");
   return result;
 }
 
@@ -233,6 +272,15 @@ export function assertOrderStatus(value) {
   oneOf(result.fulfillmentStatus, ["submitted", "confirmed", "picked_up", "weighed", "ready", "out_for_delivery", "delivered", "canceled"], "SafeOrderStatus.fulfillmentStatus");
   paymentStatus(result.paymentStatus, "SafeOrderStatus.paymentStatus");
   string(result.updatedAt, "SafeOrderStatus.updatedAt");
+  for (const field of ["pickupWindowStartAt", "pickupWindowEndAt", "deliveryWindowStartAt", "deliveryWindowEndAt"]) {
+    nullableTimestamp(result[field], `SafeOrderStatus.${field}`);
+  }
+  nullableTimestamp(result.expectedCompletionAt, "SafeOrderStatus.expectedCompletionAt");
+  const milestones = object(result.milestones, "SafeOrderStatus.milestones");
+  timestamp(milestones.submittedAt, "SafeOrderStatus.milestones.submittedAt");
+  for (const field of ["confirmedAt", "pickedUpAt", "weighedAt", "readyAt", "outForDeliveryAt", "deliveredAt"]) {
+    nullableTimestamp(milestones[field], `SafeOrderStatus.milestones.${field}`);
+  }
   for (const field of ["paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim", "canSubmitFeedback", "feedbackSubmitted"]) {
     boolean(result[field], `SafeOrderStatus.${field}`);
   }
@@ -241,6 +289,12 @@ export function assertOrderStatus(value) {
   oneOf(result.timezone, ["America/Chicago"], "SafeOrderStatus.timezone");
   oneOf(result.currency, ["USD"], "SafeOrderStatus.currency");
   for (const field of ["totalCents", "refundedCents"]) nonnegativeInteger(result[field], `SafeOrderStatus.${field}`);
+  if (result.paymentMethod !== null) {
+    const paymentMethod = object(result.paymentMethod, "SafeOrderStatus.paymentMethod");
+    nullableString(paymentMethod.brand, "SafeOrderStatus.paymentMethod.brand");
+    if (!/^\d{4}$/.test(string(paymentMethod.last4, "SafeOrderStatus.paymentMethod.last4"))) throw new TypeError("SafeOrderStatus.paymentMethod.last4 must contain four digits.");
+  }
+  nullableMoney(result.paymentAmountCents, "SafeOrderStatus.paymentAmountCents");
   assertItemizedReceipt(result.receipt);
   if (!Array.isArray(result.rescheduleOptions)) throw new TypeError("SafeOrderStatus.rescheduleOptions must be an array.");
   if (!Array.isArray(result.recurringSchedules)) throw new TypeError("SafeOrderStatus.recurringSchedules must be an array.");
@@ -452,8 +506,12 @@ function assertPortalPreferences(value) {
 export function assertPaymentSession(value) {
   const result = object(value, "PaymentRecovery");
   paymentStatus(result.paymentStatus, "PaymentRecovery.paymentStatus");
-  string(result.setupIntentId, "PaymentRecovery.setupIntentId");
-  string(result.setupIntentClientSecret, "PaymentRecovery.setupIntentClientSecret");
+  if (result.provider === "square") {
+    oneOf(result.provider, ["square"], "PaymentRecovery.provider");
+  } else {
+    string(result.setupIntentId, "PaymentRecovery.setupIntentId");
+    string(result.setupIntentClientSecret, "PaymentRecovery.setupIntentClientSecret");
+  }
   boolean(result.duplicate, "PaymentRecovery.duplicate");
   return result;
 }
@@ -518,6 +576,7 @@ function assertRouteOption(value) {
   for (const field of ["routeId", "routeDate", "windowCode", "windowStartAt", "windowEndAt", "routeProof"]) {
     string(route[field], `PublicRouteOption.${field}`);
   }
+  optionalString(route.expectedReturnAt, "PublicRouteOption.expectedReturnAt");
   nonnegativeInteger(route.remainingOrders, "PublicRouteOption.remainingOrders");
   nonnegativeInteger(route.remainingBags, "PublicRouteOption.remainingBags");
   return route;

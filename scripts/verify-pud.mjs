@@ -6,7 +6,7 @@ const root = resolve(new URL("..", import.meta.url).pathname);
 const required = [
   "pickup-delivery/index.html", "pickup-delivery/status/index.html", "pickup-delivery/recover/index.html", "pickup-delivery/privacy/index.html",
   "pickup-delivery/terms/index.html", "pickup-delivery/claims/index.html", "assets/css/pud.css", "assets/css/pud-status.css",
-  "assets/css/pud-accessibility.css", "assets/js/site-analytics.js", "assets/js/pud-config.js", "assets/js/pud-api.js",
+  "assets/css/pud-accessibility.css", "assets/js/pud-site-analytics.js", "assets/js/pud-google-ads.js", "assets/js/pud-config.js", "assets/js/pud-api.js",
   "assets/js/pud-contract.js", "assets/js/pud-address.js", "assets/js/pud-attribution.js", "assets/js/pud-booking.js",
   "assets/js/pud-calendar.js", "assets/js/pud-product-analytics.js", "assets/js/pud-recovery.js", "assets/js/site-i18n.js",
   "assets/js/pud-payment.js", "assets/js/pud-phone.js", "assets/js/pud-scheduling.js", "assets/js/pud-status.js",
@@ -24,6 +24,8 @@ for (const file of required.filter((candidate) => candidate.endsWith(".js"))) {
 
 const booking = await source("pickup-delivery/index.html");
 const status = await source("pickup-delivery/status/index.html");
+const privacy = await source("pickup-delivery/privacy/index.html");
+const terms = await source("pickup-delivery/terms/index.html");
 if (!status.includes('href="/pickup-delivery/recover/"')) {
   throw new Error("Status page must link customers to private-link recovery.");
 }
@@ -45,10 +47,20 @@ const preferenceAttemptJs = await source("assets/js/pud-preference-attempt.js");
 const idempotencyJs = await source("assets/js/pud-idempotency.js");
 const attributionJs = await source("assets/js/pud-attribution.js");
 const waitlistBootstrapJs = await source("assets/js/pud-waitlist-continuation.js");
-const siteAnalyticsJs = await source("assets/js/site-analytics.js");
+const siteAnalyticsJs = await source("assets/js/pud-site-analytics.js");
 
-for (const marker of ["pud-address-form", "pud-details-form", "pud-code-form", "pud-payment-form", "pud-review-form"]) {
+for (const marker of ["pud-address-form", "pud-details-form", "pud-code-form", "pud-review-form", "pud-payment-element", "data-final-turnstile"]) {
   if (!booking.includes(marker)) throw new Error(`Booking marker missing: ${marker}`);
+}
+if (!booking.includes("All pickup and delivery times are Central Time.")) {
+  throw new Error("Booking must state that pickup and delivery windows use Central Time.");
+}
+if (!status.includes("All pickup and delivery times shown below are Central Time.")) {
+  throw new Error("Private order status must state that pickup and delivery windows use Central Time.");
+}
+for (const [name, policy] of [["privacy", privacy], ["terms", terms]]) {
+  if (!policy.includes("Effective August 16, 2026")) throw new Error(`${name} policy needs a final effective date.`);
+  if (/Draft|not approved|staging draft/i.test(policy)) throw new Error(`${name} policy still contains draft language.`);
 }
 if (!status.includes('meta name="referrer" content="no-referrer"')) throw new Error("Status page must use no-referrer.");
 if (!status.includes("noindex,nofollow")) throw new Error("Status page must be noindex.");
@@ -57,7 +69,7 @@ if (!recovery.includes('meta name="referrer" content="no-referrer"') || !recover
 }
 if (status.includes("frame-ancestors")) throw new Error("frame-ancestors is ineffective in a meta CSP and must be delivered as a response header.");
 if (!claims.includes('meta name="referrer" content="no-referrer"')) throw new Error("Claims page must use no-referrer.");
-if (!booking.includes('/assets/js/site-analytics.js')) throw new Error("Booking page must load the consent-aware site analytics module.");
+if (!booking.includes('/assets/js/pud-site-analytics.js')) throw new Error("Booking page must load the PUD consent-aware analytics module.");
 for (const [page, sourceText] of [["booking", booking], ["status", status], ["claims", claims]]) {
   if (!sourceText.includes("/assets/js/site-i18n.js")) throw new Error(`${page} page must load the human-authored locale module.`);
 }
@@ -136,10 +148,13 @@ for (const marker of [
   "pud-step-up-phone-form", "pud-step-up-code-form", "data-receipt-weight-charge",
   "pud-preferences-form", "data-history-list", 'data-action="history-more"',
   'data-action="payment-replace"', 'data-action="reorder"', 'data-action="cancel"',
-  'data-action="open-claim"', 'data-action="rotate-status-token"', 'data-action="revoke-status-token"',
+  'data-action="open-claim"', 'data-action="revoke-status-token"',
   "data-loyalty-panel", "data-loyalty-balance", "data-loyalty-history",
 ]) {
   if (!status.includes(marker)) throw new Error(`Advanced status control missing: ${marker}`);
+}
+if (status.includes('data-action="rotate-status-token"') || /Replace private link/.test(status)) {
+  throw new Error("Customer status must not expose private-link replacement.");
 }
 const tipInput = status.match(/<input[^>]+name="amount"[^>]*>/)?.[0] || "";
 if (!tipInput || /\svalue=/.test(tipInput)) throw new Error("Tip input must exist without a preselected amount.");
@@ -199,7 +214,7 @@ for (const scope of ["cancel", "reschedule", "payment-method", "tip", "recurring
 for (const purpose of [
   "cancel_order", "reschedule_order", "payment_session", "replace_payment_method", "reorder", "add_tip",
   "open_claim", "create_recurring", "pause_recurring", "skip_recurring", "resume_recurring",
-  "update_preferences", "rotate_status_token", "revoke_status_token",
+  "update_preferences", "revoke_status_token",
   "upload_claim_evidence",
 ]) {
   if (!statusJs.includes(`"${purpose}"`)) throw new Error(`Protected action is missing a purpose-bound capability: ${purpose}`);
@@ -207,8 +222,8 @@ for (const purpose of [
 for (const marker of ["createStatusSession", "issueActionCapability", "verifiedSession", "sessionExpiryTimer", "PUD_STATUS_SESSION_INVALID"]) {
   if (!statusJs.includes(marker)) throw new Error(`In-memory step-up marker missing: ${marker}`);
 }
-for (const marker of ["pendingRotation", "pending.actionCapability", "error?.status !== 0"]) {
-  if (!statusJs.includes(marker)) throw new Error(`Rotation response-loss recovery missing: ${marker}`);
+if (/pendingRotation|rotatePrivateLink|rotateStatusToken/.test(statusJs)) {
+  throw new Error("Removed private-link replacement must not remain in customer status JavaScript.");
 }
 if (/\b(?:localStorage|sessionStorage)\b/.test(statusJs)) {
   throw new Error("Status page must keep its status token, phone proof, and verified session out of browser storage.");
@@ -287,8 +302,8 @@ if (!statusJs.includes("confirmPaymentRemediation") || !statusJs.includes("tipOr
 for (const marker of ["recurringProposalId", "preferredRouteId", "requiresPhoneVerification", "requiresPaymentSetup"]) {
   if (!bookingJs.includes(marker) && !reorderJs.includes(marker) && !statusJs.includes(marker)) throw new Error(`Safe proposal bootstrap marker missing: ${marker}`);
 }
-if (!bookingJs.includes("phoneProof") || !bookingJs.includes("addressProof") || !bookingJs.includes("preparePayment")) {
-  throw new Error("Proposal/reorder booking must retain the normal address, phone, and SetupIntent proof chain.");
+if (!bookingJs.includes("phoneProof") || !bookingJs.includes("addressProof") || !bookingJs.includes("prepareSquareCard")) {
+  throw new Error("Proposal/reorder booking must retain the normal address, phone, and Square card proof chain.");
 }
 for (const marker of [
   "takeWaitlistContinuation", "waitlistContinuationToken", "waitlistRouteId",
@@ -300,7 +315,7 @@ if (!waitlistBootstrapJs.includes("history.replaceState") || !bookingJs.includes
   throw new Error("Waitlist bearer continuation must leave the URL fragment immediately and recover only within the browser session.");
 }
 const bootstrapPosition = booking.indexOf('/assets/js/pud-waitlist-continuation.js');
-const analyticsPosition = booking.indexOf('/assets/js/site-analytics.js');
+const analyticsPosition = booking.indexOf('/assets/js/pud-site-analytics.js');
 if (bootstrapPosition < 0 || analyticsPosition < 0 || bootstrapPosition > analyticsPosition) {
   throw new Error("Waitlist bearer bootstrap must execute before any analytics module is loaded.");
 }
@@ -319,8 +334,8 @@ const siteAnalyticsWithoutSuppressionGuard = siteAnalyticsJs.replace(providerUrl
 if (siteAnalyticsWithoutSuppressionGuard.includes("window.location.href") || siteAnalyticsWithoutSuppressionGuard.includes("window.location.hash")) {
   throw new Error("Analytics must never receive URL fragments or a raw browser URL.");
 }
-if (!contractJs.includes('"waitlistContinuationToken"') || !paymentJs.includes("waitlistContinuationToken ?")) {
-  throw new Error("Waitlist continuation token must be an optional payment-setup contract field.");
+if (!contractJs.includes('"waitlistContinuationToken"') || !bookingJs.includes("waitlistContinuationToken: state.waitlistContinuationToken")) {
+  throw new Error("Waitlist continuation token must be an optional final-order contract field.");
 }
 if (/trackFunnel\([^)]*waitlistContinuation/i.test(bookingJs)) {
   throw new Error("Waitlist continuation tokens must never enter analytics.");
@@ -330,8 +345,8 @@ if (!contractJs.includes('["token", "actionCapability", "cadence", "preferredRou
 }
 
 const createOrderBlock = bookingJs.slice(bookingJs.indexOf("async function submitOrder"), bookingJs.indexOf("async function submitWaitlist"));
-if (!createOrderBlock.includes("checkoutProof") || createOrderBlock.includes("phoneProof") || createOrderBlock.includes("addressProof")) {
-  throw new Error("Final order payload must use checkoutProof and must not replay phone/address proofs.");
+for (const marker of ["phoneProof", "addressProof", "routeProof", "deliveryRouteProof", "squareCardToken", "turnstileToken"]) {
+  if (!createOrderBlock.includes(marker)) throw new Error(`Square order payload must include ${marker}.`);
 }
 if (!createOrderBlock.includes("recurringProposalId")) throw new Error("Proposal ID must reach normal order creation.");
 

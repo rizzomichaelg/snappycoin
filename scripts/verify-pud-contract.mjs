@@ -28,7 +28,7 @@ import {
   contractBody,
 } from "../assets/js/pud-contract.js";
 
-const openApiPath = process.env.PUD_OPENAPI || resolve(new URL("../../snappycoin-promo-backend/docs/pud-openapi.yaml", import.meta.url).pathname);
+const openApiPath = process.env.PUD_OPENAPI || resolve(new URL("../../docs/pud-openapi.yaml", import.meta.url).pathname);
 let openApi;
 try {
   openApi = await readFile(openApiPath, "utf8");
@@ -85,7 +85,7 @@ if (!evidenceUploadOperation || evidenceUploadOperation.method !== "post" ||
 const responseContracts = {
   PublicRouteOption: {
     required: ["routeId", "routeDate", "windowCode", "windowStartAt", "windowEndAt", "remainingOrders", "remainingBags", "routeProof"],
-    allowed: ["routeId", "routeDate", "windowCode", "windowStartAt", "windowEndAt", "remainingOrders", "remainingBags", "routeProof"],
+    allowed: ["routeId", "routeDate", "windowCode", "windowStartAt", "windowEndAt", "expectedReturnAt", "remainingOrders", "remainingBags", "routeProof"],
   },
   PublicRecurringProposal: {
     required: ["proposalId", "status", "proposedForAt", "expiresAt"],
@@ -101,14 +101,16 @@ const responseContracts = {
   },
   SafeOrderStatus: {
     required: [
-      "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "totalCents", "refundedCents", "receipt",
-      "paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim",
+      "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowStartAt", "pickupWindowEndAt",
+      "deliveryWindowStartAt", "deliveryWindowEndAt", "expectedCompletionAt", "milestones", "totalCents", "refundedCents", "receipt",
+      "paymentAttentionRequired", "paymentMethod", "paymentAmountCents", "operationalAttentionRequired", "canCancel", "canTip", "canClaim",
       "canCreateRecurring", "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
     ],
     allowed: [
-      "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "deliveryPromisedAt",
-      "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired",
+      "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "pickupWindowStartAt", "pickupWindowEndAt",
+      "deliveryWindowStartAt", "deliveryWindowEndAt", "deliveryPromisedAt", "expectedCompletionAt", "milestones",
+      "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired", "paymentMethod", "paymentAmountCents",
       "operationalAttentionRequired", "canCancel", "canTip", "canClaim", "canCreateRecurring",
       "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
@@ -197,8 +199,8 @@ const responseContracts = {
     allowed: ["preferences", "status", "duplicate"],
   },
   PaymentRecoveryData: {
-    required: ["paymentStatus", "setupIntentId", "setupIntentClientSecret", "duplicate"],
-    allowed: ["paymentStatus", "setupIntentId", "setupIntentClientSecret", "duplicate"],
+    required: ["paymentStatus", "duplicate"],
+    allowed: ["paymentStatus", "provider", "setupIntentId", "setupIntentClientSecret", "duplicate"],
   },
   TipData: {
     required: ["paymentIntentId", "status", "clientSecret"],
@@ -246,6 +248,7 @@ function verifyResponseGuards() {
     windowCode: "AM",
     windowStartAt: "2026-07-15T14:00:00Z",
     windowEndAt: "2026-07-15T17:00:00Z",
+    expectedReturnAt: "2026-07-16T22:00:00Z",
     remainingOrders: 4,
     remainingBags: 8,
     routeProof: "route-proof",
@@ -261,6 +264,20 @@ function verifyResponseGuards() {
     version: 3,
     fulfillmentStatus: "delivered",
     paymentStatus: "succeeded",
+    pickupWindowStartAt: "2026-07-14T14:00:00Z",
+    pickupWindowEndAt: "2026-07-14T15:00:00Z",
+    deliveryWindowStartAt: "2026-07-15T16:00:00Z",
+    deliveryWindowEndAt: "2026-07-15T17:00:00Z",
+    expectedCompletionAt: "2026-07-15T18:00:00Z",
+    milestones: {
+      submittedAt: "2026-07-13T18:00:00Z",
+      confirmedAt: "2026-07-13T18:05:00Z",
+      pickedUpAt: "2026-07-14T14:00:00Z",
+      weighedAt: "2026-07-14T16:00:00Z",
+      readyAt: "2026-07-15T14:00:00Z",
+      outForDeliveryAt: "2026-07-15T16:00:00Z",
+      deliveredAt: "2026-07-15T17:00:00Z",
+    },
     totalCents: 4200,
     refundedCents: 0,
     receipt: {
@@ -283,6 +300,8 @@ function verifyResponseGuards() {
       taxRuleVersion: "2026-07",
     },
     paymentAttentionRequired: false,
+    paymentMethod: { brand: "VISA", last4: "1111" },
+    paymentAmountCents: 4200,
     operationalAttentionRequired: false,
     canCancel: false,
     canTip: true,
@@ -313,6 +332,7 @@ function verifyResponseGuards() {
   };
   const publicConfig = {
     publicEnabled: true,
+    addressAutocompleteEnabled: true,
     productAnalyticsEnabled: true,
     productExperimentEnabled: false,
     bookingEnabled: true,
@@ -330,9 +350,13 @@ function verifyResponseGuards() {
     currency: "USD",
     support: { email: "support@example.com", phone: "+13146281001" },
     stripePublishableKey: "pk_test_from_server",
+    squareApplicationId: "sandbox-square-app",
+    squareLocationId: "sandbox-location",
+    squareEnvironment: "sandbox",
     turnstileSiteKey: "turnstile-from-server",
     timezone: "America/Chicago",
     pricing: { pricePerLbCents: 199, minimumCents: 2500, deliveryFeeCents: 0, version: "2026-07" },
+    scheduling: { pickupLeadTimeHours: 3, sameDayBookingCutoff: "14:00", latestPickupSlotStart: "17:00", pickupSlotDurationMinutes: 60, minimumDeliveryDelayHours: 24 },
     consentVersions: { privacy: "2026-07" },
   };
   const payment = {
@@ -521,6 +545,7 @@ function verifyResponseGuards() {
   }
 
   expectGuardFailure("public config feature flags", () => assertPublicConfig({ ...publicConfig, referralsEnabled: undefined }));
+  expectGuardFailure("public config address autocomplete flag", () => assertPublicConfig({ ...publicConfig, addressAutocompleteEnabled: undefined }));
   expectGuardFailure("public config promotions flag", () => assertPublicConfig({ ...publicConfig, promotionsEnabled: undefined }));
   expectGuardFailure("public config analytics flag", () => assertPublicConfig({ ...publicConfig, productAnalyticsEnabled: undefined }));
   expectGuardFailure("public config experiment flag", () => assertPublicConfig({ ...publicConfig, productExperimentEnabled: undefined }));

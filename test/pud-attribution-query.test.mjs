@@ -66,7 +66,7 @@ test("unknown, PII-bearing, and fragment URLs remain unscrubbed and provider-ine
 });
 
 test("site analytics prepares the campaign location before any provider bootstrap", async () => {
-  const source = await readFile(new URL("../assets/js/site-analytics.js", import.meta.url), "utf8");
+  const source = await readFile(new URL("../assets/js/pud-site-analytics.js", import.meta.url), "utf8");
   const preparation = source.indexOf("providerLocationSafe = prepareAttributionQueryForProviders();");
   const init = source.indexOf("function init() {");
   const initializationPreparation = source.indexOf("prepareProviderLocation();", init);

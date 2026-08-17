@@ -8,12 +8,14 @@ let paymentElement;
 let replacementStripe;
 let replacementElements;
 let replacementPaymentElement;
+let squareCard;
+let replacementSquareCard;
 
-function loadScript(src) {
+function loadScript(src, isReady = () => Boolean(globalThis.Stripe)) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`);
     if (existing) {
-      if (globalThis.Stripe) resolve();
+      if (isReady()) resolve();
       else existing.addEventListener("load", resolve, { once: true });
       return;
     }
@@ -24,6 +26,93 @@ function loadScript(src) {
     script.addEventListener("error", () => reject(new Error("Secure payment fields could not load.")), { once: true });
     document.head.append(script);
   });
+}
+
+function squareScript(publicConfig) {
+  return publicConfig?.squareEnvironment === "production"
+    ? "https://web.squarecdn.com/v1/square.js"
+    : "https://sandbox.web.squarecdn.com/v1/square.js";
+}
+
+async function squarePayments(publicConfig) {
+  const applicationId = publicConfig?.squareApplicationId;
+  const locationId = publicConfig?.squareLocationId;
+  if (!applicationId || !locationId) throw new Error("Secure card setup is not configured.");
+  await loadScript(squareScript(publicConfig), () => Boolean(globalThis.Square?.payments));
+  if (!globalThis.Square?.payments) throw new Error("Secure Square card fields could not load.");
+  return globalThis.Square.payments(applicationId, locationId);
+}
+
+export function squareMountSelector(mount) {
+  if (typeof mount === "string" && mount.trim()) return mount.trim();
+  const id = String(mount?.id || "").trim();
+  if (!id) throw new Error("Secure card field containers must have an id.");
+  const escapedId = globalThis.CSS?.escape ? globalThis.CSS.escape(id) : id;
+  return `#${escapedId}`;
+}
+
+export async function prepareSquareCard(publicConfig, mount) {
+  if (!mount) throw new Error("Secure card fields do not have a place to load.");
+  destroySquareCard();
+  try {
+    const payments = await squarePayments(publicConfig);
+    squareCard = await payments.card();
+    await squareCard.attach(squareMountSelector(mount));
+  } catch (_error) {
+    destroySquareCard();
+    throw new Error("Secure Square card fields could not load. Refresh this page and try again. No card was saved or charged.");
+  }
+}
+
+export async function tokenizeSquareCard(billingContact) {
+  if (!squareCard) throw new Error("Secure Square card fields are not ready.");
+  const result = await squareCard.tokenize({
+    intent: "STORE",
+    customerInitiated: true,
+    sellerKeyedIn: false,
+    billingContact,
+  });
+  if (result.status !== "OK" || !result.token) {
+    throw new Error(squarePaymentError(result.errors, "Card verification failed. Check the card details and try again."));
+  }
+  return result.token;
+}
+
+export async function prepareSquareCardReplacement(publicConfig, mount) {
+  if (!mount) throw new Error("Secure replacement-card fields do not have a place to load.");
+  destroySquareCardReplacement();
+  try {
+    const payments = await squarePayments(publicConfig);
+    replacementSquareCard = await payments.card();
+    await replacementSquareCard.attach(squareMountSelector(mount));
+  } catch (_error) {
+    destroySquareCardReplacement();
+    throw new Error("Secure Square card fields could not load. Refresh this page and try again. No card was saved or charged.");
+  }
+}
+
+export async function tokenizeSquareCardReplacement(billingContact = {}) {
+  if (!replacementSquareCard) throw new Error("Secure replacement-card fields are not ready.");
+  const result = await replacementSquareCard.tokenize({
+    intent: "STORE",
+    customerInitiated: true,
+    sellerKeyedIn: false,
+    billingContact,
+  });
+  if (result.status !== "OK" || !result.token) {
+    throw new Error(squarePaymentError(result.errors, "Replacement card verification failed."));
+  }
+  return result.token;
+}
+
+export function destroySquareCardReplacement() {
+  try { replacementSquareCard?.destroy?.(); } catch (_error) { /* already removed */ }
+  replacementSquareCard = undefined;
+}
+
+export function destroySquareCard() {
+  try { squareCard?.destroy?.(); } catch (_error) { /* already removed */ }
+  squareCard = undefined;
 }
 
 export async function preparePayment({ publicConfig, checkoutAttemptId, phoneProof, addressProof, routeProof, firstName, lastName, email, attribution, waitlistContinuationToken, idempotencyKey, mount }) {
@@ -119,4 +208,10 @@ function stripeLocale() {
 function paymentError(providerError, fallback) {
   if (getLocale() === "es-US") return translateText(fallback, "es-US");
   return providerError?.message || fallback;
+}
+
+function squarePaymentError(errors, fallback) {
+  if (getLocale() === "es-US") return translateText(fallback, "es-US");
+  const detail = Array.isArray(errors) ? errors.find((error) => error?.message)?.message : "";
+  return detail || fallback;
 }

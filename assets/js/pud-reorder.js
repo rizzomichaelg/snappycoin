@@ -49,7 +49,6 @@ export function prefillReorderDetails(form, bootstrap) {
     firstName: bootstrap.customer.firstName,
     lastName: bootstrap.customer.lastName,
     email: bootstrap.customer.email || "",
-    estimatedBags: String(bootstrap.preferences.estimatedBags),
     detergent: bootstrap.preferences.detergent,
     softenerPref: bootstrap.preferences.softenerPref,
     specialInstructions: bootstrap.preferences.specialInstructions || "",

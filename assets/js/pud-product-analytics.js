@@ -28,7 +28,7 @@ const PARAMETER_RULES = Object.freeze({
   pud_session_started: {},
   pud_page_viewed: {},
   pud_address_eligible: {},
-  pud_address_ineligible: { reasonCategory: new Set(["outside_area", "needs_review", "capacity", "unknown"]) },
+  pud_address_ineligible: { reasonCategory: new Set(["outside_area", "needs_review", "unknown"]) },
   pud_waitlist_joined: {},
   pud_booking_started: {},
   pud_phone_verified: {},

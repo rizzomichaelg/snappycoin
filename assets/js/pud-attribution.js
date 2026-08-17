@@ -95,10 +95,13 @@ export function trackFunnel(eventName, parameters = {}) {
   return false;
 }
 
-export function setSelfReportedSource(target, value) {
+export function setSelfReportedSource(target, value, detail) {
   const source = String(value || "").trim().slice(0, 200);
   if (source) target.selfReportedSource = source;
   else delete target.selfReportedSource;
+  const normalizedDetail = String(detail || "").trim().slice(0, 500);
+  if (source === "other" && normalizedDetail) target.selfReportedSourceDetail = normalizedDetail;
+  else delete target.selfReportedSourceDetail;
   return target;
 }
 

@@ -2,6 +2,8 @@ import { apiUrl } from "./pud-config.js";
 import { translateExternalText } from "./site-i18n.js";
 import {
   assertActionCapability,
+  assertAddressAutocomplete,
+  assertAddressAutocompleteSelection,
   assertClaimEvidenceAsset,
   assertClaimEvidenceCapability,
   assertClaimEvidenceGrant,
@@ -223,6 +225,14 @@ const postContract = (path, input, idempotencyKey) => {
 };
 
 export const getPublicConfig = async () => assertPublicConfig(await requestJson("/api/pud/public-config"));
+export const autocompleteAddress = async (input, options = {}) => assertAddressAutocomplete(await requestJson(
+  "/api/pud/address/autocomplete",
+  { method: "POST", body: contractBody("/api/pud/address/autocomplete", input), ...options },
+));
+export const selectAutocompleteAddress = async (input, options = {}) => assertAddressAutocompleteSelection(await requestJson(
+  "/api/pud/address/autocomplete/select",
+  { method: "POST", body: contractBody("/api/pud/address/autocomplete/select", input), ...options },
+));
 export const checkAddress = (input) => postContract("/api/pud/address/check", input);
 export const joinWaitlist = (input, key) => postContract("/api/pud/waitlist", input, key);
 export const startPhone = async (input) => assertPhoneStart(await postContract("/api/pud/phone/start", input));
@@ -303,9 +313,9 @@ export const paymentSession = async (token, actionCapability) => assertPaymentSe
   "/api/pud/orders/payment-session",
   { token, actionCapability },
 ));
-export const replacePaymentMethod = async (token, actionCapability, setupIntentId, key) => assertOrderStatus(await postContract(
+export const replacePaymentMethod = async (token, actionCapability, payment, key) => assertOrderStatus(await postContract(
   "/api/pud/orders/payment-method",
-  { token, actionCapability, setupIntentId, idempotencyKey: key },
+  { token, actionCapability, ...payment, idempotencyKey: key },
   key,
 ));
 export const updatePreferences = async (token, actionCapability, input, key) => assertPreferencesUpdate(await postContract(

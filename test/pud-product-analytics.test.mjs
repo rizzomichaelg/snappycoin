@@ -215,7 +215,7 @@ test("concurrent tracking is serialized and experiment-off sends no exposure", a
 });
 
 test("GA and Meta provider initialization remains suppressed on unsafe query and fragment URLs", async () => {
-  const source = await readFile(new URL("../assets/js/site-analytics.js", import.meta.url), "utf8");
+  const source = await readFile(new URL("../assets/js/pud-site-analytics.js", import.meta.url), "utf8");
   const unsafeLocation = { pathname: "/pickup-delivery/", search: "?email=customer%40example.com", hash: "#Bearer.private" };
   const providerSafe = (locationLike) => {
     if (locationLike.search || locationLike.hash) return null;

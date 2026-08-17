@@ -16,6 +16,7 @@ if (root && window.top !== window.self) {
   const codePanel = root.querySelector("[data-recovery-code]");
   const completePanel = root.querySelector("[data-recovery-complete]");
   const completeActions = root.querySelector("[data-complete-actions]");
+  const unavailablePanel = root.querySelector("[data-recovery-unavailable]");
   const startForm = root.querySelector("[data-recovery-start-form]");
   const codeForm = root.querySelector("[data-recovery-code-form]");
   let recoveryId = "";
@@ -117,6 +118,7 @@ if (root && window.top !== window.self) {
   async function initialize() {
     const config = await getPublicConfig();
     if (!config.statusRecoveryEnabled) throw new Error("Private-link recovery is not available right now. Call the store if you need help with an order.");
+    if (unavailablePanel) unavailablePanel.hidden = true;
     await setupTurnstile(config.turnstileSiteKey);
     ensureTurnstile(startForm);
   }
@@ -127,6 +129,7 @@ if (root && window.top !== window.self) {
     codePanel.hidden = true;
     completePanel.hidden = true;
     completeActions.hidden = true;
+    if (unavailablePanel) unavailablePanel.hidden = true;
     startPanel.hidden = false;
     resetTurnstile(startForm);
     if (text) showMessage(text);
@@ -148,8 +151,18 @@ if (root && window.top !== window.self) {
   }
 
   function disableRecovery(text) {
-    startForm.querySelectorAll("input, button").forEach((control) => { control.disabled = true; });
-    showMessage(text);
+    clearMemory();
+    startPanel.hidden = true;
+    codePanel.hidden = true;
+    completePanel.hidden = true;
+    completeActions.hidden = true;
+    if (unavailablePanel) {
+      unavailablePanel.hidden = false;
+      showMessage(text, "warning");
+      unavailablePanel.querySelector("h2")?.focus?.();
+      return;
+    }
+    showMessage(text, "warning");
   }
 
   function setBusy(form, busy) {
@@ -161,8 +174,10 @@ if (root && window.top !== window.self) {
     const node = root.querySelector("[data-message]");
     node.textContent = translateExternalText(text);
     node.dataset.variant = variant;
+    node.setAttribute("role", variant === "error" ? "alert" : "status");
+    node.setAttribute("aria-live", variant === "error" ? "assertive" : "polite");
     node.hidden = !text;
-    if (text) node.focus();
+    if (text && variant === "error") node.focus();
   }
 
   function clearMessage() {
