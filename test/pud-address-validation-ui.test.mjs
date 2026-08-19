@@ -14,9 +14,12 @@ test("address validation stays first and exposes clear eligible and ineligible p
   assert.match(html, /We check the service area and available pickup times before asking for contact details/);
   assert.match(booking, /result\.eligibility === "out_of_zone"/);
   assert.match(booking, /result\.eligibility === "review_required"/);
+  assert.match(booking, /result\.reviewBookingAllowed === true/);
+  assert.match(booking, /showAddressConfirmation/);
+  assert.match(html, /Keep mine · pending review/);
   assert.match(booking, /Outside our service area/);
   assert.match(booking, /We do not currently serve this address/);
-  assert.match(booking, /We could not confidently match this address/);
+  assert.match(booking, /We could not locate this address precisely enough/);
   assert.doesNotMatch(booking, /Google couldn’t verify/);
   assert.match(booking, /outcome === "turnaround_unconfigured"/);
   assert.match(booking, /outcome === "cutoff_passed"/);
@@ -54,7 +57,7 @@ test("Google attribution remains on address suggestions but is absent below conf
   assert.match(css, /\[translate="no"\][\s\S]*white-space: nowrap/);
 });
 
-test("address autocomplete stays server-backed, optional, and preserves manual entry", async () => {
+test("address autocomplete is server-backed, visually selectable, and preserves a reviewed manual path", async () => {
   const [html, address, booking, api] = await Promise.all([
     readFile(new URL("pickup-delivery/index.html", root), "utf8"),
     readFile(new URL("assets/js/pud-address.js", root), "utf8"),
@@ -62,12 +65,46 @@ test("address autocomplete stays server-backed, optional, and preserves manual e
     readFile(new URL("assets/js/pud-api.js", root), "utf8")
   ]);
   assert.match(html, /data-address-autocomplete-list/);
+  assert.match(html, /Start typing, then select your address from the matches/);
+  assert.match(html, /data-address-confirm-dialog/);
   assert.match(html, /Address suggestions powered by[\s\S]*Google Maps/);
   assert.match(address, /enableAddressAutocomplete/);
+  assert.match(address, /pud-address-suggestion/);
   assert.match(address, /Address suggestions are unavailable\. Enter the address manually/);
   assert.match(booking, /addressAutocompleteEnabled === true/);
+  assert.match(booking, /state\.address = pending\.enteredAddress/);
+  assert.match(booking, /data-normalized-address[\s\S]*displayAddress\(state\.address\)/);
   assert.match(api, /\/api\/pud\/address\/autocomplete/);
   assert.doesNotMatch(html + address + booking + api, /server-only-key|PUD_GEOCODER_API_KEY/);
+});
+
+test("manual address cleanup removes duplicated and placeholder unit values", async () => {
+  const { normalizeAddressEntry } = await import(`../assets/js/pud-address.js?test=${Date.now()}`);
+  assert.deepEqual(normalizeAddressEntry({
+    line1: "10010 S Executive Dr Apt 7",
+    line2: "Apt 7",
+    city: "Saint Ann",
+    state: "mo",
+    postalCode: "63074",
+  }), {
+    line1: "10010 S Executive Dr",
+    line2: "Apt 7",
+    city: "Saint Ann",
+    state: "MO",
+    postalCode: "63074",
+  });
+  assert.deepEqual(normalizeAddressEntry({
+    line1: "4439 Blair Avenue",
+    line2: "N/a",
+    city: "St. Louis",
+    state: "MO",
+    postalCode: "63107",
+  }), {
+    line1: "4439 Blair Avenue",
+    city: "St. Louis",
+    state: "MO",
+    postalCode: "63107",
+  });
 });
 
 test("free pickup and delivery copy only appears for an explicit zero delivery fee", async () => {
