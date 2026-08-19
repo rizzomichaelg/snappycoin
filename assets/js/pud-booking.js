@@ -388,7 +388,7 @@ async function submitWaitlist(form) {
     consentVersions: state.config.consentVersions || { marketing_email: state.config.consentVersion || "owner-approval-required", marketing_sms: state.config.consentVersion || "owner-approval-required" },
   };
   const waitlistKey = await stableActionKey("waitlist", JSON.stringify(intent));
-  const result = await joinWaitlist(intent, waitlistKey);
+  await joinWaitlist(intent, waitlistKey);
   trackFunnel("pud_waitlist_joined");
   const confirmation = document.createElement("div");
   confirmation.className = "pud-waitlist-confirmation";
@@ -401,9 +401,7 @@ async function submitWaitlist(form) {
     }),
     Object.assign(document.createElement("p"), {
       className: "pud-fine-print",
-      textContent: result?.confirmationEmailQueued
-        ? "A confirmation email has been queued."
-        : "No confirmation email is sent from the current waitlist workflow; keep this on-screen confirmation."
+      textContent: "Our staff team has been notified by email."
     })
   );
   form.replaceWith(confirmation);

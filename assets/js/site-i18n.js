@@ -867,7 +867,7 @@ const ES = Object.freeze({
   "Waitlist request recorded": "Solicitud de lista de espera registrada",
   "We saved your request. This is not a booking or reserved pickup time. Staff will contact you if an approved opening becomes available.": "Guardamos tu solicitud. No es una reserva ni un horario de recogida reservado. El personal te contactará si se abre un cupo aprobado.",
   "A confirmation email has been queued.": "Se puso en cola un correo de confirmación.",
-  "No confirmation email is sent from the current waitlist workflow; keep this on-screen confirmation.": "El flujo actual de la lista de espera no envía un correo de confirmación; conserva esta confirmación en pantalla.",
+  "Our staff team has been notified by email.": "Nuestro equipo recibió una notificación por correo electrónico.",
   "Awaiting intake": "En espera de recepción",
   "Not started": "No iniciado",
   "No completion time promised": "No hay una hora de finalización prometida",
