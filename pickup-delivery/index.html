@@ -9,9 +9,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://sandbox.web.squarecdn.com https://web.squarecdn.com https://www.facebook.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self' 'unsafe-inline' https://sandbox.web.squarecdn.com https://web.squarecdn.com; script-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://pci-connect.squareup.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com https://connect.squareup.com https://connect.squareupsandbox.com https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://o160250.ingest.sentry.io https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net http://127.0.0.1:8787 http://localhost:8787; font-src 'self' https://*.squarecdn.com https://d1g145x70srn7h.cloudfront.net;">
   <title>Pickup &amp; Delivery | Snappy Coin Laundry</title>
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
-  <link rel="stylesheet" href="/assets/css/pud.css?v=20260727-2">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260819-1">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260816-1"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20260819-1"></script>
   <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
 </head>
@@ -64,8 +64,9 @@
           <h2 tabindex="-1">Where should we pick up?</h2>
           <p>We check the service area and available pickup times before asking for contact details.</p>
           <form id="pud-address-form" class="pud-form">
-            <label>Street address <input name="line1" autocomplete="address-line1" list="pud-address-autocomplete-list" maxlength="160" required aria-describedby="pud-address-autocomplete-status"></label>
-            <datalist id="pud-address-autocomplete-list" data-address-autocomplete-list></datalist>
+            <label>Street address <input name="line1" autocomplete="address-line1" maxlength="160" required aria-describedby="pud-address-help pud-address-autocomplete-status"></label>
+            <p id="pud-address-help" class="pud-address-help">Start typing, then select your address from the matches. Can’t find it? You can still continue and our staff will review it.</p>
+            <div id="pud-address-autocomplete-list" class="pud-address-suggestions" data-address-autocomplete-list role="listbox" aria-label="Address matches" hidden></div>
             <p id="pud-address-autocomplete-status" class="pud-fine-print" data-address-autocomplete-status aria-live="polite"></p>
             <p class="pud-address-attribution"><span>Address suggestions powered by</span> <span translate="no" data-i18n-skip>Google Maps</span></p>
             <label>Apartment or unit <input name="line2" autocomplete="address-line2" maxlength="80"></label>
@@ -76,12 +77,31 @@
             </div>
             <button class="pud-button pud-button-primary" type="submit">Check my address</button>
           </form>
+          <dialog class="pud-address-dialog" data-address-confirm-dialog aria-labelledby="pud-address-dialog-title">
+            <div class="pud-address-dialog__body">
+              <p class="pud-eyebrow">Confirm pickup address</p>
+              <h3 id="pud-address-dialog-title">Which address should we use?</h3>
+              <p data-address-dialog-copy>Review the address before continuing.</p>
+              <div class="pud-address-comparison">
+                <div><span>You entered</span><strong data-address-entered></strong></div>
+                <div data-address-suggested-card><span>Suggested by <span translate="no" data-i18n-skip>Google Maps</span></span><strong data-address-suggested></strong></div>
+              </div>
+              <p class="pud-alert-inline" data-address-unit-warning hidden>This building may require an apartment or unit number. Add it if you have one.</p>
+              <div class="pud-actions">
+                <button class="pud-button pud-button-primary" type="button" data-action="use-suggested-address">Use suggested address</button>
+                <button class="pud-button pud-button-secondary" type="button" data-action="keep-entered-address">Keep mine · pending review</button>
+                <button class="pud-button pud-button-link" type="button" data-action="edit-address">Edit address</button>
+              </div>
+              <p class="pud-fine-print">If you keep the address you entered, you can finish booking. Staff will review it and may contact you before confirming pickup.</p>
+            </div>
+          </dialog>
         </section>
 
         <section data-step="details" hidden>
           <p class="pud-step-label" data-step-position="details">Step 2 of 4</p>
           <h2 tabindex="-1">Pickup and laundry details</h2>
           <p class="pud-confirmed-address"><span aria-hidden="true">✓</span> <span data-normalized-address></span></p>
+          <p class="pud-address-review-notice" data-address-review-notice hidden><strong>Address pending review.</strong> You can finish booking this pickup time. Our staff will check the address and may contact you for clarification before confirming pickup.</p>
           <form id="pud-details-form" class="pud-form">
             <section class="pud-form-section" aria-labelledby="pickup-section-heading">
               <h3 id="pickup-section-heading">Pickup</h3>
@@ -202,8 +222,8 @@
 
         <section data-step="complete" hidden>
           <p class="pud-success-mark" aria-hidden="true">✓</p>
-          <h2 tabindex="-1">Pickup booked</h2>
-          <p>Your order number is <strong data-order-number></strong>. Your private link opens order updates, final weight, amount due, and the receipt. Treat it like a password.</p>
+          <h2 tabindex="-1" data-complete-title>Pickup booked</h2>
+          <p data-complete-copy>Your order number is <strong data-order-number></strong>. Your private link opens order updates, final weight, amount due, and the receipt. Treat it like a password.</p>
           <div class="pud-actions">
             <a class="pud-button pud-button-primary" data-status-link href="/pickup-delivery/status/">View order status</a>
           </div>
@@ -292,6 +312,6 @@
 
   <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
   <script type="module" src="/assets/js/pud-site-analytics.js?v=20260725-1"></script>
-  <script type="module" src="/assets/js/pud-booking.js?v=20260727-1"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20260819-1"></script>
 </body>
 </html>

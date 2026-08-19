@@ -281,7 +281,7 @@ export function assertOrderStatus(value) {
   for (const field of ["confirmedAt", "pickedUpAt", "weighedAt", "readyAt", "outForDeliveryAt", "deliveredAt"]) {
     nullableTimestamp(milestones[field], `SafeOrderStatus.milestones.${field}`);
   }
-  for (const field of ["paymentAttentionRequired", "operationalAttentionRequired", "canCancel", "canTip", "canClaim", "canSubmitFeedback", "feedbackSubmitted"]) {
+  for (const field of ["paymentAttentionRequired", "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "canClaim", "canSubmitFeedback", "feedbackSubmitted"]) {
     boolean(result[field], `SafeOrderStatus.${field}`);
   }
   boolean(result.canCreateRecurring, "SafeOrderStatus.canCreateRecurring");

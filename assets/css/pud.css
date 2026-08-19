@@ -669,6 +669,120 @@ h3 {
   white-space: nowrap;
 }
 
+.pud-address-help {
+  margin: -4px 0 0;
+  color: var(--pud-ink);
+  font-size: 0.875rem;
+}
+
+.pud-address-suggestions {
+  display: grid;
+  gap: 6px;
+  margin-top: -4px;
+  padding: 6px;
+  background: var(--pud-surface-strong);
+  border: 1px solid var(--pud-border-strong);
+  border-radius: var(--pud-radius-md);
+  box-shadow: var(--pud-shadow-md);
+}
+
+.pud-address-suggestions[hidden] {
+  display: none;
+}
+
+.pud-address-suggestion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--pud-surface-strong);
+  border: 1px solid transparent;
+  border-radius: var(--pud-radius-sm);
+  cursor: pointer;
+}
+
+.pud-address-suggestion:hover,
+.pud-address-suggestion:focus-visible {
+  background: var(--pud-primary-soft);
+  border-color: var(--pud-primary);
+}
+
+.pud-address-suggestion strong {
+  color: var(--pud-primary);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.pud-address-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  color: var(--pud-ink);
+  background: var(--pud-surface-strong);
+  border: 1px solid var(--pud-border-strong);
+  border-radius: var(--pud-radius-lg);
+  box-shadow: 0 18px 56px rgba(23, 35, 45, 0.24);
+}
+
+.pud-address-dialog::backdrop {
+  background: rgba(23, 35, 45, 0.56);
+}
+
+.pud-address-dialog__body {
+  display: grid;
+  gap: var(--pud-space-4);
+  padding: clamp(20px, 4vw, 32px);
+}
+
+.pud-address-dialog__body > * {
+  margin: 0;
+}
+
+.pud-address-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pud-space-3);
+}
+
+.pud-address-comparison > div {
+  display: grid;
+  gap: 6px;
+  padding: var(--pud-space-4);
+  background: var(--pud-surface-subtle);
+  border: 1px solid var(--pud-border);
+  border-radius: var(--pud-radius-md);
+}
+
+.pud-address-comparison span {
+  color: var(--pud-muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.pud-alert-inline,
+.pud-address-review-notice {
+  padding: 12px 14px;
+  color: var(--pud-warning);
+  background: var(--pud-warning-soft);
+  border-left: 4px solid var(--pud-warning);
+  border-radius: var(--pud-radius-sm);
+}
+
+@media (max-width: 620px) {
+  .pud-address-comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .pud-address-suggestion {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
 .pud-service-area-offer {
   margin: 0;
   color: var(--pud-success);

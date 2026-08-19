@@ -2,14 +2,46 @@ import { autocompleteAddress, checkAddress, selectAutocompleteAddress } from "./
 
 export function addressFromForm(form) {
   const data = new FormData(form);
-  const line2 = String(data.get("line2") || "").trim();
+  return normalizeAddressEntry({
+    line1: data.get("line1"),
+    line2: data.get("line2"),
+    city: data.get("city"),
+    state: data.get("state"),
+    postalCode: data.get("postalCode"),
+  });
+}
+
+export function normalizeAddressEntry(input) {
+  let line1 = String(input.line1 || "").trim().replace(/\s+/g, " ");
+  let line2 = String(input.line2 || "").trim().replace(/\s+/g, " ");
+  if (/^(?:n\/?a|none|not applicable)$/i.test(line2)) line2 = "";
+  const unitToken = unitIdentifier(line2);
+  if (unitToken) {
+    // Customers commonly enter the apartment in both fields. Remove repeated
+    // trailing unit phrases from line 1 while preserving the dedicated field.
+    let match = trailingUnit(line1);
+    while (match && match.token === unitToken) {
+      line1 = line1.slice(0, match.index).replace(/[\s,]+$/, "");
+      match = trailingUnit(line1);
+    }
+  }
   return {
-    line1: String(data.get("line1") || "").trim(),
+    line1,
     ...(line2 ? { line2 } : {}),
-    city: String(data.get("city") || "").trim(),
-    state: String(data.get("state") || "MO").trim().toUpperCase(),
-    postalCode: String(data.get("postalCode") || "").trim(),
+    city: String(input.city || "").trim().replace(/\s+/g, " "),
+    state: String(input.state || "MO").trim().toUpperCase(),
+    postalCode: String(input.postalCode || "").trim(),
   };
+}
+
+function unitIdentifier(value) {
+  const match = String(value || "").match(/(?:^|\s)(?:apt(?:artment)?|unit|#)?\s*#?\s*([A-Za-z0-9-]+)\s*$/i);
+  return match?.[1]?.toUpperCase() || "";
+}
+
+function trailingUnit(value) {
+  const match = /(?:\s|,)+(?:apt(?:artment)?|unit|#)\s*#?\s*([A-Za-z0-9-]+)\s*$/i.exec(value);
+  return match ? { index: match.index, token: match[1].toUpperCase() } : null;
 }
 
 export async function validateAddress(form, turnstileToken, attribution) {
@@ -30,7 +62,7 @@ export function enableAddressAutocomplete(form, enabled) {
   const line1 = form.elements.namedItem("line1");
   const list = form.querySelector("[data-address-autocomplete-list]");
   const status = form.querySelector("[data-address-autocomplete-status]");
-  if (!(line1 instanceof HTMLInputElement) || !(list instanceof HTMLDataListElement) || !(status instanceof HTMLElement)) return;
+  if (!(line1 instanceof HTMLInputElement) || !(list instanceof HTMLElement) || !(status instanceof HTMLElement)) return;
   const sessionToken = createAutocompleteSessionToken();
   let choices = new Map();
   let requestController = null;
@@ -39,6 +71,7 @@ export function enableAddressAutocomplete(form, enabled) {
   const clearSuggestions = () => {
     choices = new Map();
     list.replaceChildren();
+    list.hidden = true;
   };
   const choose = async (placeId) => {
     requestController?.abort();
@@ -51,6 +84,7 @@ export function enableAddressAutocomplete(form, enabled) {
         if (field instanceof HTMLInputElement) field.value = value;
       }
       status.textContent = "Address selected. Please confirm the unit number, if any.";
+      form.dataset.addressSuggestionSelected = "true";
       clearSuggestions();
     } catch (_error) {
       status.textContent = "Address suggestions are unavailable. Enter the address manually.";
@@ -68,13 +102,21 @@ export function enableAddressAutocomplete(form, enabled) {
     try {
       const result = await autocompleteAddress({ query, sessionToken }, { signal: requestController.signal, timeoutMs: 8_000 });
       if (line1.value.trim() !== query) return;
-      choices = new Map(result.suggestions.map((suggestion) => [suggestion.text, suggestion.placeId]));
+      choices = new Map(result.suggestions.map((suggestion) => [suggestion.placeId, suggestion]));
       list.replaceChildren(...result.suggestions.map((suggestion) => {
-        const option = document.createElement("option");
-        option.value = suggestion.text;
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "pud-address-suggestion";
+        option.dataset.placeId = suggestion.placeId;
+        option.setAttribute("role", "option");
+        option.append(
+          Object.assign(document.createElement("span"), { textContent: suggestion.text }),
+          Object.assign(document.createElement("strong"), { textContent: "Use this address" })
+        );
         return option;
       }));
-      status.textContent = result.suggestions.length ? "Choose an address suggestion or continue entering it manually." : "";
+      list.hidden = result.suggestions.length === 0;
+      status.textContent = result.suggestions.length ? "Select the correct address below. This helps us confirm your pickup location." : "No close match found. Check the address or continue for staff review.";
     } catch (error) {
       if (error?.code === "PUD_CLIENT_ABORTED") return;
       clearSuggestions();
@@ -82,13 +124,14 @@ export function enableAddressAutocomplete(form, enabled) {
     }
   };
   line1.addEventListener("input", () => {
-    const placeId = choices.get(line1.value.trim());
-    if (placeId) {
-      void choose(placeId);
-      return;
-    }
+    delete form.dataset.addressSuggestionSelected;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => { void loadSuggestions(); }, 250);
+  });
+  list.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-place-id]");
+    if (!option || !choices.has(option.dataset.placeId)) return;
+    void choose(option.dataset.placeId);
   });
 }
 

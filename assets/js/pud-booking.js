@@ -19,6 +19,8 @@ const state = {
   attribution: attribution(),
   address: null,
   addressProof: "",
+  addressReviewRequired: false,
+  pendingAddressResult: null,
   routes: [],
   deliveryRoutes: [],
   routeId: "",
@@ -110,6 +112,8 @@ async function submitAddress(form) {
   }
   state.address = result.normalizedAddress || address;
   state.addressProof = result.addressProof || "";
+  state.addressReviewRequired = false;
+  state.pendingAddressResult = null;
   state.routeId = "";
   state.deliveryRouteId = "";
   state.phoneProof = "";
@@ -140,11 +144,15 @@ async function submitAddress(form) {
     });
   }
   if (result.eligibility === "review_required") {
+    if (result.reviewBookingAllowed === true && state.routes.length && state.config.bookingEnabled) {
+      showAddressConfirmation(address, result);
+      return;
+    }
     trackFunnel("pud_address_ineligible", { reasonCategory: "needs_review" });
     return showWaitlist({
       reason: "address_review",
-      title: "We need a more precise address",
-      message: "We could not confidently match this address to a pickup location. Check the street, city, ZIP, and apartment or unit. You can edit it now or join the waitlist for staff review; joining does not reserve a pickup time."
+      title: "Address review needed",
+      message: "We could not locate this address precisely enough to reserve a pickup safely. Send it to our staff for review and we may contact you to clarify the street or apartment number."
     });
   }
   if (result.eligibility === "service_paused") {
@@ -155,7 +163,14 @@ async function submitAddress(form) {
       message: "Pickup service is paused. Join the waitlist and we will contact you when booking reopens."
     });
   }
+  return continueBookableAddress(result, false);
+}
+
+function continueBookableAddress(result, pendingReview) {
   if (!state.addressProof) throw new Error("The address check expired. Please check the address again.");
+  state.addressReviewRequired = pendingReview;
+  const reviewNotice = $("[data-address-review-notice]");
+  if (reviewNotice) reviewNotice.hidden = !pendingReview;
   if (!state.config.bookingEnabled) {
     trackFunnel("pud_address_eligible");
     showMessage("This address is eligible. Online booking is temporarily paused, so no pickup request can be submitted yet. You can check another address or return when booking reopens.", "success");
@@ -200,11 +215,46 @@ async function submitAddress(form) {
   go("details");
 }
 
+function showAddressConfirmation(enteredAddress, result) {
+  const dialog = $("[data-address-confirm-dialog]");
+  const suggested = result.suggestedAddress || null;
+  if (!(dialog instanceof HTMLDialogElement)) {
+    continueBookableAddress(result, true);
+    return;
+  }
+  state.pendingAddressResult = { enteredAddress, result };
+  $("[data-address-entered]").textContent = displayAddress(enteredAddress);
+  $("[data-address-suggested]").textContent = displayAddress(suggested);
+  const hasDifferentSuggestion = Boolean(suggested) && addressKey(suggested) !== addressKey(enteredAddress);
+  $("[data-address-suggested-card]").hidden = !hasDifferentSuggestion;
+  $("[data-action=use-suggested-address]").hidden = !hasDifferentSuggestion;
+  $("[data-address-unit-warning]").hidden = result.missingUnit !== true;
+  $("[data-address-dialog-copy]").textContent = hasDifferentSuggestion
+    ? "We found a likely match. Choose it to reduce pickup delays, or keep what you entered and continue with staff review."
+    : "We need one quick confirmation before you continue with this address.";
+  dialog.showModal();
+}
+
+function addressKey(address) {
+  return displayAddress(address).replace(/[^A-Z0-9]/gi, "").toUpperCase();
+}
+
+function fillAddressForm(address) {
+  const form = $("#pud-address-form");
+  for (const name of ["line1", "line2", "city", "state", "postalCode"]) {
+    const field = form.elements.namedItem(name);
+    if (field instanceof HTMLInputElement) field.value = address?.[name] || "";
+  }
+  form.dataset.addressSuggestionSelected = "true";
+}
+
 function showWaitlist({ reason, title, message }) {
   state.waitlistReason = reason;
   $("#pud-waitlist-address").value = displayAddress(state.address);
   $("[data-waitlist-title]").textContent = translateExternalText(title);
   $("[data-waitlist-reason]").textContent = translateExternalText(message);
+  const submit = $("#pud-waitlist-form button[type=submit]");
+  if (submit) submit.textContent = reason === "address_review" ? "Request address review" : "Join waitlist";
   showPanel("waitlist");
 }
 
@@ -349,6 +399,18 @@ async function submitOrder() {
     // Measurement must never turn a valid booking into a customer-facing failure.
   }
   $("[data-order-number]").textContent = result.orderNumber;
+  const addressPending = result.status?.addressReviewRequired === true || state.addressReviewRequired;
+  $("[data-complete-title]").textContent = addressPending ? "Pickup requested · address pending review" : "Pickup booked";
+  const completeOrderNumber = Object.assign(document.createElement("strong"), { textContent: result.orderNumber });
+  completeOrderNumber.dataset.orderNumber = "";
+  $("[data-complete-copy]").replaceChildren(
+    document.createTextNode(addressPending
+      ? "We reserved your requested pickup window while our staff checks the address. We may contact you for clarification. Your order number is"
+      : "Your order number is"),
+    document.createTextNode(" "),
+    completeOrderNumber,
+    document.createTextNode(". Your private link opens order updates, final weight, amount due, and the receipt. Treat it like a password.")
+  );
   const selectedRoute = state.routes.find((item) => item.id === state.routeId);
   state.calendarPickup = selectedRoute?.windowStartAt && selectedRoute?.windowEndAt
     ? Object.freeze({
@@ -388,22 +450,23 @@ async function submitWaitlist(form) {
     consentVersions: state.config.consentVersions || { marketing_email: state.config.consentVersion || "owner-approval-required", marketing_sms: state.config.consentVersion || "owner-approval-required" },
   };
   const waitlistKey = await stableActionKey("waitlist", JSON.stringify(intent));
-  const result = await joinWaitlist(intent, waitlistKey);
+  await joinWaitlist(intent, waitlistKey);
   trackFunnel("pud_waitlist_joined");
   const confirmation = document.createElement("div");
   confirmation.className = "pud-waitlist-confirmation";
   confirmation.setAttribute("role", "status");
   confirmation.setAttribute("tabindex", "-1");
+  const addressReview = state.waitlistReason === "address_review";
   confirmation.append(
-    Object.assign(document.createElement("h3"), { textContent: "Waitlist request recorded" }),
+    Object.assign(document.createElement("h3"), { textContent: addressReview ? "Address review request received" : "Waitlist request recorded" }),
     Object.assign(document.createElement("p"), {
-      textContent: "We saved your request. This is not a booking or reserved pickup time. Staff will contact you if an approved opening becomes available."
+      textContent: addressReview
+        ? "We saved the address for staff review. This is not a booking or reserved pickup time. We may contact you if we need clarification."
+        : "We saved your request. This is not a booking or reserved pickup time. Staff will contact you if an approved opening becomes available."
     }),
     Object.assign(document.createElement("p"), {
       className: "pud-fine-print",
-      textContent: result?.confirmationEmailQueued
-        ? "A confirmation email has been queued."
-        : "No confirmation email is sent from the current waitlist workflow; keep this on-screen confirmation."
+      textContent: "Our staff team has been notified by email."
     })
   );
   form.replaceWith(confirmation);
@@ -413,6 +476,33 @@ async function submitWaitlist(form) {
 async function onClick(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
+  if (button.dataset.action === "use-suggested-address") {
+    const suggested = state.pendingAddressResult?.result?.suggestedAddress;
+    if (suggested) {
+      $("[data-address-confirm-dialog]")?.close();
+      state.pendingAddressResult = null;
+      fillAddressForm(suggested);
+      $("#pud-address-form").requestSubmit();
+    }
+    return;
+  }
+  if (button.dataset.action === "keep-entered-address") {
+    const pending = state.pendingAddressResult;
+    $("[data-address-confirm-dialog]")?.close();
+    state.pendingAddressResult = null;
+    if (pending) {
+      state.address = pending.enteredAddress;
+      $("[data-normalized-address]").textContent = displayAddress(state.address);
+      continueBookableAddress(pending.result, true);
+    }
+    return;
+  }
+  if (button.dataset.action === "edit-address") {
+    $("[data-address-confirm-dialog]")?.close();
+    state.pendingAddressResult = null;
+    $("#pud-address-form [name=line1]")?.focus();
+    return;
+  }
   if (button.dataset.action === "copy-status-link") {
     const value = $("[data-status-link]")?.href || "";
     const status = $("[data-confirmation-action-status]");

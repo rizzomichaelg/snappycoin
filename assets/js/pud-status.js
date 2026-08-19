@@ -992,17 +992,18 @@ function renderAttention(value) {
   const copy = $("[data-attention-copy]");
   const paymentNeedsHelp = Boolean(value.paymentAttentionRequired);
   const orderNeedsHelp = Boolean(value.operationalAttentionRequired);
+  const addressNeedsReview = Boolean(value.addressReviewRequired);
   const canRepairPayment = ["requires_action", "failed"].includes(value.paymentStatus)
     && Boolean(publicConfig?.squareApplicationId || publicConfig?.stripePublishableKey);
-  panel.hidden = !paymentNeedsHelp && !orderNeedsHelp;
+  panel.hidden = !paymentNeedsHelp && !orderNeedsHelp && !addressNeedsReview;
   if (panel.hidden) {
     title.textContent = "";
     copy.textContent = "";
     delete panel.dataset.variant;
     return;
   }
-  panel.dataset.variant = paymentNeedsHelp && orderNeedsHelp ? "both" : paymentNeedsHelp ? "payment" : "operations";
-  if (paymentNeedsHelp && orderNeedsHelp) {
+  panel.dataset.variant = paymentNeedsHelp && (orderNeedsHelp || addressNeedsReview) ? "both" : paymentNeedsHelp ? "payment" : "operations";
+  if (paymentNeedsHelp && (orderNeedsHelp || addressNeedsReview)) {
     title.textContent = "Your order needs attention";
     copy.textContent = canRepairPayment
       ? "Please update payment below. Our team is also reviewing an order detail and will contact you if anything else is needed."
@@ -1014,6 +1015,9 @@ function renderAttention(value) {
         ? "Your card needs confirmation. Use the secure payment section below to keep this order moving."
         : "The card could not be charged. Update your payment method below; staff will retry the same order charge."
       : "The payment is being reviewed. We’ll contact you using the information on the order if anything is needed.";
+  } else if (addressNeedsReview) {
+    title.textContent = "Address pending review";
+    copy.textContent = "Your requested pickup window is reserved while our team checks the address. We’ll contact you if we need clarification before confirming pickup.";
   } else {
     title.textContent = "Our team is reviewing an order detail";
     copy.textContent = "Your laundry remains tracked. We’ll contact you using the information on the order if we need anything from you.";
