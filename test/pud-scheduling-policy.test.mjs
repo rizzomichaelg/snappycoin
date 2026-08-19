@@ -27,7 +27,9 @@ test("booking shows the promotional hierarchy without technical delivery counts"
   assert.match(html, /class="pud-price-note">Comforters &amp; bulky items priced separately\. Call for pricing\.<\/span>/);
   assert.match(html, /Pricing<\/dt><dd>\$1\.35\/lb · \$15 minimum through August 31st\./);
   assert.match(booking, /compactMoney\(price\.minimumCents \?\? 1500\)/);
-  assert.match(home, /Pickup &amp; delivery from your door\./);
+  assert.match(home, /Wash\/Dry\/Fold offer through August 31/);
+  assert.match(home, /Claim 10% discount/);
+  assert.match(home, /href="\/pickup-delivery\/#booking"/);
   assert.doesNotMatch(home, /\$1\.35 per pound|\$15 minimum|\$1\.50 per pound|10% off through August 31st/);
   assert.doesNotMatch(booking, /delivery window.*available at least 24 hours after pickup/);
   assert.match(booking, /Choose a delivery day and time\./);
