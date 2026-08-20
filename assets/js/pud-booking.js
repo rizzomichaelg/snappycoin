@@ -1,5 +1,5 @@
 import { PUD_CONFIG } from "./pud-config.js";
-import { createOrder, getPublicConfig, joinWaitlist } from "./pud-api.js";
+import { acceptSuggestedAddress, createOrder, getPublicConfig, joinWaitlist } from "./pud-api.js";
 import { attribution, setSelfReportedSource, trackFunnel } from "./pud-attribution.js";
 import { displayAddress, enableAddressAutocomplete, validateAddress } from "./pud-address.js";
 import { eligibleDeliveryRoutes, formatRoute, renderRouteDays, renderRouteTimes, routeOptions } from "./pud-scheduling.js";
@@ -37,6 +37,7 @@ const allSteps = ["address", "details", "phone", "review", "complete"];
 const $ = (selector) => root.querySelector(selector);
 let turnstileSiteKey = "";
 let submissionInFlight = false;
+let addressConfirmationInFlight = false;
 if (root && window.top !== window.self) fatal(new Error("Booking is available only in a full browser window."));
 else if (root) boot().catch((error) => fatal(error));
 
@@ -107,6 +108,10 @@ async function onSubmit(event) {
 
 async function submitAddress(form) {
   const { address, result } = await validateAddress(form, undefined, state.attribution);
+  return processAddressResult(address, result);
+}
+
+function processAddressResult(address, result, { confirmedSuggestion = false } = {}) {
   if (!result || !["eligible", "out_of_zone", "review_required", "service_paused"].includes(result.eligibility)) {
     throw new Error("The address service returned an invalid eligibility result.");
   }
@@ -145,6 +150,7 @@ async function submitAddress(form) {
   }
   if (result.eligibility === "review_required") {
     if (result.reviewBookingAllowed === true && state.routes.length && state.config.bookingEnabled) {
+      if (confirmedSuggestion) return continueBookableAddress(result, true);
       showAddressConfirmation(address, result);
       return;
     }
@@ -223,14 +229,18 @@ function showAddressConfirmation(enteredAddress, result) {
     return;
   }
   state.pendingAddressResult = { enteredAddress, result };
+  setAddressDialogBusy(false);
   $("[data-address-entered]").textContent = displayAddress(enteredAddress);
   $("[data-address-suggested]").textContent = displayAddress(suggested);
   const hasDifferentSuggestion = Boolean(suggested) && addressKey(suggested) !== addressKey(enteredAddress);
+  const canAcceptSuggestion = hasDifferentSuggestion && Boolean(result.suggestionProof);
   $("[data-address-suggested-card]").hidden = !hasDifferentSuggestion;
-  $("[data-action=use-suggested-address]").hidden = !hasDifferentSuggestion;
+  $("[data-action=use-suggested-address]").hidden = !canAcceptSuggestion;
   $("[data-address-unit-warning]").hidden = result.missingUnit !== true;
-  $("[data-address-dialog-copy]").textContent = hasDifferentSuggestion
+  $("[data-address-dialog-copy]").textContent = canAcceptSuggestion
     ? "We found a likely match. Choose it to reduce pickup delays, or keep what you entered and continue with staff review."
+    : hasDifferentSuggestion
+      ? "We found a likely match. Edit the address to use it, or keep what you entered and continue with staff review."
     : "We need one quick confirmation before you continue with this address.";
   dialog.showModal();
 }
@@ -477,16 +487,35 @@ async function onClick(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   if (button.dataset.action === "use-suggested-address") {
-    const suggested = state.pendingAddressResult?.result?.suggestedAddress;
-    if (suggested) {
+    if (addressConfirmationInFlight) return;
+    const pending = state.pendingAddressResult;
+    const suggested = pending?.result?.suggestedAddress;
+    const suggestionProof = pending?.result?.suggestionProof;
+    if (!suggested || !suggestionProof) return;
+    addressConfirmationInFlight = true;
+    setAddressDialogBusy(true, "Confirming address…");
+    try {
+      const result = await acceptSuggestedAddress(
+        { address: suggested, suggestionProof },
+        { timeoutMs: 8_000 },
+      );
       $("[data-address-confirm-dialog]")?.close();
       state.pendingAddressResult = null;
       fillAddressForm(suggested);
-      $("#pud-address-form").requestSubmit();
+      processAddressResult(suggested, result, { confirmedSuggestion: true });
+    } catch (_error) {
+      $("[data-address-confirm-dialog]")?.close();
+      state.pendingAddressResult = null;
+      showMessage("We could not confirm the suggested address. Check the address again, then choose the suggested address or continue with staff review.");
+      $("#pud-address-form button[type=submit]")?.focus();
+    } finally {
+      addressConfirmationInFlight = false;
+      setAddressDialogBusy(false);
     }
     return;
   }
   if (button.dataset.action === "keep-entered-address") {
+    if (addressConfirmationInFlight) return;
     const pending = state.pendingAddressResult;
     $("[data-address-confirm-dialog]")?.close();
     state.pendingAddressResult = null;
@@ -498,6 +527,7 @@ async function onClick(event) {
     return;
   }
   if (button.dataset.action === "edit-address") {
+    if (addressConfirmationInFlight) return;
     $("[data-address-confirm-dialog]")?.close();
     state.pendingAddressResult = null;
     $("#pud-address-form [name=line1]")?.focus();
@@ -737,8 +767,29 @@ function populateReview() {
 }
 
 function setBusy(form, busy) {
-  form.querySelectorAll("button").forEach((control) => { control.disabled = busy; });
+  form.querySelectorAll("button").forEach((control) => {
+    control.disabled = busy;
+    if (!control.dataset.busyLabel) return;
+    if (busy) {
+      control.dataset.idleLabel = control.textContent;
+      control.textContent = translateText(control.dataset.busyLabel);
+    } else if (control.dataset.idleLabel) {
+      control.textContent = control.dataset.idleLabel;
+      delete control.dataset.idleLabel;
+    }
+  });
   form.setAttribute("aria-busy", String(busy));
+}
+
+function setAddressDialogBusy(busy, status = "") {
+  const dialog = $("[data-address-confirm-dialog]");
+  if (!(dialog instanceof HTMLDialogElement)) return;
+  dialog.setAttribute("aria-busy", String(busy));
+  dialog.querySelectorAll("button").forEach((control) => { control.disabled = busy; });
+  const confirm = dialog.querySelector("[data-action=use-suggested-address]");
+  if (confirm) confirm.textContent = translateText(busy ? "Confirming address…" : "Use suggested address");
+  const statusNode = dialog.querySelector("[data-address-dialog-status]");
+  if (statusNode) statusNode.textContent = status;
 }
 
 function turnstileValue(form) {

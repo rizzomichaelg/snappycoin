@@ -14,6 +14,7 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
   "/api/pud/address/autocomplete": define("AddressAutocompleteRequest", ["query", "sessionToken"]),
   "/api/pud/address/autocomplete/select": define("AddressAutocompleteSelectionRequest", ["placeId", "sessionToken"]),
   "/api/pud/address/check": define("AddressCheckRequest", ["address"], ["turnstileToken", "attribution"]),
+  "/api/pud/address/suggestion/accept": define("AddressSuggestionAcceptanceRequest", ["address", "suggestionProof"]),
   "/api/pud/waitlist": define(
     "WaitlistRequest",
     ["address", "turnstileToken", "addressProof", "firstName", "lastName", "phone", "reason", "marketingEmailConsent", "marketingSmsConsent", "consentVersions"],

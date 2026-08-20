@@ -772,6 +772,12 @@ h3 {
   border-radius: var(--pud-radius-sm);
 }
 
+.pud-address-dialog-status {
+  min-height: 1.25em;
+  color: var(--pud-muted);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 620px) {
   .pud-address-comparison {
     grid-template-columns: 1fr;

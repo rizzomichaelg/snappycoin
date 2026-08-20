@@ -9,9 +9,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://sandbox.web.squarecdn.com https://web.squarecdn.com https://www.facebook.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self' 'unsafe-inline' https://sandbox.web.squarecdn.com https://web.squarecdn.com; script-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://pci-connect.squareup.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com https://connect.squareup.com https://connect.squareupsandbox.com https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://o160250.ingest.sentry.io https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net http://127.0.0.1:8787 http://localhost:8787; font-src 'self' https://*.squarecdn.com https://d1g145x70srn7h.cloudfront.net;">
   <title>Pickup &amp; Delivery | Snappy Coin Laundry</title>
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
-  <link rel="stylesheet" href="/assets/css/pud.css?v=20260819-1">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260819-2">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260819-1"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20260819-2"></script>
   <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
 </head>
@@ -75,7 +75,7 @@
               <label class="pud-state">State <input name="state" autocomplete="address-level1" maxlength="2" value="MO" required></label>
               <label>ZIP <input name="postalCode" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" required></label>
             </div>
-            <button class="pud-button pud-button-primary" type="submit">Check my address</button>
+            <button class="pud-button pud-button-primary" type="submit" data-busy-label="Checking address…">Check my address</button>
           </form>
           <dialog class="pud-address-dialog" data-address-confirm-dialog aria-labelledby="pud-address-dialog-title">
             <div class="pud-address-dialog__body">
@@ -87,6 +87,7 @@
                 <div data-address-suggested-card><span>Suggested by <span translate="no" data-i18n-skip>Google Maps</span></span><strong data-address-suggested></strong></div>
               </div>
               <p class="pud-alert-inline" data-address-unit-warning hidden>This building may require an apartment or unit number. Add it if you have one.</p>
+              <p class="pud-address-dialog-status" data-address-dialog-status role="status" aria-live="polite"></p>
               <div class="pud-actions">
                 <button class="pud-button pud-button-primary" type="button" data-action="use-suggested-address">Use suggested address</button>
                 <button class="pud-button pud-button-secondary" type="button" data-action="keep-entered-address">Keep mine · pending review</button>
@@ -312,6 +313,6 @@
 
   <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
   <script type="module" src="/assets/js/pud-site-analytics.js?v=20260725-1"></script>
-  <script type="module" src="/assets/js/pud-booking.js?v=20260819-1"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20260819-2"></script>
 </body>
 </html>

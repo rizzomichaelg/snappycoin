@@ -17,6 +17,11 @@ test("address validation stays first and exposes clear eligible and ineligible p
   assert.match(booking, /result\.reviewBookingAllowed === true/);
   assert.match(booking, /showAddressConfirmation/);
   assert.match(html, /Keep mine · pending review/);
+  assert.match(html, /data-busy-label="Checking address…"/);
+  assert.match(html, /data-address-dialog-status[\s\S]*aria-live="polite"/);
+  assert.match(booking, /acceptSuggestedAddress/);
+  assert.match(booking, /Confirming address…/);
+  assert.doesNotMatch(booking, /fillAddressForm\(suggested\);\s*\$\("#pud-address-form"\)\.requestSubmit/);
   assert.match(booking, /Outside our service area/);
   assert.match(booking, /We do not currently serve this address/);
   assert.match(booking, /We could not locate this address precisely enough/);

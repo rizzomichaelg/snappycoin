@@ -234,6 +234,10 @@ export const selectAutocompleteAddress = async (input, options = {}) => assertAd
   { method: "POST", body: contractBody("/api/pud/address/autocomplete/select", input), ...options },
 ));
 export const checkAddress = (input) => postContract("/api/pud/address/check", input);
+export const acceptSuggestedAddress = async (input, options = {}) => requestJson(
+  "/api/pud/address/suggestion/accept",
+  { method: "POST", body: contractBody("/api/pud/address/suggestion/accept", input), ...options },
+);
 export const joinWaitlist = (input, key) => postContract("/api/pud/waitlist", input, key);
 export const startPhone = async (input) => assertPhoneStart(await postContract("/api/pud/phone/start", input));
 export const resendPhone = async (input) => assertPhoneResend(await postContract("/api/pud/phone/resend", input));
