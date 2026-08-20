@@ -497,12 +497,20 @@ async function onClick(event) {
     try {
       const result = await acceptSuggestedAddress(
         { address: suggested, suggestionProof },
-        { timeoutMs: 8_000 },
+        { timeoutMs: 20_000 },
       );
+      const confirmedResult = {
+        ...result,
+        routes: pending.result.routes,
+        deliveryRoutes: pending.result.deliveryRoutes,
+        ...(pending.result.availability ? { availability: pending.result.availability } : {}),
+        ...(pending.result.zoneCode ? { zoneCode: pending.result.zoneCode } : {}),
+        ...(pending.result.zoneVersion ? { zoneVersion: pending.result.zoneVersion } : {}),
+      };
       $("[data-address-confirm-dialog]")?.close();
       state.pendingAddressResult = null;
       fillAddressForm(suggested);
-      processAddressResult(suggested, result, { confirmedSuggestion: true });
+      processAddressResult(suggested, confirmedResult, { confirmedSuggestion: true });
     } catch (_error) {
       $("[data-address-confirm-dialog]")?.close();
       state.pendingAddressResult = null;
