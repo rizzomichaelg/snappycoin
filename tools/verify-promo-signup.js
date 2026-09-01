@@ -495,11 +495,11 @@ function verifyStaticPage() {
   assert(html.includes("googleads.g.doubleclick.net"), "main page CSP must allow Google Ads doubleclick endpoint");
   assert(html.includes("ad.doubleclick.net"), "main page CSP must allow Google Ads collect endpoint");
   assert(!html.includes("noscript=1"), "main page must not bypass consent with a noscript Meta Pixel");
-  assert(html.includes('class="hero-wdf-promo"'), "main page Wash/Dry/Fold promotion is missing");
-  assert(html.includes("Wash/Dry/Fold offer through August 31"), "main page Wash/Dry/Fold promotion deadline is missing");
-  assert(html.includes("Claim 10% discount"), "main page Wash/Dry/Fold promotion CTA is missing");
-  assert(html.includes('href="/pickup-delivery/#booking"'), "main page Wash/Dry/Fold promotion must link directly to booking");
-  assert(!html.includes("$1.35/lb"), "literal PUD pricing must stay off the main homepage");
+  assert(html.includes('class="hero-wdf-service"'), "main page Wash/Dry/Fold service link is missing");
+  assert(html.includes("Pickup &amp; delivery Wash/Dry/Fold"), "main page Wash/Dry/Fold service label is missing");
+  assert(html.includes("Book pickup &amp; delivery"), "main page Wash/Dry/Fold booking CTA is missing");
+  assert(html.includes('href="/pickup-delivery/#booking"'), "main page Wash/Dry/Fold service must link directly to booking");
+  assert(!/10% off|August 31|Claim 10% discount|hero-wdf-promo/i.test(html), "expired Wash/Dry/Fold promotion copy is still present");
   assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20260621-1"), "global analytics script is missing from promo redirect page");
   assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
   assert(redirectHtml.includes("www.googleadservices.com"), "promo redirect CSP must allow Google Ads measurement");
@@ -507,7 +507,7 @@ function verifyStaticPage() {
   assert(html.includes('href="privacy.html"'), "footer privacy policy link is missing");
   assert(html.includes('href="terms.html"'), "footer terms link is missing");
   assert(html.includes('href="cookies.html"'), "footer cookie statement link is missing");
-  assert(html.includes("styles.css?v=20260818-1"), "main stylesheet cache buster was not updated");
+  assert(html.includes("styles.css?v=20260901-1"), "main stylesheet cache buster was not updated");
   assert(!privacyHtml.includes("noscript=1"), "privacy page must not bypass consent with a noscript Meta Pixel");
   assert(privacyHtml.includes("Privacy Policy"), "privacy page heading is missing");
   assert(privacyHtml.includes("SMS verification is used only to confirm"), "privacy page must explain SMS verification");

@@ -9,9 +9,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: https://sandbox.web.squarecdn.com https://web.squarecdn.com https://www.facebook.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; style-src 'self' 'unsafe-inline' https://sandbox.web.squarecdn.com https://web.squarecdn.com; script-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://connect.facebook.net https://www.googletagmanager.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://pci-connect.squareup.com; connect-src 'self' https://api.snappycoinlaundry.com https://api-staging.snappycoinlaundry.com https://api.stripe.com https://connect.squareup.com https://connect.squareupsandbox.com https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://sandbox.web.squarecdn.com https://web.squarecdn.com https://o160250.ingest.sentry.io https://www.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://stats.g.doubleclick.net http://127.0.0.1:8787 http://localhost:8787; font-src 'self' https://*.squarecdn.com https://d1g145x70srn7h.cloudfront.net;">
   <title>Pickup &amp; Delivery | Snappy Coin Laundry</title>
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
-  <link rel="stylesheet" href="/assets/css/pud.css?v=20260819-2">
+  <link rel="stylesheet" href="/assets/css/pud.css?v=20260901-1">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260819-2"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20260901-1"></script>
   <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
 </head>
@@ -37,7 +37,7 @@
       <p>Enter your address to choose available pickup and delivery times.</p>
       <p class="pud-service-area-offer" data-pud-service-area-offer hidden>Free pickup and delivery within our service area.</p>
       <ul class="pud-trust-list">
-        <li><span>Price</span><strong class="pud-price-stack"><span class="pud-price-current"><span data-pud-current-price>$1.35/lb</span> · <span data-pud-minimum>$15 minimum</span></span><span class="pud-price-promotion" data-pud-promotion><s>$1.50/lb</s> <span>10% off through August 31st.</span></span><span class="pud-price-note">Comforters &amp; bulky items priced separately. Call for pricing.</span></strong></li>
+        <li><span>Price</span><strong class="pud-price-stack"><span class="pud-price-current"><span data-pud-current-price>$1.50/lb</span> · <span data-pud-minimum>$15 minimum</span></span><span class="pud-price-note">Comforters &amp; bulky items priced separately. Call for pricing.</span></strong></li>
         <li><span>Payment</span><strong data-payment-summary>Online card payment · charged after final weighing</strong></li>
         <li><span>Updates</span><strong>Electronic updates as your order moves from pickup through delivery</strong></li>
       </ul>
@@ -191,7 +191,7 @@
             <div><dt>Delivery</dt><dd data-review-return></dd><button type="button" data-action="edit" data-step="details">Edit</button></div>
             <div><dt>Laundry preferences</dt><dd data-review-laundry></dd></div>
             <div><dt>Contact</dt><dd data-review-customer></dd></div>
-            <div><dt>Pricing</dt><dd>$1.35/lb · $15 minimum through August 31st.<br>Regularly $1.50/lb. Final total is based on actual weight after pickup.</dd></div>
+            <div><dt>Pricing</dt><dd data-review-pricing>$1.50/lb · $15 minimum. Final total is based on actual weight after pickup.</dd></div>
           </dl>
           <form id="pud-review-form" class="pud-form">
             <section class="pud-form-section" aria-labelledby="card-on-file-heading">
@@ -301,7 +301,7 @@
       <p class="pud-eyebrow">Common questions</p>
       <h2 id="pud-faq-heading">Before your first pickup</h2>
       <details><summary>What does the service-area waitlist do?</summary><p>It records your address and contact details for staff review. It does not create an order, reserve a pickup, or promise that service will expand. Staff can invite you to finish a verified booking when an approved window is available.</p></details>
-      <details><summary>How is the final price calculated?</summary><p>Laundry is weighed after pickup and charged at the promotional price of $1.35 per pound, with a $15 minimum, through August 31st. The regular price is $1.50 per pound.</p></details>
+      <details><summary>How is the final price calculated?</summary><p>Laundry is weighed after pickup and charged at $1.50 per pound, with a $15 minimum.</p></details>
       <details><summary>When will my laundry be returned?</summary><p>Choose your pickup first, then select from the available delivery days and times.</p></details>
       <details><summary>Can I request fragrance-free detergent?</summary><p>Yes. Choose “Free &amp; clear” under Laundry preferences and add any sensitivities in Special instructions.</p></details>
       <details><summary>What if I miss the pickup?</summary><p>Call <a href="tel:13146281001">(314) 628-1001</a> as soon as possible so the local team can review the available options.</p></details>
@@ -313,6 +313,6 @@
 
   <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
   <script type="module" src="/assets/js/pud-site-analytics.js?v=20260725-1"></script>
-  <script type="module" src="/assets/js/pud-booking.js?v=20260820-1"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20260901-1"></script>
 </body>
 </html>

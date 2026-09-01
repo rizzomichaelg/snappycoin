@@ -55,11 +55,10 @@ async function boot() {
   configureHandoff();
   if (!state.config.publicEnabled) return showUnavailable(state.config.message || "Pickup and delivery is not accepting bookings yet.");
   const price = state.config.pricing || {};
-  const pricePerLbCents = price.pricePerLbCents ?? 135;
+  const pricePerLbCents = price.pricePerLbCents ?? 150;
   $("[data-pud-current-price]").textContent = `${money(pricePerLbCents)}/lb`;
   $("[data-pud-minimum]").textContent = `${compactMoney(price.minimumCents ?? 1500)} minimum`;
-  const promotion = $("[data-pud-promotion]");
-  if (promotion) promotion.hidden = pricePerLbCents !== 135;
+  $("[data-review-pricing]").textContent = `${money(pricePerLbCents)}/lb · ${compactMoney(price.minimumCents ?? 1500)} minimum. Final total is based on actual weight after pickup.`;
   $("[data-pud-service-area-offer]").hidden = price.deliveryFeeCents !== 0;
   await setupTurnstile(state.config.turnstileSiteKey);
   showStep(state.step);

@@ -82,6 +82,7 @@ const runtimeTemplateSamples = new Map([
   ["Out for delivery since {value}", ["Out for delivery since Jul 15, 2026, 9:00 AM"]],
   ["Order journey. Current stage: {value}.", ["Order journey. Current stage: Laundry picked up."]],
   ["{value}/lb", ["$1.99/lb"]],
+  ["{value}/lb · {value} minimum. Final total is based on actual weight after pickup.", ["$1.50/lb · $15 minimum. Final total is based on actual weight after pickup."]],
   ["Pricing {value} · tax rule {value} · minimum {value}.", ["Pricing pricing-v1 · tax rule tax-v1 · minimum $35.00."]],
   ["Rewards account: {value}.", ["Rewards account: Active."]],
   ["{value} · {value} · balance {value}{value} · {value}{value}", ["Reward earned · +$5.00 · balance $10.00 · order PUD-20260715-AB12CD34 · Jul 15, 2026 · expires Aug 15, 2026"]],

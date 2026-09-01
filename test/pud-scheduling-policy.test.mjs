@@ -15,22 +15,24 @@ test("delivery choices begin 24 hours after the selected pickup timestamp", () =
   assert.deepEqual(eligibleDeliveryRoutes(routes, pickup).map((route) => route.id), ["exactly-24-hours", "later"]);
 });
 
-test("booking shows the promotional hierarchy without technical delivery counts", async () => {
+test("booking and homepage show the standard rate without expired promotion copy", async () => {
   const [html, home, booking] = await Promise.all([
     readFile(new URL("pickup-delivery/index.html", root), "utf8"),
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("assets/js/pud-booking.js", root), "utf8"),
   ]);
-  assert.match(html, /data-pud-current-price>\$1\.35\/lb/);
+  assert.match(html, /data-pud-current-price>\$1\.50\/lb/);
   assert.match(html, /data-pud-minimum>\$15 minimum/);
-  assert.match(html, /<s>\$1\.50\/lb<\/s>[\s\S]*10% off through August 31st\./);
   assert.match(html, /class="pud-price-note">Comforters &amp; bulky items priced separately\. Call for pricing\.<\/span>/);
-  assert.match(html, /Pricing<\/dt><dd>\$1\.35\/lb · \$15 minimum through August 31st\./);
+  assert.match(html, /Pricing<\/dt><dd data-review-pricing>\$1\.50\/lb · \$15 minimum\./);
   assert.match(booking, /compactMoney\(price\.minimumCents \?\? 1500\)/);
-  assert.match(home, /Wash\/Dry\/Fold offer through August 31/);
-  assert.match(home, /Claim 10% discount/);
+  assert.match(booking, /price\.pricePerLbCents \?\? 150/);
+  assert.match(home, /Pickup &amp; delivery Wash\/Dry\/Fold/);
+  assert.match(home, /Book pickup &amp; delivery/);
   assert.match(home, /href="\/pickup-delivery\/#booking"/);
-  assert.doesNotMatch(home, /\$1\.35 per pound|\$15 minimum|\$1\.50 per pound|10% off through August 31st/);
+  for (const source of [html, home, booking]) {
+    assert.doesNotMatch(source, /\$1\.35|10% off|August 31|promotional price|pud-promo-2026-08-31/i);
+  }
   assert.doesNotMatch(booking, /delivery window.*available at least 24 hours after pickup/);
   assert.match(booking, /Choose a delivery day and time\./);
 });

@@ -934,9 +934,7 @@ h3 {
 }
 
 .pud-trust-list .pud-price-current,
-.pud-trust-list .pud-price-current span,
-.pud-trust-list .pud-price-promotion,
-.pud-trust-list .pud-price-promotion span {
+.pud-trust-list .pud-price-current span {
   color: var(--pud-text);
   font-size: 1rem;
   font-weight: 700;

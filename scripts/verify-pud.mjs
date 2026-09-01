@@ -59,7 +59,7 @@ if (!status.includes("All pickup and delivery times shown below are Central Time
   throw new Error("Private order status must state that pickup and delivery windows use Central Time.");
 }
 for (const [name, policy] of [["privacy", privacy], ["terms", terms]]) {
-  if (!policy.includes("Effective August 16, 2026")) throw new Error(`${name} policy needs a final effective date.`);
+  if (!policy.includes("Effective September 1, 2026")) throw new Error(`${name} policy needs the current effective date.`);
   if (/Draft|not approved|staging draft/i.test(policy)) throw new Error(`${name} policy still contains draft language.`);
 }
 if (!status.includes('meta name="referrer" content="no-referrer"')) throw new Error("Status page must use no-referrer.");

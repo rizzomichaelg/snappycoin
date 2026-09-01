@@ -1,17 +1,17 @@
 {
-  "source": "rizzomichaelg/snappycoin@origin/main with approved PUD entry-point links, pickup-turnaround clarification, prominent 10% Wash/Dry/Fold booking promotion, and responsive header sizing",
+  "source": "rizzomichaelg/snappycoin@origin/main with approved PUD entry-point links, standard Wash/Dry/Fold booking entry point, and responsive header sizing",
   "files": {
     "assets/js/availability-widget.js": "b343a0777c08488784d730ab8c59b05be21f2ed898b6766fde8c118153d46b29",
     "assets/js/promo-signup.js": "6382bedb875acc4645eba9c573968c73b1f3a46949a0727fe01020894eb3e102",
     "assets/js/site-analytics.js": "c874338ec1e3505b35e0ac6ea383ecfc40b201551dd22e33ad68889d08df4e07",
     "cookies.html": "9488a542c1e8d9f40e5cd71cef022d9bc6d1eb35b6fcb3d0a87b2ce78a5088ad",
     "docs/security-headers.md": "1fb191765d0a4a631dc3a2ae754e5bcfab1917fc9ff2c354086b3f262915a069",
-    "index.html": "b8f96cecf7c5c06141ff91f3dbc2cd796cc0930ee3c410322fb365c4c73a88b3",
+    "index.html": "ff354dda2e408f946a37422d0ebee163320a1489114c5d6452d59c86117c805e",
     "manifest.json": "c0efb3ede062ce9ec98276f90ab8349f289563d312119bee78b1b6785cf1496d",
     "privacy.html": "1500a788010f0ebb6fe7be78183d12259fc092c41c74cc6a91b5341d20e31dfb",
     "promos/free-weekday-wash/index.html": "3691ad648e33f3fffedc489b890d07ca57f7a2903769ef2a2192f23b47c05f40",
     "script.js": "acc2a03af13da2dd0745ba03c56be88abe2f7975ec9905d2c6a8543127d9c891",
-    "styles.css": "82ddac62fcbc829ef759ce5a3a050c377271d311cd6dcafabe789235c304afd7",
+    "styles.css": "0ccf685967d8dea48396f2f3a5853a3c34a02c1feb775a0a2c8b92419b202e94",
     "terms.html": "38e700b2068d633e4c2aa09cefec40bb65de62909956aec3a0fd722aebd1aeaa"
   }
 }
