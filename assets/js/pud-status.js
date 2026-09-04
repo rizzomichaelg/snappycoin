@@ -206,7 +206,7 @@ function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
   $("#pud-tip-form [name=amount]")?.addEventListener("input", () => {
-    document.querySelectorAll('[data-action="tip-amount"]').forEach((button) => button.setAttribute("aria-pressed", "false"));
+    document.querySelectorAll('[data-action="tip-amount"]').forEach((button) => button.setAttribute("aria-pressed", String(!button.dataset.percent)));
   });
   $("[data-step-up]")?.addEventListener("toggle", () => {
     if ($("[data-step-up]").open && !$("#pud-step-up-phone-form").hidden) ensureTurnstile($("#pud-step-up-phone-form"));
@@ -268,9 +268,13 @@ async function onClick(event) {
   const action = button.dataset.action;
   if (action === "tip-amount") {
     const input = $("#pud-tip-form [name=amount]");
-    input.value = button.dataset.amount;
+    const isCustom = !button.dataset.percent;
+    input.value = isCustom ? "" : (percentageTipCents(order, Number(button.dataset.percent)) / 100).toFixed(2);
+    $("[data-tip-dollar-field]").hidden = false;
+    input.readOnly = !isCustom;
+    $('#pud-tip-form [type="submit"]').disabled = false;
     document.querySelectorAll('[data-action="tip-amount"]').forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
-    if (!button.dataset.amount) input.focus();
+    if (isCustom) input.focus();
     return;
   }
   if (action === "refresh") return runAction(async () => {
@@ -1233,10 +1237,22 @@ function renderReschedule(options) {
   select.disabled = routes.length === 0;
 }
 
+function percentageTipCents(value, percent) {
+  const receipt = value?.receipt;
+  if (!receipt) return 0;
+  const subtotal = Math.max(0, receipt.baseChargeCents + receipt.deliveryFeeCents - receipt.discountCents);
+  return Math.round(subtotal * percent / 100);
+}
+
 function renderTip(value) {
   const panel = $("[data-tip-panel]");
   const form = $("#pud-tip-form");
   const summary = $("[data-tip-summary]");
+  form.querySelectorAll("[data-percent]").forEach((button) => {
+    const cents = percentageTipCents(value, Number(button.dataset.percent));
+    button.textContent = `${button.dataset.percent}% (${money(cents)})`;
+    button.disabled = cents < 50 || cents > 100000;
+  });
   const tipCents = Number(value.receipt?.tipCents || 0);
   const tippingStatus = ["out_for_delivery", "delivered"].includes(value.fulfillmentStatus);
   panel.hidden = !tippingStatus || (tipCents === 0 && (!publicConfig?.tipsEnabled || !value.canTip));

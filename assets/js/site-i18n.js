@@ -37,6 +37,7 @@ const ES = Object.freeze({
   "Delivery window · Central Time": "Horario de entrega · Hora Central",
   "Leave a tip": "Dejar propina",
   "Other amount": "Otro monto",
+  "Percentages use your subtotal after discounts, before tax.": "Los porcentajes se calculan sobre el subtotal después de descuentos y antes de impuestos.",
   "Suggested tip amounts": "Montos de propina sugeridos",
   "Optional. Charged separately to the card used for this order.": "Opcional. Se cobra por separado a la tarjeta usada para este pedido.",
   "Continue": "Continuar",

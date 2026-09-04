@@ -336,6 +336,20 @@ try {
     assert.equal(await page.locator("[data-message]").textContent(), "");
     assert.equal(await page.locator('[data-fulfillment-timeline] [aria-current="step"]').count(), state.fulfillment === "canceled" ? 0 : 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    if (state.fulfillment === "delivered") {
+      const amount = page.locator('#pud-tip-form [name="amount"]');
+      assert.equal(await amount.isVisible(), false);
+      for (const [percent, dollars] of [[10, "3.98"], [15, "5.97"], [20, "7.96"]]) {
+        await page.locator(`[data-percent="${percent}"]`).click();
+        assert.equal(await amount.inputValue(), dollars);
+        assert.equal(await amount.getAttribute("readonly"), "");
+      }
+      await page.locator('[data-action="tip-amount"][data-amount=""]').click();
+      assert.equal(await amount.inputValue(), "");
+      assert.equal(await amount.getAttribute("readonly"), null);
+      await amount.fill("4.25");
+      assert.equal(await amount.inputValue(), "4.25");
+    }
     report.statusStates.push(state);
     console.log(`✓ status ${state.fulfillment}/${state.payment}`);
     await context.close();
