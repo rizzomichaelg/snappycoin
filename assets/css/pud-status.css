@@ -355,6 +355,26 @@
   color: inherit;
 }
 
+.pud-tip-panel {
+  scroll-margin-top: 96px;
+  padding: 20px;
+  background: var(--pud-primary-soft);
+  border: 1px solid var(--pud-border-strong);
+  border-left: 4px solid var(--pud-primary);
+  border-radius: var(--pud-radius-md);
+}
+
+.pud-tip-panel .pud-step-label {
+  color: var(--pud-primary);
+}
+
+.pud-tip-panel:focus,
+.pud-tip-panel[data-focus-arrival="true"] {
+  outline: 3px solid var(--pud-accent);
+  outline-offset: 3px;
+  box-shadow: var(--pud-shadow-sm);
+}
+
 .pud-step-up {
   padding: 20px;
   background: var(--pud-surface-subtle);
@@ -919,6 +939,7 @@
   .pud-status-now,
   .pud-step-up,
   .pud-payment-attention,
+  .pud-tip-panel,
   .pud-disclosure-body,
   .pud-evidence {
     padding: var(--pud-space-4);
@@ -933,3 +954,30 @@
     width: 100%;
   }
 }
+
+/* Keep the private tracker compact; account controls open only when needed. */
+.pud-page--status .pud-page-intro { border: 0; margin-bottom: 20px; padding: 0; }
+.pud-page--status .pud-page-intro h1 { font-size: 1.5rem; line-height: 1.25; }
+.pud-page--status .pud-status-heading { align-items: center; flex-direction: row; }
+.pud-page--status .pud-status-heading > div { min-width: 0; }
+.pud-page--status .pud-status-heading h2 { font-size: 1rem; }
+.pud-page--status .pud-status-heading .pud-step-label { display: none; }
+.pud-page--status .pud-status-now { grid-template-columns: 1fr; padding: 20px; margin: 20px 0; border-radius: 4px; }
+.pud-page--status .pud-status-now .pud-step-label { display: none; }
+.pud-status-essential { grid-template-columns: 1fr 1fr; margin-bottom: 20px; }
+.pud-status-essential > div { background: transparent; padding: 0; border: 0; }
+.pud-page--status .pud-tip-panel { padding: 20px 0; border: 0; border-block: 1px solid var(--pud-border); border-radius: 0; background: transparent; }
+.pud-page--status .pud-tip-panel h3 { font-size: 1.125rem; }
+.pud-page--status .pud-step-up { padding: 0; border: 0; border-top: 1px solid var(--pud-border); border-radius: 0; background: transparent; }
+.pud-page--status .pud-session-state { border: 0; padding: 0; background: transparent; }
+.pud-page--status .pud-status-actions:not(:has(> :not([hidden]))) { display: none; }
+.pud-page--status .pud-timeline-section { margin-top: 0; }
+@media (max-width: 560px) {
+  .pud-status-essential { grid-template-columns: 1fr; gap: 16px; }
+  .pud-page--status .pud-status-now h3 { font-size: 1.5rem; }
+  .pud-page--status .pud-status-shell { padding: 20px 16px; }
+}
+
+.pud-tip-amounts { display: flex; flex-wrap: wrap; gap: .5rem; grid-column: 1 / -1; }
+.pud-tip-amounts .pud-button { flex: 1 1 auto; }
+.pud-tip-amounts [aria-pressed="true"] { background: #245b78; border-color: #245b78; color: #fff; }

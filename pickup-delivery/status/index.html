@@ -10,7 +10,7 @@
   <title>Private Order Status | Snappy Coin Laundry</title>
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
   <link rel="stylesheet" href="/assets/css/pud.css?v=20260819-1">
-  <link rel="stylesheet" href="/assets/css/pud-status.css?v=20260715-2">
+  <link rel="stylesheet" href="/assets/css/pud-status.css?v=20260904-2">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
   <script type="module" src="/assets/js/site-i18n.js?v=20260819-1"></script>
   <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
@@ -30,10 +30,10 @@
   <main id="private-order" class="pud-single pud-status-page" data-pud-status>
     <section class="pud-card pud-status-shell" aria-labelledby="status-title">
       <header class="pud-page-intro">
-        <p class="pud-eyebrow">Your private order page</p>
-        <h1 id="status-title">Laundry, without the guesswork.</h1>
-        <p>See where your order is now, what happens next, and anything that needs your attention.</p>
+        <h1 id="status-title">Your order</h1>
+        <p>Pickup, delivery, and payment updates in one place.</p>
       </header>
+      <p class="pud-fine-print" data-status-loading role="status" hidden>Loading your order…</p>
       <div class="pud-alert" data-message role="alert" tabindex="-1" hidden></div>
 
       <details class="pud-token-entry" data-token-entry open>
@@ -66,31 +66,9 @@
           </div>
         </section>
 
-        <section class="pud-timeline-section" aria-labelledby="timeline-heading">
-          <div class="pud-section-heading">
-            <h3 id="timeline-heading">Order journey</h3>
-            <p>Updates come directly from our laundry and delivery team.</p>
-          </div>
-          <ol class="pud-fulfillment-timeline" data-fulfillment-timeline>
-            <li data-timeline-step="submitted"><span aria-hidden="true">1</span><strong>Received</strong><small>Order sent</small></li>
-            <li data-timeline-step="confirmed"><span aria-hidden="true">2</span><strong>Scheduled</strong><small>Pickup reserved</small></li>
-            <li data-timeline-step="picked_up"><span aria-hidden="true">3</span><strong>Picked up</strong><small>Bags collected</small></li>
-            <li data-timeline-step="weighed"><span aria-hidden="true">4</span><strong>In the wash</strong><small>Weighed &amp; processing</small></li>
-            <li data-timeline-step="ready"><span aria-hidden="true">5</span><strong>Clean &amp; packed</strong><small>Ready to return</small></li>
-            <li data-timeline-step="out_for_delivery"><span aria-hidden="true">6</span><strong>On the way</strong><small>With our driver</small></li>
-            <li data-timeline-step="delivered"><span aria-hidden="true">7</span><strong>Delivered</strong><small>Back with you</small></li>
-          </ol>
-        </section>
-
-        <p class="pud-fine-print">All pickup and delivery times shown below are Central Time.</p>
-        <dl class="pud-status-grid">
+        <dl class="pud-status-grid pud-status-essential">
+          <div><dt>Delivery window · Central Time</dt><dd data-expected-completion></dd></div>
           <div><dt>Payment</dt><dd data-payment-status></dd></div>
-          <div><dt>Pickup (Central Time)</dt><dd data-pickup-window></dd></div>
-          <div><dt>Processing</dt><dd data-processing-status></dd></div>
-          <div><dt>Delivery</dt><dd data-delivery-status></dd></div>
-          <div><dt>Scheduled delivery (Central Time)</dt><dd data-expected-completion></dd></div>
-          <div><dt>Bags</dt><dd data-bag-status></dd></div>
-          <div><dt>Total</dt><dd data-total></dd></div>
         </dl>
 
         <section class="pud-status-section pud-payment-attention" data-payment-panel hidden aria-labelledby="payment-heading">
@@ -110,16 +88,36 @@
           </form>
         </section>
 
-        <section class="pud-status-section" data-reschedule-panel hidden aria-labelledby="reschedule-heading">
-          <p class="pud-step-label">Pickup options</p>
-          <h3 id="reschedule-heading">Need a different pickup time?</h3>
+        <section class="pud-status-section pud-tip-panel" data-tip-panel hidden aria-labelledby="tip-heading" tabindex="-1">
+          <h3 id="tip-heading">Leave a tip</h3>
+          <p data-tip-summary>Optional. Charged separately to the card used for this order.</p>
+          <form id="pud-tip-form" class="pud-form pud-inline-form">
+            <div class="pud-tip-amounts" role="group" aria-label="Suggested tip amounts">
+              <button type="button" class="pud-button" data-action="tip-amount" data-amount="3" aria-pressed="false">$3</button>
+              <button type="button" class="pud-button" data-action="tip-amount" data-amount="5" aria-pressed="false">$5</button>
+              <button type="button" class="pud-button" data-action="tip-amount" data-amount="10" aria-pressed="false">$10</button>
+              <button type="button" class="pud-button" data-action="tip-amount" data-amount="" aria-pressed="false">Other amount</button>
+            </div>
+            <label>Tip amount in dollars
+              <input name="amount" type="number" inputmode="decimal" min="0.50" max="1000" step="0.01" placeholder="0.00" required>
+            </label>
+            <button class="pud-button pud-button-primary" type="submit">Continue</button>
+          </form>
+          <p class="pud-fine-print">You’ll review the amount before paying. Paid tips are final.</p>
+        </section>
+
+        <details class="pud-status-section pud-disclosure" data-reschedule-panel hidden>
+          <summary><span>Need a different pickup time?</span></summary>
+          <div class="pud-disclosure-body">
+          <h3 id="reschedule-heading" class="pud-visually-hidden">Need a different pickup time?</h3>
           <p>Only open windows are shown. Your current time stays reserved until the change succeeds.</p>
           <form id="pud-reschedule-form" class="pud-form pud-inline-form">
             <label>New pickup window <select name="routeId" data-reschedule-options required></select></label>
             <label class="pud-visually-hidden">Reason <input name="reason" maxlength="500" value="customer_request"></label>
             <button class="pud-button pud-button-primary" type="submit">Change pickup window</button>
           </form>
-        </section>
+          </div>
+        </details>
 
         <section class="pud-status-section" data-reschedule-calendar hidden aria-labelledby="reschedule-calendar-heading">
           <p class="pud-step-label">Pickup updated</p>
@@ -154,10 +152,65 @@
           </div>
         </section>
 
-        <section class="pud-status-section pud-step-up" aria-labelledby="step-up-heading" data-step-up>
-          <p class="pud-step-label">Protected actions</p>
-          <h3 id="step-up-heading">Manage this order</h3>
-          <p>Reading your status never requires a code. To change payment, cancel, report a problem, or manage saved details, verify the mobile number on the order.</p>
+
+        <details class="pud-status-section pud-disclosure" data-receipt>
+          <summary><span>Receipt &amp; charges</span><small data-receipt-summary>Your current charges and payment activity.</small></summary>
+          <div class="pud-disclosure-body">
+            <h3 id="receipt-heading" class="pud-visually-hidden">Itemized receipt</h3>
+            <dl class="pud-receipt-grid">
+              <div><dt>Processed weight</dt><dd data-receipt-weight></dd></div>
+              <div><dt>Price per pound</dt><dd data-receipt-rate></dd></div>
+              <div><dt>Weight charge</dt><dd data-receipt-weight-charge></dd></div>
+              <div data-receipt-minimum-row><dt>Minimum adjustment</dt><dd data-receipt-minimum-adjustment></dd></div>
+              <div><dt>Laundry subtotal</dt><dd data-receipt-base></dd></div>
+              <div data-receipt-delivery-row><dt>Delivery fee</dt><dd data-receipt-delivery></dd></div>
+              <div data-receipt-discount-row><dt>Discount</dt><dd data-receipt-discount></dd></div>
+              <div data-receipt-tax-row><dt>Tax</dt><dd data-receipt-tax></dd></div>
+              <div class="pud-receipt-total"><dt>Laundry order charge</dt><dd data-receipt-total></dd></div>
+              <div><dt>Order payment captured</dt><dd data-receipt-captured></dd></div>
+              <div data-receipt-tip-row><dt>Separate tip payment</dt><dd data-receipt-tip></dd></div>
+              <div data-receipt-refund-row><dt>Refunded</dt><dd data-receipt-refunded></dd></div>
+              <div class="pud-receipt-total"><dt>Net paid including tip</dt><dd data-receipt-net></dd></div>
+            </dl>
+            <p class="pud-fine-print" data-receipt-versions></p>
+          </div>
+        </details>
+
+        <details class="pud-status-section pud-disclosure" data-order-details>
+          <summary><span>Order details &amp; progress</span></summary>
+          <div class="pud-disclosure-body">
+        <section class="pud-timeline-section" aria-labelledby="timeline-heading">
+          <div class="pud-section-heading">
+            <h3 id="timeline-heading">Order journey</h3>
+
+          </div>
+          <ol class="pud-fulfillment-timeline" data-fulfillment-timeline>
+            <li data-timeline-step="submitted"><span aria-hidden="true">1</span><strong>Received</strong><small>Order sent</small></li>
+            <li data-timeline-step="confirmed"><span aria-hidden="true">2</span><strong>Scheduled</strong><small>Pickup reserved</small></li>
+            <li data-timeline-step="picked_up"><span aria-hidden="true">3</span><strong>Picked up</strong><small>Bags collected</small></li>
+            <li data-timeline-step="weighed"><span aria-hidden="true">4</span><strong>In the wash</strong><small>Weighed &amp; processing</small></li>
+            <li data-timeline-step="ready"><span aria-hidden="true">5</span><strong>Clean &amp; packed</strong><small>Ready to return</small></li>
+            <li data-timeline-step="out_for_delivery"><span aria-hidden="true">6</span><strong>On the way</strong><small>With our driver</small></li>
+            <li data-timeline-step="delivered"><span aria-hidden="true">7</span><strong>Delivered</strong><small>Back with you</small></li>
+          </ol>
+        </section>
+
+            <dl class="pud-status-grid">
+              <div><dt>Pickup</dt><dd data-pickup-window></dd></div>
+              <div><dt>Processing</dt><dd data-processing-status></dd></div>
+              <div><dt>Delivery</dt><dd data-delivery-status></dd></div>
+              <div><dt>Bags</dt><dd data-bag-status></dd></div>
+              <div><dt>Order total</dt><dd data-total></dd></div>
+            </dl>
+            <p class="pud-fine-print">All times are Central Time.</p>
+          </div>
+        </details>
+
+        <details class="pud-status-section pud-disclosure pud-step-up" data-step-up>
+          <summary><span>Manage order &amp; account</span><small data-step-up-summary>Changes, saved preferences, and order history</small></summary>
+          <div class="pud-disclosure-body">
+          <h3 id="step-up-heading">Verify to continue</h3>
+          <p>To protect your saved card and account, we’ll text a code to the mobile number on this order. Tracking and viewing your receipt do not require a code.</p>
           <p class="pud-session-state" data-step-up-state role="status">Phone verification is required for protected actions.</p>
           <form id="pud-step-up-phone-form" class="pud-form pud-inline-form" autocomplete="off">
             <label>Mobile number
@@ -186,30 +239,6 @@
           <div class="pud-actions" data-step-up-active hidden>
             <button class="pud-button pud-button-link" type="button" data-action="step-up-restart">Verify again now</button>
           </div>
-        </section>
-
-        <details class="pud-status-section pud-disclosure" data-receipt>
-          <summary><span>Receipt &amp; charges</span><small data-receipt-summary>Your current charges and payment activity.</small></summary>
-          <div class="pud-disclosure-body">
-            <h3 id="receipt-heading" class="pud-visually-hidden">Itemized receipt</h3>
-            <dl class="pud-receipt-grid">
-              <div><dt>Processed weight</dt><dd data-receipt-weight></dd></div>
-              <div><dt>Price per pound</dt><dd data-receipt-rate></dd></div>
-              <div><dt>Weight charge</dt><dd data-receipt-weight-charge></dd></div>
-              <div data-receipt-minimum-row><dt>Minimum adjustment</dt><dd data-receipt-minimum-adjustment></dd></div>
-              <div><dt>Laundry subtotal</dt><dd data-receipt-base></dd></div>
-              <div data-receipt-delivery-row><dt>Delivery fee</dt><dd data-receipt-delivery></dd></div>
-              <div data-receipt-discount-row><dt>Discount</dt><dd data-receipt-discount></dd></div>
-              <div data-receipt-tax-row><dt>Tax</dt><dd data-receipt-tax></dd></div>
-              <div class="pud-receipt-total"><dt>Laundry order charge</dt><dd data-receipt-total></dd></div>
-              <div><dt>Order payment captured</dt><dd data-receipt-captured></dd></div>
-              <div data-receipt-tip-row><dt>Separate tip payment</dt><dd data-receipt-tip></dd></div>
-              <div data-receipt-refund-row><dt>Refunded</dt><dd data-receipt-refunded></dd></div>
-              <div class="pud-receipt-total"><dt>Net paid including tip</dt><dd data-receipt-net></dd></div>
-            </dl>
-            <p class="pud-fine-print" data-receipt-versions></p>
-          </div>
-        </details>
 
         <details class="pud-status-section pud-disclosure" data-portal-details hidden>
           <summary><span>Order history &amp; wash preferences</span><small>Available during this verified session.</small></summary>
@@ -263,17 +292,6 @@
           </div>
         </details>
 
-        <section class="pud-status-section" data-tip-panel hidden aria-labelledby="tip-heading">
-          <h3 id="tip-heading">Add a thank-you tip</h3>
-          <p>Tips are optional and available only after delivery. No amount is selected for you.</p>
-          <form id="pud-tip-form" class="pud-form pud-inline-form">
-            <label>Tip amount in dollars
-              <input name="amount" type="number" inputmode="decimal" min="0.50" max="1000" step="0.01" placeholder="0.00" required>
-            </label>
-            <button class="pud-button pud-button-primary" type="submit">Review and submit tip</button>
-          </form>
-        </section>
-
         <details class="pud-status-section pud-disclosure" data-recurring-panel hidden>
           <summary><span>Recurring pickups</span><small>Plan future laundry days.</small></summary>
           <div class="pud-disclosure-body">
@@ -304,6 +322,9 @@
             </div>
           </div>
         </details>
+          </div>
+        </details>
+
       </div>
       <dialog class="pud-confirm-dialog" data-confirm-dialog aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-copy">
         <form method="dialog">
@@ -316,13 +337,13 @@
           </div>
         </form>
       </dialog>
-      <p class="pud-fine-print pud-privacy-note"><strong>Keep this page private.</strong> The order token stays in the URL fragment and is never sent to analytics. Changes require fresh phone verification and a one-time authorization.</p>
+      <p class="pud-fine-print pud-privacy-note"><strong>Keep this page private.</strong> Only share this link with someone you trust. Need help? <a href="tel:13146281001">Call (314) 628-1001</a>.</p>
     </section>
   </main>
   <footer class="pud-footer">
     <p>Snappy Coin Laundry · Maryland Heights, Missouri</p>
     <nav aria-label="Pickup and delivery"><a href="/">Main site</a><a href="/pickup-delivery/">Book a pickup</a><a href="/pickup-delivery/status/">Check an order</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="tel:13146281001">(314) 628-1001</a></nav>
   </footer>
-  <script type="module" src="/assets/js/pud-status.js?v=20260819-1"></script>
+  <script type="module" src="/assets/js/pud-status.js?v=20260904-1"></script>
 </body>
 </html>

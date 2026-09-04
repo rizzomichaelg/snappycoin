@@ -27,6 +27,10 @@ const state = {
   deliveryRouteId: "",
   verificationId: "",
   phoneProof: "",
+  verifiedPhone: "",
+  phoneProofExpiresAt: "",
+  paymentReady: false,
+  paymentLoading: false,
   reorderBootstrap: null,
   waitlistContinuationToken: waitlistBootstrap?.token || "",
   waitlistRouteId: waitlistBootstrap?.routeId || "",
@@ -77,7 +81,15 @@ function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
   root.addEventListener("change", onChange);
-  window.addEventListener("popstate", () => showStep(history.state?.pudStep || state.step, true));
+  window.addEventListener("popstate", () => {
+    if (state.step === "complete" || submissionInFlight || state.paymentLoading) return;
+    const requested = history.state?.pudStep || "address";
+    if (requested === "address" || (requested === "details" && state.addressProof) ||
+        (requested === "phone" && state.verificationId) || (requested === "review" && state.phoneProof)) {
+      state.step = requested;
+      showStep(requested, true);
+    }
+  });
   bindPhoneFormatting(root);
 }
 
@@ -120,7 +132,7 @@ function processAddressResult(address, result, { confirmedSuggestion = false } =
   state.pendingAddressResult = null;
   state.routeId = "";
   state.deliveryRouteId = "";
-  state.phoneProof = "";
+  state.paymentReady = false;
   destroySquareCard();
   state.routes = routeOptions(result);
   state.deliveryRoutes = routeOptions(result, "deliveryRoutes");
@@ -278,7 +290,7 @@ async function submitDetails(form) {
   const deliveryRoute = eligibleDeliveryRoutes(state.deliveryRoutes, pickupRoute, state.config.scheduling?.minimumDeliveryDelayHours ?? 24)
     .find((route) => route.id === state.deliveryRouteId);
   if (!pickupRoute) throw new Error("That pickup window is no longer available.");
-  if (!deliveryRoute) throw new Error("Choose a delivery window at least 24 hours after pickup.");
+  if (!deliveryRoute) throw new Error("Choose an available delivery window for this pickup.");
   state.customer = {
     firstName: String(data.get("firstName") || "").trim(),
     lastName: String(data.get("lastName") || "").trim(),
@@ -291,6 +303,7 @@ async function submitDetails(form) {
     throw new Error("Authorize pickup from the secure location or choose to hand the bags to the driver.");
   }
   state.order = {
+    estimatedBags: Number(data.get("estimatedBags")),
     detergent: String(data.get("detergent") || "premium"),
     softenerPref: String(data.get("softenerPref") || "liquid"),
     specialInstructions: String(data.get("specialInstructions") || "").trim(),
@@ -308,6 +321,12 @@ async function submitDetails(form) {
     consentVersion: state.config.consentVersion || "owner-approval-required",
   };
   if (!state.consents.terms) throw new Error("Accept the service terms.");
+  if (canReusePhoneVerification()) {
+    await openReview();
+    return;
+  }
+  state.phoneProof = "";
+  state.verifiedPhone = "";
   const result = await beginPhoneVerification(state.customer.phone);
   state.verificationId = result.verificationId;
   $("[data-phone-last4]").textContent = state.customer.phone.slice(-4);
@@ -323,22 +342,56 @@ async function submitCode(form) {
   const code = String(new FormData(form).get("code") || "").trim();
   const result = await confirmPhoneVerification(state.verificationId, code);
   state.phoneProof = result.phoneProof;
+  state.verifiedPhone = state.customer.phone;
+  state.phoneProofExpiresAt = result.expiresAt;
   trackFunnel("pud_phone_verified");
+  await openReview();
+}
+
+function canReusePhoneVerification() {
+  return Boolean(state.phoneProof && state.verifiedPhone === state.customer?.phone &&
+    Date.parse(state.phoneProofExpiresAt) > Date.now() + 30_000);
+}
+
+async function openReview() {
   populateReview();
   go("review");
-  const paymentMount = $("#pud-payment-element");
-  paymentMount.replaceChildren();
+  if (!state.paymentReady) await loadBookingPayment();
+}
+
+async function loadBookingPayment() {
+  if (state.paymentLoading || state.paymentReady) return;
+  state.paymentLoading = true;
+  const paymentError = $("[data-payment-form-error]");
+  const retry = $('[data-action="retry-payment"]');
+  const loading = $("[data-payment-loading]");
+  const submit = $('#pud-review-form button[type="submit"]');
+  submit.disabled = true;
+  paymentError.hidden = true;
+  retry.hidden = true;
+  loading.hidden = false;
   try {
+    const paymentMount = $("#pud-payment-element");
+    paymentMount.replaceChildren();
     await prepareSquareCard(state.config, paymentMount);
-  } catch (error) {
-    const paymentError = $("[data-payment-form-error]");
-    paymentError.textContent = error.message;
+    state.paymentReady = true;
+  } catch (_error) {
+    paymentError.textContent = translateText("Card fields could not load. Try again without restarting your booking.");
     paymentError.hidden = false;
-    throw error;
+    retry.hidden = false;
+  } finally {
+    state.paymentLoading = false;
+    loading.hidden = true;
+    submit.disabled = !state.paymentReady;
   }
 }
 
 async function submitOrder() {
+  if (!state.paymentReady) throw new Error("Secure Square card fields are not ready.");
+  if (!canReusePhoneVerification()) {
+    go("details");
+    throw new Error("Phone verification expired. Continue from your details to request a new code.");
+  }
   const consentVersion = state.config.consentVersions || {};
   const route = state.routes.find((item) => item.id === state.routeId);
   const deliveryRoute = state.deliveryRoutes.find((item) => item.id === state.deliveryRouteId);
@@ -370,6 +423,7 @@ async function submitOrder() {
     squareCardToken,
     turnstileToken: turnstileValue($("#pud-review-form")),
     preferences: {
+      estimatedBags: state.order.estimatedBags,
       detergent: state.order.detergent,
       softenerPref: state.order.softenerPref,
       unattendedPickup: state.order.unattendedPickup,
@@ -484,7 +538,8 @@ async function submitWaitlist(form) {
 
 async function onClick(event) {
   const button = event.target.closest("[data-action]");
-  if (!button) return;
+  if (!button || submissionInFlight || state.paymentLoading) return;
+  if (button.dataset.action === "retry-payment") return loadBookingPayment();
   if (button.dataset.action === "use-suggested-address") {
     if (addressConfirmationInFlight) return;
     const pending = state.pendingAddressResult;
@@ -574,7 +629,11 @@ async function onClick(event) {
     const activeSteps = activeBookingSteps();
     go(button.dataset.step || activeSteps[Math.max(0, activeSteps.indexOf(state.step) - 1)]);
   }
-  if (button.dataset.action === "edit") go(button.dataset.step);
+  if (button.dataset.action === "edit") {
+    go(button.dataset.step);
+    const target = button.dataset.focus;
+    if (target) document.getElementById(target)?.focus();
+  }
   if (button.dataset.action === "resend") {
     const resendForm = $("#pud-resend-form");
     button.disabled = true;
@@ -595,6 +654,10 @@ async function onClick(event) {
 }
 
 function onChange(event) {
+  if (event.target?.matches?.('[name="phone"]')) {
+    const samePhone = (() => { try { return normalizeUsPhone(event.target.value) === state.verifiedPhone; } catch { return false; } })();
+    $('#pud-details-form button[type="submit"]').textContent = translateText(samePhone && canReusePhoneVerification() ? "Continue to review" : "Text me a code");
+  }
   if (event.target?.matches?.('[name="pickupDay"]')) renderPickupTimes();
   if (event.target?.matches?.('[name="routeId"]')) renderDeliveryChoices();
   if (event.target?.matches?.('[name="deliveryDay"]')) renderDeliveryTimes();
@@ -607,15 +670,18 @@ function go(step, push = true) {
   if (!allowedBookingSteps().includes(step)) return;
   state.step = step;
   showStep(step, true);
-  root.scrollIntoView({ behavior: "smooth", block: "start" });
+  root.querySelector(".pud-booking-card").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   if (push) history.pushState({ pudStep: step }, "", `#${step}`);
 }
 
 function showStep(step, focusHeading = false) {
+  root.dataset.bookingStep = step;
+  const detailsContinue = $('#pud-details-form button[type="submit"]');
+  detailsContinue.textContent = translateText(canReusePhoneVerification() ? "Continue to review" : "Text me a code");
   const activeSteps = activeBookingSteps();
   const progress = root.querySelector(".pud-progress");
   if (progress) progress.style.setProperty("--pud-progress-count", String(activeSteps.length));
-  root.querySelectorAll("[data-step]").forEach((panel) => { panel.hidden = panel.dataset.step !== step; });
+  root.querySelectorAll("section[data-step]").forEach((panel) => { panel.hidden = panel.dataset.step !== step; });
   root.querySelectorAll("[data-progress-step]").forEach((item) => {
     const index = activeSteps.indexOf(item.dataset.progressStep);
     const visible = index >= 0 && step !== "complete";
@@ -767,7 +833,8 @@ function populateReview() {
   const deliveryRoute = state.deliveryRoutes.find((item) => item.id === state.deliveryRouteId);
   $("[data-review-route]").textContent = route ? formatRoute(route) : state.routeId;
   $("[data-review-return]").textContent = deliveryRoute ? formatRoute(deliveryRoute) : state.deliveryRouteId;
-  $("[data-review-customer]").textContent = `${state.customer.firstName} ${state.customer.lastName} · •••• ${state.customer.phone.slice(-4)}`;
+  $("[data-review-customer]").textContent = `${state.customer.firstName} ${state.customer.lastName} · ${state.customer.email} · •••• ${state.customer.phone.slice(-4)}`;
+  $("[data-review-bags]").textContent = `${state.order.estimatedBags} bag${state.order.estimatedBags === 1 ? "" : "s"} expected`;
   const detergent = state.order.detergent.replaceAll("_", " ");
   const softener = state.order.softenerPref.replaceAll("_", " ");
   $("[data-review-laundry]").textContent = `Detergent: ${detergent} · Softener: ${softener}${state.order.specialInstructions ? ` · ${state.order.specialInstructions}` : ""}`;
@@ -775,7 +842,7 @@ function populateReview() {
 
 function setBusy(form, busy) {
   form.querySelectorAll("button").forEach((control) => {
-    control.disabled = busy;
+    control.disabled = busy || (form.id === "pud-review-form" && control.type === "submit" && !state.paymentReady);
     if (!control.dataset.busyLabel) return;
     if (busy) {
       control.dataset.idleLabel = control.textContent;

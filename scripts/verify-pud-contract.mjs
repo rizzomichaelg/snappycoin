@@ -102,7 +102,7 @@ const responseContracts = {
   SafeOrderStatus: {
     required: [
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowStartAt", "pickupWindowEndAt",
-      "deliveryWindowStartAt", "deliveryWindowEndAt", "expectedCompletionAt", "milestones", "totalCents", "refundedCents", "receipt",
+      "deliveryWindowStartAt", "deliveryWindowEndAt", "expectedCompletionAt", "milestones", "estimatedBags", "totalCents", "refundedCents", "receipt",
       "paymentAttentionRequired", "paymentMethod", "paymentAmountCents", "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "canClaim",
       "canCreateRecurring", "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
@@ -110,7 +110,7 @@ const responseContracts = {
     allowed: [
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "pickupWindowStartAt", "pickupWindowEndAt",
       "deliveryWindowStartAt", "deliveryWindowEndAt", "deliveryPromisedAt", "expectedCompletionAt", "milestones",
-      "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired", "paymentMethod", "paymentAmountCents",
+      "estimatedBags", "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired", "paymentMethod", "paymentAmountCents",
       "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "canClaim", "canCreateRecurring",
       "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
@@ -278,6 +278,7 @@ function verifyResponseGuards() {
       outForDeliveryAt: "2026-07-15T16:00:00Z",
       deliveredAt: "2026-07-15T17:00:00Z",
     },
+    estimatedBags: 2,
     totalCents: 4200,
     refundedCents: 0,
     receipt: {
@@ -726,7 +727,7 @@ function resolveSchema(name, schemas, cache, stack) {
 }
 
 function sampleValue(field) {
-  if (/^(expectedVersion|amountCents|preferredBags)$/.test(field)) return 1;
+  if (/^(expectedVersion|amountCents|preferredBags|estimatedBags)$/.test(field)) return 1;
   if (/Consent$/.test(field)) return false;
   if (/^(address|preferences|consents|preferredRouteRule|consentVersions)$/.test(field)) return {};
   return `${field}-sample-value`;

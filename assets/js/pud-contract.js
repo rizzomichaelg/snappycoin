@@ -290,6 +290,7 @@ export function assertOrderStatus(value) {
   oneOf(result.timezone, ["America/Chicago"], "SafeOrderStatus.timezone");
   oneOf(result.currency, ["USD"], "SafeOrderStatus.currency");
   for (const field of ["totalCents", "refundedCents"]) nonnegativeInteger(result[field], `SafeOrderStatus.${field}`);
+  positiveInteger(result.estimatedBags, "SafeOrderStatus.estimatedBags");
   if (result.paymentMethod !== null) {
     const paymentMethod = object(result.paymentMethod, "SafeOrderStatus.paymentMethod");
     nullableString(paymentMethod.brand, "SafeOrderStatus.paymentMethod.brand");

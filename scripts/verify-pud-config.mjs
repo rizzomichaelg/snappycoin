@@ -53,9 +53,12 @@ if (/apiUrl\([^\n]*(?:token|clientSecret|setupIntentClientSecret)/.test(api + st
   throw new Error("Private tokens or Stripe secrets must not be interpolated into API URLs.");
 }
 for (const [name, script, html] of [["status", status, statusHtml], ["claims", claims, claimsHtml]]) {
-  if (!script.includes("history.replaceState") || script.includes("location.search")) {
-    throw new Error(`${name} must normalize to a fragment-only URL without reading a query token.`);
+  const safeTipFocusRead = 'new URLSearchParams(location.search).get("focus") === "tip"';
+  const scriptWithoutAllowedFocus = name === "status" ? script.replace(safeTipFocusRead, "") : script;
+  if (!script.includes("history.replaceState") || scriptWithoutAllowedFocus.includes("location.search")) {
+    throw new Error(`${name} must normalize bearer credentials to the fragment without reading a query token.`);
   }
+  if (name === "status" && !script.includes(safeTipFocusRead)) throw new Error("Status may read only the non-secret focus=tip query hint.");
   if (!html.includes('meta name="referrer" content="no-referrer"') || html.includes("site-analytics.js")) {
     throw new Error(`${name} must be no-referrer and analytics-free.`);
   }

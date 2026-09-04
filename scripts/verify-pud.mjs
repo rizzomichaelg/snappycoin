@@ -55,11 +55,11 @@ for (const marker of ["pud-address-form", "pud-details-form", "pud-code-form", "
 if (!booking.includes("All pickup and delivery times are Central Time.")) {
   throw new Error("Booking must state that pickup and delivery windows use Central Time.");
 }
-if (!status.includes("All pickup and delivery times shown below are Central Time.")) {
+if (!status.includes("All times are Central Time.")) {
   throw new Error("Private order status must state that pickup and delivery windows use Central Time.");
 }
-for (const [name, policy] of [["privacy", privacy], ["terms", terms]]) {
-  if (!policy.includes("Effective September 1, 2026")) throw new Error(`${name} policy needs the current effective date.`);
+for (const [name, policy, effectiveDate] of [["privacy", privacy, "September 4, 2026"], ["terms", terms, "September 4, 2026"]]) {
+  if (!policy.includes(`Effective ${effectiveDate}`)) throw new Error(`${name} policy needs the current effective date.`);
   if (/Draft|not approved|staging draft/i.test(policy)) throw new Error(`${name} policy still contains draft language.`);
 }
 if (!status.includes('meta name="referrer" content="no-referrer"')) throw new Error("Status page must use no-referrer.");
@@ -186,7 +186,11 @@ for (const marker of ["safePath", "safeReferrerOrigin", "safeCampaignValue", "co
   if (!attributionJs.includes(marker)) throw new Error(`Privacy-safe attribution marker missing: ${marker}`);
 }
 
-if (statusJs.includes("location.search") || claimsJs.includes("location.search")) throw new Error("Private pages must strip URL query strings.");
+const safeTipFocusRead = 'new URLSearchParams(location.search).get("focus") === "tip"';
+if (statusJs.replace(safeTipFocusRead, "").includes("location.search") || claimsJs.includes("location.search")) {
+  throw new Error("Private pages may read only the non-secret focus=tip hint and must strip all URL query strings.");
+}
+if (!statusJs.includes(safeTipFocusRead)) throw new Error("Status must allow only the non-secret focus=tip email hint.");
 for (const marker of ["en-US", "es-US", "America/Chicago", "USD", "LOCALE_STORAGE_KEY", "withLocalePath"]) {
   if (!i18nJs.includes(marker)) throw new Error(`Locale contract marker missing: ${marker}`);
 }

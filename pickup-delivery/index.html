@@ -11,9 +11,10 @@
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
   <link rel="stylesheet" href="/assets/css/pud.css?v=20260901-1">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260901-1"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20260904-2"></script>
   <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
+  <link rel="stylesheet" href="/assets/css/pud-booking.css?v=20260904-1">
 </head>
 <body class="pud-page pud-page--booking">
   <a class="skip-link" href="#booking">Skip to booking</a>
@@ -32,20 +33,15 @@
   <main id="booking" class="pud-layout" data-pud-booking>
     <section class="pud-hero" aria-labelledby="pud-title">
       <p class="pud-eyebrow">Pickup · Wash · Dry · Fold</p>
-      <h1 id="pud-title">Laundry done for you, from your door and back.</h1>
-      <p class="pud-hero-lead">We pick up your laundry, wash and fold it to your preferences, and return it ready to put away.</p>
-      <p>Enter your address to choose available pickup and delivery times.</p>
+      <h1 id="pud-title">Book a laundry pickup</h1>
+      <p class="pud-hero-lead">Enter your address to choose available pickup and delivery times.</p>
       <p class="pud-service-area-offer" data-pud-service-area-offer hidden>Free pickup and delivery within our service area.</p>
       <ul class="pud-trust-list">
         <li><span>Price</span><strong class="pud-price-stack"><span class="pud-price-current"><span data-pud-current-price>$1.50/lb</span> · <span data-pud-minimum>$15 minimum</span></span><span class="pud-price-note">Comforters &amp; bulky items priced separately. Call for pricing.</span></strong></li>
         <li><span>Payment</span><strong data-payment-summary>Online card payment · charged after final weighing</strong></li>
         <li><span>Updates</span><strong>Electronic updates as your order moves from pickup through delivery</strong></li>
       </ul>
-      <div class="pud-how-it-works" aria-label="How pickup and delivery works">
-        <p><strong>01</strong> Choose a pickup time.</p>
-        <p><strong>02</strong> Tell us your laundry preferences.</p>
-        <p><strong>03</strong> Follow your order from pickup through delivery.</p>
-      </div>
+
     </section>
 
     <section class="pud-card pud-booking-card" aria-label="Book pickup and delivery">
@@ -101,12 +97,16 @@
         <section data-step="details" hidden>
           <p class="pud-step-label" data-step-position="details">Step 2 of 4</p>
           <h2 tabindex="-1">Pickup and laundry details</h2>
-          <p class="pud-confirmed-address"><span aria-hidden="true">✓</span> <span data-normalized-address></span></p>
+          <p class="pud-confirmed-address"><span aria-hidden="true">✓</span> <span data-normalized-address></span> <button class="pud-button pud-button-link" type="button" data-action="edit" data-step="address">Edit address</button></p>
           <p class="pud-address-review-notice" data-address-review-notice hidden><strong>Address pending review.</strong> You can finish booking this pickup time. Our staff will check the address and may contact you for clarification before confirming pickup.</p>
           <form id="pud-details-form" class="pud-form">
             <section class="pud-form-section" aria-labelledby="pickup-section-heading">
               <h3 id="pickup-section-heading">Pickup</h3>
               <p class="pud-fine-print">All pickup and delivery times are Central Time.</p>
+              <label>About how many bags should we expect?
+                <input name="estimatedBags" type="number" inputmode="numeric" min="1" max="100" step="1" value="1" required aria-describedby="estimated-bags-help">
+                <small id="estimated-bags-help">Your best estimate helps us plan space and staffing. It does not affect your price.</small>
+              </label>
               <div class="pud-route-planner">
                 <label>Pickup day <select id="pud-pickup-day" name="pickupDay" required></select></label>
                 <label>Pickup time (Central Time) <select id="pud-route" name="routeId" aria-describedby="pud-route-availability" required disabled></select></label>
@@ -127,7 +127,7 @@
             <section class="pud-form-section" aria-labelledby="contact-section-heading">
               <h3 id="contact-section-heading">Contact</h3>
               <div class="pud-field-row">
-                <label>First name <input name="firstName" autocomplete="given-name" maxlength="80" required></label>
+                <label>First name <input id="booking-first-name" name="firstName" autocomplete="given-name" maxlength="80" required></label>
                 <label>Last name <input name="lastName" autocomplete="family-name" maxlength="80" required></label>
               </div>
               <label>Email <input name="email" type="email" autocomplete="email" maxlength="254" required></label>
@@ -137,7 +137,7 @@
             <section class="pud-form-section" aria-labelledby="preferences-section-heading">
               <h3 id="preferences-section-heading">Laundry preferences</h3>
               <div class="pud-field-row">
-                <label>Detergent <select name="detergent"><option value="premium">Premium</option><option value="gain">Gain</option><option value="tide">Tide</option><option value="free_clear">Free &amp; clear</option><option value="customer_supplied">I’ll provide my own</option></select></label>
+                <label>Detergent <select id="booking-detergent" name="detergent"><option value="premium">Premium</option><option value="gain">Gain</option><option value="tide">Tide</option><option value="free_clear">Free &amp; clear</option><option value="customer_supplied">I’ll provide my own</option></select></label>
                 <label>Softener <select name="softenerPref"><option value="liquid">Liquid</option><option value="dryer_sheets">Dryer sheets</option><option value="none">None</option></select></label>
               </div>
               <label>Special instructions <textarea name="specialInstructions" rows="3" maxlength="1000" aria-describedby="special-help"></textarea><small id="special-help">Include detergent sensitivities here. Do not include card information.</small></label>
@@ -158,9 +158,9 @@
               <fieldset><legend>Required permissions</legend>
                 <label class="pud-check"><input name="terms" type="checkbox" value="yes" required><span>I accept the <a href="/pickup-delivery/terms/" target="_blank" rel="noopener">service terms</a>.</span></label>
                 <p class="pud-fine-print">The <a href="/pickup-delivery/privacy/" target="_blank" rel="noopener">privacy notice</a> explains how we use order information.</p>
-                <p class="pud-fine-print">Transactional texts are required for verification and operational order updates. They are not marketing.</p>
+                <p class="pud-fine-print">We text you a one-time code to verify your number. Order updates are currently sent by email. These are not marketing messages. Text message frequency varies with verification requests; message and data rates may apply. Reply STOP at any time to stop texts, or HELP for help.</p>
               </fieldset>
-              <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="address">Back</button><button class="pud-button pud-button-primary" type="submit">Text me a code</button></div>
+              <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="address">Back</button><button class="pud-button pud-button-primary" type="submit" data-busy-label="Continuing…">Text me a code</button></div>
             </section>
           </form>
         </section>
@@ -171,7 +171,7 @@
           <p>Enter the one-time code sent to the number ending in <strong data-phone-last4></strong>. We never use this code for marketing consent.</p>
           <form id="pud-code-form" class="pud-form">
             <label>Verification code <input name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{4,10}" maxlength="10" required></label>
-            <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="details">Back</button><button class="pud-button pud-button-primary" type="submit">Verify phone</button></div>
+            <div class="pud-actions"><button class="pud-button pud-button-secondary" type="button" data-action="back" data-step="details">Back</button><button class="pud-button pud-button-primary" type="submit" data-busy-label="Verifying…">Verify phone</button></div>
           </form>
           <details class="pud-resend">
             <summary>Didn’t get the code?</summary>
@@ -187,19 +187,22 @@
           <p class="pud-step-label" data-step-position="review">Step 4 of 4</p>
           <h2 tabindex="-1">Review &amp; Payment</h2>
           <dl class="pud-review">
-            <div><dt>Pickup</dt><dd><span data-review-address></span><br><span data-review-route></span></dd><button type="button" data-action="edit" data-step="details">Edit</button></div>
-            <div><dt>Delivery</dt><dd data-review-return></dd><button type="button" data-action="edit" data-step="details">Edit</button></div>
-            <div><dt>Laundry preferences</dt><dd data-review-laundry></dd></div>
-            <div><dt>Contact</dt><dd data-review-customer></dd></div>
+            <div><dt>Pickup</dt><dd><span data-review-address></span><br><span data-review-route></span></dd><button type="button" data-action="edit" data-step="details" data-focus="pud-pickup-day" aria-label="Edit pickup">Edit</button></div>
+            <div><dt>Delivery</dt><dd data-review-return></dd><button type="button" data-action="edit" data-step="details" data-focus="pud-delivery-day" aria-label="Edit delivery">Edit</button></div>
+            <div><dt>Expected bags</dt><dd data-review-bags></dd><button type="button" data-action="edit" data-step="details">Edit</button></div>
+            <div><dt>Laundry preferences</dt><dd data-review-laundry></dd><button type="button" data-action="edit" data-step="details" data-focus="booking-detergent" aria-label="Edit laundry preferences">Edit</button></div>
+            <div><dt>Contact</dt><dd data-review-customer></dd><button type="button" data-action="edit" data-step="details" data-focus="booking-first-name" aria-label="Edit contact details">Edit</button></div>
             <div><dt>Pricing</dt><dd data-review-pricing>$1.50/lb · $15 minimum. Final total is based on actual weight after pickup.</dd></div>
           </dl>
           <form id="pud-review-form" class="pud-form">
             <section class="pud-form-section" aria-labelledby="card-on-file-heading">
               <h3 id="card-on-file-heading">Card on file</h3>
               <p>Payment is online only. Your card will be securely saved with Square. You will not be charged when you book. After we pick up and weigh your laundry, the final amount will be charged to this card.</p>
+              <p data-payment-loading role="status" hidden>Loading secure card fields…</p>
               <div id="pud-payment-element" class="pud-payment-element" aria-label="Secure Square card details"></div>
               <p class="pud-fine-print">Square securely stores your card. Snappy receives only the card brand, last four digits, and a secure Square reference—not your full card number or security code. <a href="https://squareup.com/help/us/en/article/3797-secure-data-encryption" target="_blank" rel="noopener">Learn about Square security.</a></p>
               <p class="pud-fine-print" data-payment-form-error role="alert" hidden></p>
+              <button class="pud-button pud-button-secondary" type="button" data-action="retry-payment" hidden>Retry card setup</button>
               <label class="pud-check"><input name="savedPaymentMethod" type="checkbox" value="yes" required><span>I authorize Square to store this payment method for Snappy Coin Laundry, and I authorize Snappy Coin Laundry to charge it for this order’s final amount after pickup and weighing. See the <a href="/pickup-delivery/terms/" target="_blank" rel="noopener">service terms</a>.</span></label>
             </section>
             <section class="pud-review-optional" aria-labelledby="optional-section-heading">
@@ -217,7 +220,7 @@
             </section>
             <div class="pud-turnstile" data-turnstile data-final-turnstile></div>
             <p class="pud-fine-print" data-review-payment-copy>No charge is made when you book. Staff reviews the final weighed amount before charging your saved card.</p>
-            <button class="pud-button pud-button-primary" type="submit">Book Pickup</button>
+            <button class="pud-button pud-button-primary" type="submit" data-busy-label="Booking pickup…" disabled>Book Pickup</button>
           </form>
         </section>
 
@@ -313,6 +316,6 @@
 
   <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
   <script type="module" src="/assets/js/pud-site-analytics.js?v=20260725-1"></script>
-  <script type="module" src="/assets/js/pud-booking.js?v=20260901-1"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20260901-2"></script>
 </body>
 </html>

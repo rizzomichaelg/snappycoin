@@ -510,7 +510,7 @@ function verifyStaticPage() {
   assert(html.includes("styles.css?v=20260901-1"), "main stylesheet cache buster was not updated");
   assert(!privacyHtml.includes("noscript=1"), "privacy page must not bypass consent with a noscript Meta Pixel");
   assert(privacyHtml.includes("Privacy Policy"), "privacy page heading is missing");
-  assert(privacyHtml.includes("SMS verification is used only to confirm"), "privacy page must explain SMS verification");
+  assert(privacyHtml.includes("a one-time code to verify that a mobile number belongs to you"), "privacy page must explain SMS verification");
   assert(privacyHtml.includes("We do not send your name, email"), "privacy page must describe Meta Lead privacy limits");
   assert(privacyHtml.includes("optional cookies are accepted"), "privacy page must describe optional cookie consent");
   assert(privacyHtml.includes("Google Ads"), "privacy page must describe Google Ads measurement");
