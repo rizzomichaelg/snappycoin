@@ -90,6 +90,7 @@ function statusFixture(fulfillmentStatus = "confirmed", paymentStatus = "succeed
   return {
     orderNumber: "PUD-AUDIT-123456789012345678901234567890",
     version: 3,
+    estimatedBags: 2,
     fulfillmentStatus,
     paymentStatus,
     pickupWindowStartAt: "2026-07-29T14:00:00.000Z",

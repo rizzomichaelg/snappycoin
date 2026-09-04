@@ -14,11 +14,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Check out canonical backend contract
-        uses: actions/checkout@v4
-        with:
-          repository: rizzomichaelg/snappycoin-backend
-          path: .contract/snappycoin-backend
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -29,6 +24,6 @@ jobs:
       - name: Verify OpenAPI client contract mirror
         run: node scripts/verify-pud-contract.mjs
         env:
-          PUD_OPENAPI: ${{ github.workspace }}/.contract/snappycoin-backend/docs/pud-openapi.yaml
+          PUD_OPENAPI: ${{ github.workspace }}/contracts/pud-openapi.yaml
       - name: Verify static asset inventory
         run: node scripts/verify-pud.mjs
