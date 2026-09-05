@@ -981,3 +981,16 @@
 .pud-tip-amounts { display: flex; flex-wrap: wrap; gap: .5rem; grid-column: 1 / -1; }
 .pud-tip-amounts .pud-button { flex: 1 1 auto; }
 .pud-tip-amounts [aria-pressed="true"] { background: #245b78; border-color: #245b78; color: #fff; }
+
+
+/* Replacement-card controls share the booking form's scale and spacing. */
+#pud-payment-method-form { max-width: 640px; gap: 14px; color: var(--pud-ink, #243447); }
+#pud-payment-method-form .pud-card-field-label { margin: 0; font-size: 0.875rem; font-weight: 650; color: var(--pud-text, #243447); }
+#pud-payment-method-element { min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+#pud-payment-method-form .pud-fine-print { margin: 0; max-width: 58ch; line-height: 1.5; }
+#pud-payment-method-form .pud-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 2px; }
+#pud-payment-method-form .pud-actions .pud-button { width: auto; flex: 0 1 auto; min-height: 44px; }
+@media (max-width: 480px) {
+  #pud-payment-method-form .pud-actions .pud-button-primary { flex: 1 1 180px; }
+  #pud-payment-method-form .pud-actions .pud-button-link { flex: 0 0 auto; }
+}

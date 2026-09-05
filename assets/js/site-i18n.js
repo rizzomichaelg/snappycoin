@@ -14,6 +14,7 @@ export const DISPLAY_CURRENCY = "USD";
 export const LOCALE_STORAGE_KEY = "snappyLocaleV1";
 
 const ES = Object.freeze({
+  "This card was declined. Check the card details or use a different card.": "Esta tarjeta fue rechazada. Revisa los datos o usa otra tarjeta.",
   "Edit pickup": "Editar recogida",
   "Edit delivery": "Editar entrega",
   "Edit laundry preferences": "Editar preferencias de lavado",
@@ -565,6 +566,7 @@ const ES = Object.freeze({
   "Let’s fix the payment": "Corrijamos el pago",
   "Your laundry order is still here. Securely confirm a replacement card and we will retry the original payment—never create a second order.": "Tu pedido sigue aquí. Confirma de forma segura otra tarjeta y volveremos a intentar el pago original; nunca crearemos un segundo pedido.",
   "Update card and retry": "Actualizar tarjeta y reintentar",
+  "New card details": "Datos de la nueva tarjeta",
   "Secure replacement card details": "Datos seguros de la tarjeta de reemplazo",
   "Confirming replaces the saved payment method and retries this order’s existing payment. It does not create a second order.": "Al confirmar se reemplaza el método de pago guardado y se reintenta el pago de este pedido. No se crea otro pedido.",
   "Confirm replacement card": "Confirmar tarjeta de reemplazo",

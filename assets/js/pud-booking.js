@@ -5,7 +5,7 @@ import { displayAddress, enableAddressAutocomplete, validateAddress } from "./pu
 import { eligibleDeliveryRoutes, formatRoute, renderRouteDays, renderRouteTimes, routeOptions } from "./pud-scheduling.js";
 import { beginPhoneVerification, bindPhoneFormatting, confirmPhoneVerification, normalizeUsPhone, resendPhoneVerification } from "./pud-phone.js";
 import { destroySquareCard, prepareSquareCard, tokenizeSquareCard } from "./pud-payment.js";
-import { stableActionKey } from "./pud-idempotency.js";
+import { stableActionKey, retireActionKey } from "./pud-idempotency.js";
 import { clearReorderBootstrap, prefillReorderAddress, prefillReorderDetails, takeReorderBootstrap } from "./pud-reorder.js";
 import { downloadPickupCalendar } from "./pud-calendar.js";
 import { formatCurrencyCents, getLocale, translateExternalText, translateText, withLocalePath } from "./site-i18n.js";
@@ -449,8 +449,17 @@ async function submitOrder() {
     locale: getLocale?.() || undefined,
   };
   const stableIntent = { ...intent, squareCardToken: "[square-token]", turnstileToken: "[turnstile-token]" };
-  const orderKey = await stableActionKey("order", JSON.stringify([state.phoneProof, state.addressProof, route.routeProof, deliveryRoute.routeProof, stableIntent]));
-  const result = await createOrder({ idempotencyKey: orderKey, ...intent }, orderKey);
+  const orderSignature = JSON.stringify([state.phoneProof, state.addressProof, route.routeProof, deliveryRoute.routeProof, stableIntent]);
+  const orderKey = await stableActionKey("order", orderSignature);
+  let result;
+  try {
+    result = await createOrder({ idempotencyKey: orderKey, ...intent }, orderKey);
+  } catch (error) {
+    // A confirmed card-save decline creates no order. A different card must not
+    // reuse Square's rejected attempt; unknown/network outcomes retain the key.
+    if (error.code === "PUD_CARD_DECLINED") await retireActionKey("order", orderSignature);
+    throw error;
+  }
   const token = result.statusToken;
   if (!token || !result.orderNumber) throw new Error("The order was created without a private status link. Contact support with the request ID.");
   try {

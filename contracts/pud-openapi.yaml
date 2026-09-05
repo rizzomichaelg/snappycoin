@@ -581,6 +581,49 @@ paths:
   /api/admin/pud/orders/{id}/weight:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminWeight" }
+  /api/admin/pud/orders/{id}/resend-tracking:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post:
+      tags: [Staff orders]
+      operationId: resendPudTrackingEmail
+      security: [{ AccessJWT: [] }]
+      x-roles: [staff, manager]
+      x-idempotency: required
+      description: Queues the existing active private tracking link to the saved customer email; never returns or rotates the token. Repeated requests in the same minute share one outbox job. Expired or revoked links require customer recovery.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminChargeRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/admin/pud/orders/{id}/payment-method:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post:
+      tags: [Staff orders]
+      operationId: replacePudOrderCard
+      security: [{ AccessJWT: [] }]
+      x-roles: [staff, manager]
+      x-idempotency: required
+      description: Saves a Square replacement card with customer authorization; never charges it. Rejects stale, processing, paid, and canceled orders.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion, idempotencyKey, squareCardToken, consentAccepted, contactMethod]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                idempotencyKey: { type: string, minLength: 16, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]+$" }
+                squareCardToken: { type: string, minLength: 1, maxLength: 16384 }
+                consentAccepted: { type: boolean, const: true }
+                contactMethod: { type: string, enum: [phone, in_person] }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        default: { $ref: "#/components/responses/Error" }
   /api/admin/pud/orders/{id}/charge:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminCharge" }
@@ -4570,7 +4613,7 @@ components:
     AdminIntakeRequest:
       type: object
       additionalProperties: false
-      required: [expectedVersion, actualBags, bagCodes, station]
+      required: [expectedVersion, actualBags, bagCodes]
       properties:
         expectedVersion: { type: integer, minimum: 1 }
         actualBags: { type: integer, minimum: 1, maximum: 100 }
