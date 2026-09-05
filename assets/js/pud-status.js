@@ -612,9 +612,14 @@ async function startPaymentReplacement() {
   const form = $("#pud-payment-method-form");
   const mount = $("#pud-payment-method-element");
   mount.replaceChildren();
-  if (recoveryPaymentProvider === "square") await prepareSquareCardReplacement(publicConfig, mount);
-  else await preparePaymentMethodReplacement(publicConfig, session.setupIntentClientSecret, mount);
   form.hidden = false;
+  try {
+    if (recoveryPaymentProvider === "square") await prepareSquareCardReplacement(publicConfig, mount);
+    else await preparePaymentMethodReplacement(publicConfig, session.setupIntentClientSecret, mount);
+  } catch (error) {
+    closePaymentReplacement();
+    throw error;
+  }
   $("[data-payment-actions]").hidden = true;
   form.querySelector("button[type=submit]")?.focus();
   message("Secure replacement-card fields are ready. Saving a new card does not charge it.", "success");

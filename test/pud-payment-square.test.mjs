@@ -37,3 +37,17 @@ test("booking explains that Square handles sensitive card details", async () => 
   assert.match(html, /href="https:\/\/squareup\.com\/help\/us\/en\/article\/3797-secure-data-encryption"/);
   assert.match(html, /target="_blank" rel="noopener">Learn about Square security\.<\/a>/);
 });
+
+
+test("tracking page permits Square replacement-card resources in both environments", async () => {
+  const html = await readFile(new URL("../pickup-delivery/status/index.html", import.meta.url), "utf8");
+  const csp = html.match(/Content-Security-Policy[^>]+content="([^"]+)"/)?.[1] || "";
+  for (const directive of ["script-src", "frame-src", "style-src", "img-src", "connect-src"]) {
+    const sources = csp.split(";").find((part) => part.trim().startsWith(directive + " ")) || "";
+    assert.ok(sources.includes("https://web.squarecdn.com"), directive);
+    assert.ok(sources.includes("https://sandbox.web.squarecdn.com"), directive);
+  }
+  assert.match(csp, /connect-src[^;]*https:\/\/pci-connect\.squareup\.com/);
+  assert.match(csp, /connect-src[^;]*https:\/\/pci-connect\.squareupsandbox\.com/);
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
+});
