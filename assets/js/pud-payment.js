@@ -11,21 +11,35 @@ let replacementPaymentElement;
 let squareCard;
 let replacementSquareCard;
 
+const scriptLoads = new Map();
 function loadScript(src, isReady = () => Boolean(globalThis.Stripe)) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      if (isReady()) resolve();
-      else existing.addEventListener("load", resolve, { once: true });
-      return;
+  if (isReady()) return Promise.resolve();
+  if (scriptLoads.has(src)) return scriptLoads.get(src);
+  const pending = new Promise((resolve, reject) => {
+    let script = document.querySelector(`script[src="${src}"]`);
+    const existing = Boolean(script);
+    if (!script) {
+      script = document.createElement("script");
+      script.src = src;
+      script.async = true;
     }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.addEventListener("load", resolve, { once: true });
-    script.addEventListener("error", () => reject(new Error("Secure payment fields could not load.")), { once: true });
-    document.head.append(script);
+    const finish = (error) => {
+      clearTimeout(timeout);
+      script.removeEventListener("load", loaded);
+      script.removeEventListener("error", failed);
+      if (error) { script.remove(); reject(error); }
+      else resolve();
+    };
+    const failed = () => finish(new Error("Secure payment fields could not load."));
+    const loaded = () => isReady() ? finish() : failed();
+    const timeout = setTimeout(failed, 15_000);
+    script.addEventListener("load", loaded, { once: true });
+    script.addEventListener("error", failed, { once: true });
+    if (!existing) document.head.append(script);
   });
+  scriptLoads.set(src, pending);
+  pending.finally(() => scriptLoads.delete(src)).catch(() => {});
+  return pending;
 }
 
 function squareScript(publicConfig) {

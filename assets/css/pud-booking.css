@@ -1,0 +1,34 @@
+/* Booking-specific hierarchy; shared tracking and policy styles stay independent. */
+[data-pud-booking].pud-layout { grid-template-columns: minmax(0, 780px); max-width: 840px; padding-top: 28px; gap: 24px; }
+[data-pud-booking] .pud-hero { padding: 0; border: 0; box-shadow: none; background: transparent; }
+[data-pud-booking] .pud-hero h1 { max-width: none; font-size: clamp(1.7rem, 4vw, 2.15rem); margin-bottom: 8px; }
+[data-pud-booking] .pud-hero-lead { max-width: none; margin-bottom: 12px; }
+[data-pud-booking] .pud-trust-list { display: block; margin: 8px 0 0; }
+[data-pud-booking] .pud-trust-list li { padding: 8px 0; }
+[data-pud-booking] .pud-trust-list li:not(:first-child) { display: none; }
+[data-pud-booking] .pud-service-area-offer { margin: 8px 0; }
+[data-pud-booking] .pud-booking-card { box-shadow: none; border-radius: 8px; scroll-margin-top: 84px; }
+[data-pud-booking] .pud-form-section { padding-top: 20px; margin-top: 20px; }
+[data-pud-booking] .pud-form-section:first-child { margin-top: 0; padding-top: 0; }
+[data-pud-booking] .pud-confirmed-address { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+[data-pud-booking] .pud-confirmed-address .pud-button { margin-left: auto; }
+[data-pud-booking] [data-address-autocomplete-status]:empty { display: none; }
+[data-pud-booking] .pud-address-help { margin-bottom: 0; }
+[data-pud-booking] .pud-mobile-how { display: none; }
+[data-pud-booking][data-booking-step]:not([data-booking-step="address"]) .pud-hero-lead,
+[data-pud-booking][data-booking-step]:not([data-booking-step="address"]) .pud-hero .pud-eyebrow,
+[data-pud-booking][data-booking-step]:not([data-booking-step="address"]) .pud-price-note,
+[data-pud-booking][data-booking-step]:not([data-booking-step="address"]) .pud-service-confidence,
+[data-pud-booking][data-booking-step]:not([data-booking-step="address"]) .pud-faq { display: none; }
+@media (max-width: 600px) {
+  [data-pud-booking].pud-layout { padding: 18px 12px 40px; gap: 16px; }
+  [data-pud-booking] .pud-booking-card { padding: 20px 16px; }
+  [data-pud-booking] .pud-hero-lead { display: none; }
+  [data-pud-booking] .pud-hero h1 { font-size: 1.6rem; }
+}
+@media (max-width: 600px) {
+  [data-pud-booking] .pud-review > div { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; }
+  [data-pud-booking] .pud-review dt { grid-column: 1; align-self: center; }
+  [data-pud-booking] .pud-review dd { grid-column: 1 / -1; overflow-wrap: anywhere; }
+  [data-pud-booking] .pud-review button { grid-column: 2; grid-row: 1; justify-self: end; min-height: 44px; min-width: 44px; }
+}

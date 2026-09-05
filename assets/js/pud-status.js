@@ -152,10 +152,13 @@ let portalPreferences = null;
 let rescheduledCalendarPickup = null;
 let portalLoyalty = null;
 let pendingConfirmation = null;
+let pendingTipReview = false;
 let pendingFeedbackSatisfaction = "";
 let feedbackResult = null;
 let automaticRefreshTimer = 0;
 let automaticRefreshFailures = 0;
+let tipFocusRequested = false;
+let tipFocusHandled = false;
 
 if (root && window.top !== window.self) {
   root.replaceChildren(Object.assign(document.createElement("p"), {
@@ -167,7 +170,12 @@ if (root && window.top !== window.self) {
 }
 
 async function boot() {
+  tipFocusRequested = new URLSearchParams(location.search).get("focus") === "tip";
   token = fragmentToken();
+  if (token) {
+    $("[data-status-loading]").hidden = false;
+    $("[data-token-entry]").hidden = true;
+  }
   replacePrivateLocation(token);
   bind();
   renderStepUpState();
@@ -178,7 +186,12 @@ async function boot() {
     renderRecoveryAvailability(null);
   }
   if (!token) return message("Open the private status link from your confirmation message.");
-  await refresh();
+  try {
+    await refresh();
+  } finally {
+    $("[data-status-loading]").hidden = true;
+    if (!order) $("[data-token-entry]").hidden = false;
+  }
 }
 
 function renderRecoveryAvailability(config) {
@@ -192,6 +205,12 @@ function renderRecoveryAvailability(config) {
 function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
+  $("#pud-tip-form [name=amount]")?.addEventListener("input", () => {
+    document.querySelectorAll('[data-action="tip-amount"]').forEach((button) => button.setAttribute("aria-pressed", String(!button.dataset.percent)));
+  });
+  $("[data-step-up]")?.addEventListener("toggle", () => {
+    if ($("[data-step-up]").open && !$("#pud-step-up-phone-form").hidden) ensureTurnstile($("#pud-step-up-phone-form"));
+  });
   $("[data-confirm-dialog]")?.addEventListener("close", () => { pendingConfirmation = null; });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) clearAutomaticRefresh();
@@ -219,6 +238,7 @@ async function onSubmit(event) {
     closePaymentReplacement();
     clearRescheduledCalendar();
     clearFeedbackState();
+    pendingTipReview = false;
     token = submitted;
     replacePrivateLocation(token);
     publicConfig = null;
@@ -246,6 +266,17 @@ async function onClick(event) {
   const button = event.target.closest("[data-action]");
   if (!button || actionInFlight) return;
   const action = button.dataset.action;
+  if (action === "tip-amount") {
+    const input = $("#pud-tip-form [name=amount]");
+    const isCustom = !button.dataset.percent;
+    input.value = isCustom ? "" : (percentageTipCents(order, Number(button.dataset.percent)) / 100).toFixed(2);
+    $("[data-tip-dollar-field]").hidden = false;
+    input.readOnly = !isCustom;
+    $('#pud-tip-form [type="submit"]').disabled = false;
+    document.querySelectorAll('[data-action="tip-amount"]').forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
+    if (isCustom) input.focus();
+    return;
+  }
   if (action === "refresh") return runAction(async () => {
     automaticRefreshFailures = 0;
     await refresh();
@@ -493,9 +524,14 @@ async function submitStepUpCode(form) {
   if (failures.length) {
     message(`Phone verified. Protected actions are unlocked, but ${failures.join(" and ")} could not load. Try verifying again if the problem continues.`);
   } else {
-    const loyaltyText = publicConfig?.loyaltyEnabled ? "rewards, " : "";
-    message(`Phone verified. Protected actions, ${loyaltyText}order history, receipts, claims, and preferences are unlocked for this short browser session.`, "success");
+    message("Phone verified. You can now manage this order.", "success");
   }
+  $("[data-step-up]").open = !pendingTipReview;
+  if (pendingTipReview) {
+    pendingTipReview = false;
+    submitTip($("#pud-tip-form"));
+  }
+
 }
 
 async function resendStepUpCode() {
@@ -620,9 +656,16 @@ function submitTip(form) {
   if (!Number.isSafeInteger(amountCents) || amountCents < 50 || amountCents > 100_000) {
     throw new Error("Tip amount must be between $0.50 and $1,000.00.");
   }
+  if (!activeVerifiedSession()) {
+    pendingTipReview = true;
+    focusStepUp();
+    renderStepUpState("Verify your phone to use the saved card. Then review your tip before paying.");
+    return;
+  }
+  pendingTipReview = false;
   openConfirmation({
     title: `Add a ${money(amountCents)} tip?`,
-    copy: `This creates a separate tip payment for ${order.orderNumber}. It will not change the laundry order charge.`,
+    copy: `This creates one final, separate tip payment for ${order.orderNumber}. It cannot be changed or canceled online after it is paid.`,
     confirmLabel: "Add tip",
     run: () => commitTip(form, amountCents),
   });
@@ -636,9 +679,11 @@ async function commitTip(form, amountCents) {
   const confirmed = result.clientSecret ? await confirmPaymentRemediation(publicConfig, result.clientSecret) : null;
   const finalStatus = confirmed?.status || result.status;
   if (!["succeeded", "processing"].includes(finalStatus)) {
-    throw new Error("The tip payment was not completed. Retry to resume the same payment.");
+    await retireActionKey("tip", signature);
+    throw new Error("The tip payment was not completed and no tip was added. Check the saved payment method before trying again.");
   }
   form.reset();
+  if (finalStatus === "succeeded") await refresh({ silent: true });
   message(finalStatus === "succeeded" ? "Thank you. Your tip was added." : "Your tip is processing. Refresh before trying again.", "success");
 }
 
@@ -869,7 +914,7 @@ async function revokePrivateLink() {
     $("#pud-status-form").reset();
     $("[data-status-content]").hidden = true;
     const tokenEntry = $("[data-token-entry]");
-    if (tokenEntry) tokenEntry.open = true;
+    if (tokenEntry) { tokenEntry.open = true; tokenEntry.hidden = false; }
     message(`The private link for ${orderNumber} was revoked.`, "success");
   } catch (error) {
     await handleVersionConflict(error);
@@ -885,7 +930,7 @@ function render(value) {
   }
   $("[data-status-content]").hidden = false;
   const tokenEntry = $("[data-token-entry]");
-  if (tokenEntry) tokenEntry.open = false;
+  if (tokenEntry) { tokenEntry.open = false; tokenEntry.hidden = true; }
   $("[data-order-number]").textContent = value.orderNumber || "Your order";
   const card = value.paymentMethod?.last4 ? ` · ${value.paymentMethod.brand || "Card"} ending ${value.paymentMethod.last4}` : "";
   $("[data-payment-status]").textContent = value.paymentStatus === "uncharged"
@@ -910,12 +955,21 @@ function render(value) {
     : milestones.outForDeliveryAt
       ? `Out for delivery since ${formatDate(milestones.outForDeliveryAt)}`
       : "Not started";
-  $("[data-expected-completion]").textContent = formatSavedWindow(
-    value.deliveryWindowStartAt,
-    value.deliveryWindowEndAt,
-    value.expectedCompletionAt ? formatDate(value.expectedCompletionAt) : "Not scheduled yet"
-  );
-  $("[data-bag-status]").textContent = value.actualBags == null ? "Confirmed after pickup" : `${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`;
+  const awaitingPickup = ["submitted", "confirmed"].includes(value.fulfillmentStatus);
+  const nextWindow = $("[data-expected-completion]");
+  nextWindow.parentElement.hidden = value.fulfillmentStatus === "canceled";
+  nextWindow.previousElementSibling.textContent = awaitingPickup
+    ? "Pickup window · Central Time"
+    : value.fulfillmentStatus === "delivered" ? "Delivered · Central Time" : "Delivery window · Central Time";
+  nextWindow.textContent = awaitingPickup
+    ? formatSavedWindow(value.pickupWindowStartAt, value.pickupWindowEndAt, pickupWindowLabel(value.pickupWindowCode))
+    : value.fulfillmentStatus === "delivered"
+      ? (milestones.deliveredAt ? formatDate(milestones.deliveredAt) : "Delivered")
+      : formatSavedWindow(value.deliveryWindowStartAt, value.deliveryWindowEndAt,
+          value.expectedCompletionAt ? formatDate(value.expectedCompletionAt) : "Not scheduled yet");
+  $("[data-bag-status]").textContent = value.actualBags == null
+    ? `${value.estimatedBags} bag${value.estimatedBags === 1 ? "" : "s"} expected · confirmed at pickup`
+    : `${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`;
   $("[data-total]").textContent = value.weightTenths == null ? "Calculated after weighing" : money(value.totalCents);
   $("[data-last-updated]").textContent = value.updatedAt ? `Server status updated ${formatDate(value.updatedAt)}.` : "";
   renderJourney(value);
@@ -931,6 +985,7 @@ function render(value) {
   renderReschedule(value.rescheduleOptions);
   renderFeedback(value);
   renderTip(value);
+  focusTipFromEmail();
   renderRecurring(value);
 }
 
@@ -995,7 +1050,7 @@ function renderAttention(value) {
   const addressNeedsReview = Boolean(value.addressReviewRequired);
   const canRepairPayment = ["requires_action", "failed"].includes(value.paymentStatus)
     && Boolean(publicConfig?.squareApplicationId || publicConfig?.stripePublishableKey);
-  panel.hidden = !paymentNeedsHelp && !orderNeedsHelp && !addressNeedsReview;
+  panel.hidden = !orderNeedsHelp && !addressNeedsReview && (!paymentNeedsHelp || canRepairPayment);
   if (panel.hidden) {
     title.textContent = "";
     copy.textContent = "";
@@ -1056,7 +1111,7 @@ function renderReceipt(receipt, paymentStatus) {
     : ["succeeded", "partially_refunded", "refunded", "succeeded_external"].includes(paymentStatus)
       ? "This receipt reflects the order total and settled payment activity."
       : "Charges are itemized; the payment state is shown above.";
-  $("[data-receipt-versions]").textContent = `Pricing ${receipt.pricingVersion} · tax rule ${receipt.taxRuleVersion} · minimum ${money(receipt.minimumCents)}.`;
+  $("[data-receipt-versions]").textContent = `Minimum order charge: ${money(receipt.minimumCents)}.`;
 }
 
 function renderPortalDetails(details) {
@@ -1146,7 +1201,7 @@ function historyReceiptDetails(receipt) {
     ["Net paid including tip", money(receipt.netPaidCents), true],
   ];
   rows.filter(([, , visible]) => visible).forEach(([term, value]) => list.append(definitionRow(term, value)));
-  details.append(summary, list, textNode("p", `Pricing ${receipt.pricingVersion} · tax rule ${receipt.taxRuleVersion} · minimum ${money(receipt.minimumCents)}.`));
+  details.append(summary, list, textNode("p", `Minimum order charge: ${money(receipt.minimumCents)}.`));
   return details;
 }
 
@@ -1182,8 +1237,46 @@ function renderReschedule(options) {
   select.disabled = routes.length === 0;
 }
 
+function percentageTipCents(value, percent) {
+  const receipt = value?.receipt;
+  if (!receipt) return 0;
+  const subtotal = Math.max(0, receipt.baseChargeCents + receipt.deliveryFeeCents - receipt.discountCents);
+  return Math.round(subtotal * percent / 100);
+}
+
 function renderTip(value) {
-  $("[data-tip-panel]").hidden = !publicConfig?.tipsEnabled || !value.canTip || value.fulfillmentStatus !== "delivered";
+  const panel = $("[data-tip-panel]");
+  const form = $("#pud-tip-form");
+  const summary = $("[data-tip-summary]");
+  form.querySelectorAll("[data-percent]").forEach((button) => {
+    const cents = percentageTipCents(value, Number(button.dataset.percent));
+    button.textContent = `${button.dataset.percent}% (${money(cents)})`;
+    button.disabled = cents < 50 || cents > 100000;
+  });
+  const tipCents = Number(value.receipt?.tipCents || 0);
+  const tippingStatus = ["out_for_delivery", "delivered"].includes(value.fulfillmentStatus);
+  panel.hidden = !tippingStatus || (tipCents === 0 && (!publicConfig?.tipsEnabled || !value.canTip));
+  form.hidden = !publicConfig?.tipsEnabled || !value.canTip || tipCents > 0;
+  const heading = $("#tip-heading");
+  if (heading) heading.textContent = tipCents > 0 ? "Thank you for your tip" : "Leave a tip";
+  const terms = panel.querySelector(".pud-fine-print");
+  if (terms) terms.hidden = tipCents > 0;
+  summary.textContent = tipCents > 0
+    ? `Thank you. You added a ${money(tipCents)} tip to this order.`
+    : "Optional. Charged separately to the card used for this order.";
+}
+
+function focusTipFromEmail() {
+  if (!tipFocusRequested || tipFocusHandled) return;
+  const panel = $("[data-tip-panel]");
+  if (!panel || panel.hidden) return;
+  tipFocusHandled = true;
+  panel.dataset.focusArrival = "true";
+  requestAnimationFrame(() => {
+    const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+    panel.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    panel.focus({ preventScroll: true });
+  });
 }
 
 function renderRecurring(value) {
@@ -1372,16 +1465,24 @@ function renderStepUpState(override = "") {
   active.hidden = !session;
   status.dataset.active = session ? "true" : "false";
   status.textContent = override || (session
-    ? `Phone verified until ${formatDate(session.expiresAt)}. Each protected action still receives its own one-time authorization.`
+    ? `Verified until ${formatDate(session.expiresAt)}.`
     : verificationId
-      ? "Enter the code. The resulting verified session stays only in this page's memory."
-      : "Phone verification is required for protected actions.");
-  if (!phoneForm.hidden) ensureTurnstile(phoneForm);
+      ? "Enter the code we sent to your phone."
+      : "We’ll only use this code to confirm it’s you.");
+  const panel = $("[data-step-up]");
+  const heading = $("#step-up-heading");
+  if (heading) heading.textContent = session ? "You’re verified" : "Verify to continue";
+  const summary = $("[data-step-up-summary]");
+  if (summary) summary.textContent = session ? "Verified for this visit" : "Changes, saved preferences, and order history";
+  if (!phoneForm.hidden && panel?.open) ensureTurnstile(phoneForm);
   if (resendPanel && !resendPanel.hidden) ensureTurnstile($("#pud-step-up-resend-form"));
 }
 
 function focusStepUp() {
-  $("[data-step-up]")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  const panel = $("[data-step-up]");
+  if (panel) panel.open = true;
+  renderStepUpState();
+  panel?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   const selector = verificationId ? "#pud-step-up-code-form input[name=code]" : "#pud-step-up-phone-form input[name=phone]";
   $(selector)?.focus();
 }
@@ -1400,6 +1501,7 @@ function closePaymentReplacement() {
 }
 
 function clearMemoryCredentials() {
+  pendingTipReview = false;
   clearAutomaticRefresh();
   clearVerifiedSession();
   clearStepUpVerification();

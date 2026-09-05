@@ -39,9 +39,19 @@ const publicConfig = {
   currency: "USD",
   support: { email: "support@snappycoinlaundry.com", phone: "+13146281001" },
   stripePublishableKey: null,
+  squareApplicationId: "sandbox-sq0idb-browser-audit",
+  squareLocationId: "browser-audit-location",
+  squareEnvironment: "sandbox",
   turnstileSiteKey: "browser-audit-site-key",
   timezone: "America/Chicago",
   pricing: { pricePerLbCents: 150, minimumCents: 3500, deliveryFeeCents: 0, version: "audit-v2" },
+  scheduling: {
+    pickupLeadTimeHours: 0,
+    pickupSlotDurationMinutes: 60,
+    minimumDeliveryDelayHours: 24,
+    sameDayBookingCutoff: "14:00",
+    latestPickupSlotStart: "17:00"
+  },
   consentVersion: "audit-v1",
   consentVersions: {
     terms: "audit-v1",
@@ -80,13 +90,31 @@ function statusFixture(fulfillmentStatus = "confirmed", paymentStatus = "succeed
   return {
     orderNumber: "PUD-AUDIT-123456789012345678901234567890",
     version: 3,
+    estimatedBags: 2,
     fulfillmentStatus,
     paymentStatus,
+    pickupWindowStartAt: "2026-07-29T14:00:00.000Z",
+    pickupWindowEndAt: "2026-07-29T15:00:00.000Z",
+    deliveryWindowStartAt: "2026-07-30T14:00:00.000Z",
+    deliveryWindowEndAt: "2026-07-30T15:00:00.000Z",
+    expectedCompletionAt: "2026-07-30T14:00:00.000Z",
+    milestones: {
+      submittedAt: "2026-07-25T18:00:00.000Z",
+      confirmedAt: null,
+      pickedUpAt: null,
+      weighedAt: null,
+      readyAt: null,
+      outForDeliveryAt: null,
+      deliveredAt: null
+    },
     totalCents: 4000,
     refundedCents: 0,
     receipt,
+    paymentMethod: null,
+    paymentAmountCents: null,
     paymentAttentionRequired: ["requires_action", "failed", "disputed"].includes(paymentStatus),
     operationalAttentionRequired: false,
+    addressReviewRequired: false,
     canCancel: true,
     canTip: true,
     canClaim: true,
@@ -308,6 +336,20 @@ try {
     assert.equal(await page.locator("[data-message]").textContent(), "");
     assert.equal(await page.locator('[data-fulfillment-timeline] [aria-current="step"]').count(), state.fulfillment === "canceled" ? 0 : 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    if (state.fulfillment === "delivered") {
+      const amount = page.locator('#pud-tip-form [name="amount"]');
+      assert.equal(await amount.isVisible(), false);
+      for (const [percent, dollars] of [[10, "3.98"], [15, "5.97"], [20, "7.96"]]) {
+        await page.locator(`[data-percent="${percent}"]`).click();
+        assert.equal(await amount.inputValue(), dollars);
+        assert.equal(await amount.getAttribute("readonly"), "");
+      }
+      await page.locator('[data-action="tip-amount"][data-amount=""]').click();
+      assert.equal(await amount.inputValue(), "");
+      assert.equal(await amount.getAttribute("readonly"), null);
+      await amount.fill("4.25");
+      assert.equal(await amount.inputValue(), "4.25");
+    }
     report.statusStates.push(state);
     console.log(`✓ status ${state.fulfillment}/${state.payment}`);
     await context.close();
