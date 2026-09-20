@@ -994,3 +994,7 @@
   #pud-payment-method-form .pud-actions .pud-button-primary { flex: 1 1 180px; }
   #pud-payment-method-form .pud-actions .pud-button-link { flex: 0 0 auto; }
 }
+
+.pud-schedule-expectation { margin: 1rem 0; padding: 1rem; border-left: 3px solid #64748b; background: #f8fafc; }
+.pud-schedule-expectation[data-attention="true"] { border-color: #a16207; background: #fffbeb; }
+.pud-schedule-expectation p { margin-top: 0; }

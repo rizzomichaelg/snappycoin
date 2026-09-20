@@ -14,6 +14,15 @@ export const DISPLAY_CURRENCY = "USD";
 export const LOCALE_STORAGE_KEY = "snappyLocaleV1";
 
 const ES = Object.freeze({
+  "Scheduled delivery · Central Time": "Entrega programada · Hora Central",
+  "Estimated return · Central Time": "Devolución estimada · Hora Central",
+  "Contact the store": "Contactar a la tienda",
+  "Your order needs a scheduling or service review. Contact the store to confirm the next step before expecting another handoff.": "Tu pedido necesita una revisión del horario o del servicio. Contacta a la tienda para confirmar el siguiente paso antes de esperar otra recogida o entrega.",
+  "The saved window has passed and this handoff is not marked complete. Refresh for an update or contact the store to confirm timing.": "El horario guardado ya pasó y la recogida o entrega no figura como completada. Actualiza la página o contacta a la tienda para confirmar el horario.",
+  "Your requested pickup window is awaiting staff confirmation. Check this page for confirmation before leaving bags out.": "El horario de recogida solicitado espera confirmación del personal. Consulta esta página antes de dejar las bolsas afuera.",
+  "Have your bags ready during your confirmed pickup window. Use the options below if your plans change.": "Ten las bolsas listas durante el horario confirmado. Usa las opciones de abajo si tus planes cambian.",
+  "Your return time is an estimate until a delivery window is assigned. Check this page for the scheduled window or contact the store if you need to coordinate delivery.": "La hora de devolución es estimada hasta que se asigne un horario de entrega. Consulta esta página o contacta a la tienda si necesitas coordinar la entrega.",
+  "This is your scheduled delivery window, not a live arrival estimate. Follow your saved handoff instructions and check this page for updates.": "Este es tu horario de entrega programado, no una estimación de llegada en tiempo real. Sigue las instrucciones guardadas y consulta esta página para ver actualizaciones.",
   "This card was declined. Check the card details or use a different card.": "Esta tarjeta fue rechazada. Revisa los datos o usa otra tarjeta.",
   "Edit pickup": "Editar recogida",
   "Edit delivery": "Editar entrega",

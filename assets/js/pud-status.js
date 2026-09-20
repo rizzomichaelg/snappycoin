@@ -1,3 +1,4 @@
+import { orderExpectation } from "./pud-expectations.js";
 import {
   cancelOrder,
   createRecurring,
@@ -965,7 +966,7 @@ function render(value) {
   nextWindow.parentElement.hidden = value.fulfillmentStatus === "canceled";
   nextWindow.previousElementSibling.textContent = awaitingPickup
     ? "Pickup window · Central Time"
-    : value.fulfillmentStatus === "delivered" ? "Delivered · Central Time" : "Delivery window · Central Time";
+    : value.fulfillmentStatus === "delivered" ? "Delivered · Central Time" : value.deliveryWindowStartAt && value.deliveryWindowEndAt ? "Scheduled delivery · Central Time" : "Estimated return · Central Time";
   nextWindow.textContent = awaitingPickup
     ? formatSavedWindow(value.pickupWindowStartAt, value.pickupWindowEndAt, pickupWindowLabel(value.pickupWindowCode))
     : value.fulfillmentStatus === "delivered"
@@ -978,6 +979,13 @@ function render(value) {
   $("[data-total]").textContent = value.weightTenths == null ? "Calculated after weighing" : money(value.totalCents);
   $("[data-last-updated]").textContent = value.updatedAt ? `Server status updated ${formatDate(value.updatedAt)}.` : "";
   renderJourney(value);
+  const expectation = orderExpectation(value);
+  const expectationPanel = $("[data-schedule-expectation]");
+  if (expectationPanel) {
+    expectationPanel.hidden = !expectation;
+    expectationPanel.dataset.attention = String(Boolean(expectation?.attention));
+    $("[data-schedule-expectation-copy]").textContent = translateText(expectation?.text || "");
+  }
 
   renderReceipt(value.receipt, value.paymentStatus);
   const paymentVisible = value.paymentAttentionRequired && ["requires_action", "failed"].includes(value.paymentStatus)
