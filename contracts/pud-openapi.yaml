@@ -539,13 +539,17 @@ paths:
     get:
       tags: [Staff orders]
       operationId: getPudBoard
+      description: Search and queue counts cover the full selected view before pagination. Work date is in America/Chicago. Schedule sorting follows the next pickup or delivery window.
       parameters:
+        - { in: query, name: query, schema: { type: string, minLength: 2, maxLength: 100 }, description: Case-insensitive order-number or customer-name substring, or phone last four. Names are decrypted only during the authorized search. }
+        - { in: query, name: queue, schema: { type: string, enum: [needs_review, needs_confirmation, pickup_due, intake_due, charge_due, payment_attention, processing, delivery_due, out_for_delivery, completed, canceled] } }
+        - { in: query, name: view, schema: { type: string, enum: [day, current, future, completed, archived, pickups, laundry, deliveries, attention], default: day } }
         - in: query
           name: sort
           description: Sort within operational/payment priority, with stable order-number and ID ties. Changing sort requires a fresh cursor.
           schema:
             type: string
-            enum: [schedule_asc, schedule_desc, submitted_desc, submitted_asc]
+            enum: [schedule_asc, schedule_desc, submitted_desc, submitted_asc, completed_desc]
             default: schedule_asc
       security: [{ AccessJWT: [] }]
       x-roles: [staff, manager, driver]
@@ -560,6 +564,24 @@ paths:
       x-roles: [staff, manager, driver]
       responses: { "200": { $ref: "#/components/responses/GenericSuccess" }, default: { $ref: "#/components/responses/Error" } }
 
+  /api/admin/pud/orders/{id}/followup:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post:
+      tags: [Staff orders]
+      operationId: updatePudOrderFollowup
+      security: [{ AccessJWT: [] }]
+      x-roles: [staff, manager]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/AdminFollowupRequest" } }
+      responses: { "200": { $ref: "#/components/responses/GenericSuccess" }, default: { $ref: "#/components/responses/Error" } }
+  /api/admin/pud/orders/{id}/archive:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post: { tags: [Staff orders], operationId: archivePudOrder, security: [{ AccessJWT: [] }], x-roles: [staff, manager], requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminTransitionRequest" } } } }, responses: { "200": { $ref: "#/components/responses/GenericSuccess" }, default: { $ref: "#/components/responses/Error" } } }
+  /api/admin/pud/orders/{id}/restore:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post: { tags: [Staff orders], operationId: restorePudOrder, security: [{ AccessJWT: [] }], x-roles: [staff, manager], requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminTransitionRequest" } } } }, responses: { "200": { $ref: "#/components/responses/GenericSuccess" }, default: { $ref: "#/components/responses/Error" } } }
   /api/admin/pud/orders/{id}/confirm:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminConfirm" }
@@ -627,6 +649,31 @@ paths:
   /api/admin/pud/orders/{id}/charge:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminCharge" }
+  /api/admin/pud/orders/{id}/manual-payment:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post:
+      tags: [Staff orders]
+      operationId: recordPudManualPayment
+      security: [{ AccessJWT: [] }]
+      x-roles: [staff, manager]
+      x-idempotency: required
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion, idempotencyKey, amountCents, method, reference]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                idempotencyKey: { type: string, minLength: 16, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]+$" }
+                amountCents: { type: integer, minimum: 1 }
+                method: { type: string, enum: [cash, square, other] }
+                reference: { type: string, minLength: 4, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{3,127}$" }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        default: { $ref: "#/components/responses/Error" }
   /api/admin/pud/orders/{id}/ready:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminReady" }
@@ -710,6 +757,12 @@ paths:
     get:
       tags: [Staff routes]
       operationId: listPudRoutes
+      description: Lists stored operational routes. Staff and managers may request default booking windows for one date with availableFor, zoneId, dateFrom, and dateTo (the same date). Browsing does not persist these windows.
+      parameters:
+        - { in: query, name: availableFor, schema: { type: string, enum: [pickup, delivery] } }
+        - { in: query, name: zoneId, schema: { type: string } }
+        - { in: query, name: dateFrom, schema: { type: string, format: date } }
+        - { in: query, name: dateTo, schema: { type: string, format: date } }
       security: [{ AccessJWT: [] }]
       x-roles: [staff, manager, driver]
       responses: { "200": { $ref: "#/components/responses/GenericSuccess" }, default: { $ref: "#/components/responses/Error" } }
@@ -3792,10 +3845,27 @@ components:
         detergent: { type: string }
         softenerPref: { type: string }
         preferredRouteRule: { type: object, additionalProperties: true }
+    AdditionalItem:
+      type: object
+      additionalProperties: false
+      required: [description, quantity, unitPriceCents]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 120 }
+        quantity: { type: integer, minimum: 1, maximum: 1000 }
+        unitPriceCents: { type: integer, minimum: 1, maximum: 1000000 }
+    PricedAdditionalItem:
+      type: object
+      additionalProperties: false
+      required: [description, quantity, unitPriceCents, lineTotalCents]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 120 }
+        quantity: { type: integer, minimum: 1, maximum: 1000 }
+        unitPriceCents: { type: integer, minimum: 1, maximum: 1000000 }
+        lineTotalCents: { type: integer, minimum: 1, maximum: 10000000 }
     ItemizedReceipt:
       type: object
       additionalProperties: false
-      required: [currency, weightTenths, pricePerLbCents, weightChargeCents, minimumCents, minimumAdjustmentCents, baseChargeCents, deliveryFeeCents, discountCents, taxCents, tipCents, totalCents, amountCapturedCents, refundedCents, netPaidCents, pricingVersion, taxRuleVersion]
+      required: [currency, weightTenths, pricePerLbCents, weightChargeCents, minimumCents, minimumAdjustmentCents, baseChargeCents, additionalItems, additionalItemsCents, deliveryFeeCents, discountCents, taxCents, tipCents, totalCents, amountCapturedCents, refundedCents, netPaidCents, pricingVersion, taxRuleVersion]
       properties:
         currency: { type: string, const: usd }
         weightTenths: { type: [integer, "null"], minimum: 0 }
@@ -3804,6 +3874,8 @@ components:
         minimumCents: { $ref: "#/components/schemas/MoneyCents" }
         minimumAdjustmentCents: { $ref: "#/components/schemas/MoneyCents" }
         baseChargeCents: { $ref: "#/components/schemas/MoneyCents" }
+        additionalItems: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/PricedAdditionalItem" } }
+        additionalItemsCents: { type: integer, minimum: 0, maximum: 10000000 }
         deliveryFeeCents: { $ref: "#/components/schemas/MoneyCents" }
         discountCents: { $ref: "#/components/schemas/MoneyCents" }
         taxCents: { $ref: "#/components/schemas/MoneyCents" }
@@ -3861,6 +3933,8 @@ components:
         addressReviewRequired: { type: boolean }
         canCancel: { type: boolean }
         canTip: { type: boolean }
+        paidExternally: { type: boolean }
+        canReplaceTipCard: { type: boolean }
         canClaim: { type: boolean }
         canCreateRecurring: { type: boolean }
         canSubmitFeedback: { type: boolean }
@@ -4534,6 +4608,15 @@ components:
                     minimumDeliveryDelayHours: { type: integer, minimum: 0 }
                 consentVersions: { type: object, additionalProperties: { type: string } }
 
+    AdminFollowupRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, status, owner, nextAction]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        status: { type: string, enum: [open, resolved] }
+        owner: { type: string, enum: [staff, manager] }
+        nextAction: { type: string, enum: [contact_customer, reschedule_pickup, reschedule_delivery, return_bags, manager_review] }
     AdminTransitionRequest:
       type: object
       additionalProperties: false
@@ -4562,7 +4645,7 @@ components:
         expectedVersion: { type: integer, minimum: 1 }
         actualBags: { type: integer, minimum: 1, maximum: 100 }
         pickupMode: { type: string, enum: [attended, unattended] }
-        bagCodes: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { type: string } }
+        bagCodes: { description: "Send an empty array to create bag identifiers from the actual pickup count when no bags exist; otherwise confirm every existing bag code.", type: array, minItems: 0, maxItems: 100, uniqueItems: true, items: { type: string } }
         notes: { type: string, maxLength: 2000 }
     AdminBagLabelsRequest:
       type: object
@@ -4640,6 +4723,7 @@ components:
         notes: { type: string, maxLength: 2000 }
     WeightRequest:
       type: object
+      description: Saves weight and separately priced laundry items before payment. Omitting additionalItems preserves saved items; an empty array removes them. The item subtotal is capped at 10000000 cents. The existing order minimum, discount, and laundry tax rules apply to the combined laundry subtotal.
       additionalProperties: false
       required: [expectedVersion, weightMode, weightTenths, bagTareTenths]
       properties:
@@ -4648,6 +4732,7 @@ components:
         weightTenths: { $ref: "#/components/schemas/WeightTenths" }
         bagTareTenths: { type: integer, minimum: 0, maximum: 10000 }
         machineCostCents: { $ref: "#/components/schemas/MoneyCents" }
+        additionalItems: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/AdditionalItem" } }
     AdminChargeRequest:
       type: object
       additionalProperties: false

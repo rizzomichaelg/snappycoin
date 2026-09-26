@@ -57,7 +57,7 @@ test("status clears non-silent stale guidance and exposes loaded state without a
   assert.match(status, /state === "current"\) step\.setAttribute\("aria-current", "step"\)/);
 });
 
-test("out-for-delivery and delivered orders offer one final tip and retain the paid amount", async () => {
+test("paid orders offer one final tip after weighing and retain the paid amount", async () => {
   const [status, statusHtml] = await Promise.all([
     source("assets/js/pud-status.js"),
     source("pickup-delivery/status/index.html"),
@@ -65,11 +65,11 @@ test("out-for-delivery and delivered orders offer one final tip and retain the p
   assert.match(statusHtml, /data-tip-summary/);
   assert.match(statusHtml, /pud-tip-panel[^>]*data-tip-panel[^>]*tabindex="-1"/);
   assert.ok(statusHtml.indexOf("data-tip-panel") < statusHtml.indexOf("data-reschedule-panel"));
-  assert.match(statusHtml, /Optional\. Charged separately to the card used for this order/);
+  assert.match(statusHtml, /Optional\. Charged separately to your saved card/);
   assert.match(statusHtml, /Paid tips are final/);
-  assert.match(status, /\["out_for_delivery", "delivered"\]\.includes\(value\.fulfillmentStatus\)/);
+  assert.match(status, /\["weighed", "ready", "out_for_delivery", "delivered"\]\.includes\(value\.fulfillmentStatus\)/);
   assert.match(status, /panel\.hidden = !tippingStatus/);
-  assert.match(status, /tipCents === 0 && \(!publicConfig\?\.tipsEnabled \|\| !value\.canTip\)/);
+  assert.match(status, /tipCents === 0 && \(!publicConfig\?\.tipsEnabled \|\| \(!value\.canTip && !value\.canReplaceTipCard\)\)/);
   assert.match(status, /form\.hidden = !publicConfig\?\.tipsEnabled \|\| !value\.canTip \|\| tipCents > 0/);
   assert.match(status, /You added a \$\{money\(tipCents\)\} tip to this order/);
   assert.match(status, /await refresh\(\{ silent: true \}\)/);

@@ -111,19 +111,21 @@ const responseContracts = {
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "pickupWindowStartAt", "pickupWindowEndAt",
       "deliveryWindowStartAt", "deliveryWindowEndAt", "deliveryPromisedAt", "expectedCompletionAt", "milestones",
       "estimatedBags", "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired", "paymentMethod", "paymentAmountCents",
-      "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "canClaim", "canCreateRecurring",
+      "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "paidExternally", "canReplaceTipCard", "canClaim", "canCreateRecurring",
       "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
     ],
   },
   ItemizedReceipt: {
     required: [
+      "additionalItems", "additionalItemsCents",
       "currency", "weightTenths", "pricePerLbCents", "weightChargeCents", "minimumCents",
       "minimumAdjustmentCents", "baseChargeCents", "deliveryFeeCents", "discountCents", "taxCents",
       "tipCents", "totalCents", "amountCapturedCents", "refundedCents", "netPaidCents",
       "pricingVersion", "taxRuleVersion",
     ],
     allowed: [
+      "additionalItems", "additionalItemsCents",
       "currency", "weightTenths", "pricePerLbCents", "weightChargeCents", "minimumCents",
       "minimumAdjustmentCents", "baseChargeCents", "deliveryFeeCents", "discountCents", "taxCents",
       "tipCents", "totalCents", "amountCapturedCents", "refundedCents", "netPaidCents",
@@ -282,6 +284,8 @@ function verifyResponseGuards() {
     totalCents: 4200,
     refundedCents: 0,
     receipt: {
+      additionalItems: [],
+      additionalItemsCents: 0,
       currency: "usd",
       weightTenths: 200,
       pricePerLbCents: 199,

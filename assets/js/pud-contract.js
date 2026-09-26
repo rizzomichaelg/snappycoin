@@ -285,6 +285,9 @@ export function assertOrderStatus(value) {
   for (const field of ["paymentAttentionRequired", "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "canClaim", "canSubmitFeedback", "feedbackSubmitted"]) {
     boolean(result[field], `SafeOrderStatus.${field}`);
   }
+  for (const field of ["paidExternally", "canReplaceTipCard"]) {
+    if (result[field] !== undefined) boolean(result[field], `SafeOrderStatus.${field}`);
+  }
   boolean(result.canCreateRecurring, "SafeOrderStatus.canCreateRecurring");
   oneOf(result.locale, ["en-US", "es-US"], "SafeOrderStatus.locale");
   oneOf(result.timezone, ["America/Chicago"], "SafeOrderStatus.timezone");
@@ -468,7 +471,7 @@ export function assertClaimResult(value) {
   return result;
 }
 
-function assertItemizedReceipt(value) {
+export function assertItemizedReceipt(value) {
   const receipt = object(value, "ItemizedReceipt");
   oneOf(receipt.currency, ["usd"], "ItemizedReceipt.currency");
   if (receipt.weightTenths !== null) nonnegativeInteger(receipt.weightTenths, "ItemizedReceipt.weightTenths");
@@ -479,6 +482,23 @@ function assertItemizedReceipt(value) {
   ]) nonnegativeInteger(receipt[field], `ItemizedReceipt.${field}`);
   string(receipt.pricingVersion, "ItemizedReceipt.pricingVersion");
   string(receipt.taxRuleVersion, "ItemizedReceipt.taxRuleVersion");
+  // Accept older receipts while the public site and Worker deploy independently.
+  if (receipt.additionalItems !== undefined || receipt.additionalItemsCents !== undefined) {
+    if (!Array.isArray(receipt.additionalItems) || receipt.additionalItems.length > 20) throw new TypeError("ItemizedReceipt.additionalItems must contain at most 20 items.");
+    nonnegativeInteger(receipt.additionalItemsCents, "ItemizedReceipt.additionalItemsCents");
+    let subtotal = 0;
+    for (const item of receipt.additionalItems) {
+      object(item, "ItemizedReceipt.additionalItems item");
+      const description = string(item.description, "ItemizedReceipt item description");
+      if (!description.trim() || description.length > 120) throw new TypeError("ItemizedReceipt item description is invalid.");
+      positiveInteger(item.quantity, "ItemizedReceipt item quantity");
+      positiveInteger(item.unitPriceCents, "ItemizedReceipt item unitPriceCents");
+      positiveInteger(item.lineTotalCents, "ItemizedReceipt item lineTotalCents");
+      if (item.quantity > 1000 || item.unitPriceCents > 1000000 || item.lineTotalCents !== item.quantity * item.unitPriceCents) throw new TypeError("ItemizedReceipt item amount is invalid.");
+      subtotal += item.lineTotalCents;
+    }
+    if (subtotal > 10000000 || subtotal !== receipt.additionalItemsCents) throw new TypeError("ItemizedReceipt item subtotal does not match its items.");
+  }
   return receipt;
 }
 

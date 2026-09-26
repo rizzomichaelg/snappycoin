@@ -327,6 +327,7 @@ async function onClick(event) {
   }
   if (action === "reorder") return runAction(() => beginBookingBootstrap());
   if (action === "open-claim") return runAction(openClaimForm);
+  if (action === "tip-card-replace") return runAction(startPaymentReplacement);
   if (action === "payment-replace") return runAction(startPaymentReplacement);
   if (action === "payment-replace-cancel") {
     closePaymentReplacement();
@@ -614,6 +615,7 @@ async function startPaymentReplacement() {
   const mount = $("#pud-payment-method-element");
   mount.replaceChildren();
   form.hidden = false;
+  $("[data-payment-panel]").hidden = false;
   try {
     if (recoveryPaymentProvider === "square") await prepareSquareCardReplacement(publicConfig, mount);
     else await preparePaymentMethodReplacement(publicConfig, session.setupIntentClientSecret, mount);
@@ -630,13 +632,13 @@ async function submitPaymentMethod() {
   if (!recoverySetupIntentId) throw new Error("Start card replacement again before confirming.");
   if (recoveryPaymentProvider === "square") {
     const squareCardToken = await tokenizeSquareCardReplacement();
-    const signature = `${order.orderNumber}:square-replacement`;
+    const signature = `${order.orderNumber}:square-replacement:${order.version}`;
     const key = await stableActionKey("payment-method", signature);
     const actionCapability = await issueCapability("replace_payment_method");
     order = await replacePaymentMethod(token, actionCapability, { squareCardToken, consentAccepted: true }, key);
     closePaymentReplacement();
     render(order);
-    message("The replacement card was saved. Staff can now retry the final charge.", "success");
+    message(order.canReplaceTipCard ? "Your card was saved for tipping. Review and confirm your tip below. Your laundry payment has not changed." : "The replacement card was saved. Staff can now retry the final charge.", "success");
     return;
   }
   if (!confirmedReplacementSetupIntentId) {
@@ -652,7 +654,7 @@ async function submitPaymentMethod() {
   order = await replacePaymentMethod(token, actionCapability, { setupIntentId: confirmedReplacementSetupIntentId }, key);
   closePaymentReplacement();
   render(order);
-  message("The replacement card was saved and the original payment was retried. Refresh if payment is still processing.", "success");
+  message(order.canReplaceTipCard ? "Your card was saved for tipping. Review and confirm your tip below. Your laundry payment has not changed." : "The replacement card was saved and the original payment was retried. Refresh if payment is still processing.", "success");
 }
 
 function submitTip(form) {
@@ -938,11 +940,12 @@ function render(value) {
   const tokenEntry = $("[data-token-entry]");
   if (tokenEntry) { tokenEntry.open = false; tokenEntry.hidden = true; }
   $("[data-order-number]").textContent = value.orderNumber || "Your order";
-  const card = value.paymentMethod?.last4 ? ` · ${value.paymentMethod.brand || "Card"} ending ${value.paymentMethod.last4}` : "";
+  const paidExternally = value.paidExternally || value.paymentStatus === "succeeded_external";
+  const card = !paidExternally && value.paymentMethod?.last4 ? ` · ${value.paymentMethod.brand || "Card"} ending ${value.paymentMethod.last4}` : "";
   $("[data-payment-status]").textContent = value.paymentStatus === "uncharged"
     ? `Payment pending final weight${card}`
     : ["succeeded", "succeeded_external"].includes(value.paymentStatus)
-      ? `Paid · ${money(value.paymentAmountCents ?? value.totalCents)}${card}`
+      ? `Paid · ${money(value.paymentAmountCents ?? value.totalCents)}${paidExternally ? " · Paid separately" : card}`
       : value.paymentStatus === "failed"
         ? `Payment Failed · Action Required${card}`
         : `${label(value.paymentStatus)}${card}`;
@@ -990,7 +993,11 @@ function render(value) {
   renderReceipt(value.receipt, value.paymentStatus);
   const paymentVisible = value.paymentAttentionRequired && ["requires_action", "failed"].includes(value.paymentStatus)
     && Boolean(publicConfig?.squareApplicationId || publicConfig?.stripePublishableKey);
-  $("[data-payment-panel]").hidden = !paymentVisible;
+  $("[data-payment-panel]").hidden = !paymentVisible && !(value.canReplaceTipCard && recoverySetupIntentId);
+  $("#payment-heading").textContent = value.canReplaceTipCard ? "Save a card for tipping" : "Payment Failed · Action Required";
+  $("[data-payment-help]").textContent = value.canReplaceTipCard
+    ? "Your laundry is already paid. Saving this card does not charge it. You will confirm the tip separately."
+    : "Your laundry order is still here. Save a replacement card so staff can retry the final charge.";
   $("[data-cancel-action]").hidden = !value.canCancel;
   $("[data-reorder-action]").hidden = value.fulfillmentStatus !== "delivered" || !publicConfig?.bookingEnabled;
   $("[data-claim-link]").hidden = !publicConfig?.claimsEnabled || !value.canClaim;
@@ -1100,6 +1107,18 @@ function paymentTone(status) {
 }
 
 function renderReceipt(receipt, paymentStatus) {
+  const itemList = $("[data-receipt-item-list]");
+  const itemRow = $("[data-receipt-additional-items]");
+  if (itemList && itemRow) {
+    itemList.replaceChildren();
+    const items = receipt.additionalItems || [];
+    itemRow.hidden = items.length === 0;
+    items.forEach((item) => {
+      const row = textNode("li", `${item.description} · ${item.quantity} × ${money(item.unitPriceCents)} = ${money(item.lineTotalCents)}`);
+      row.setAttribute("data-i18n-skip", "");
+      itemList.appendChild(row);
+    });
+  }
   $("[data-receipt-weight]").textContent = receipt.weightTenths === null ? "Pending" : `${(receipt.weightTenths / 10).toFixed(1)} lb`;
   $("[data-receipt-rate]").textContent = `${money(receipt.pricePerLbCents)}/lb`;
   $("[data-receipt-weight-charge]").textContent = money(receipt.weightChargeCents);
@@ -1202,6 +1221,9 @@ function historyReceiptDetails(receipt) {
   const rows = [
     ["Price per pound", `${money(receipt.pricePerLbCents)}/lb`, true],
     ["Weight charge", money(receipt.weightChargeCents), true],
+    ...(receipt.additionalItems || []).map((item) => [
+      `${item.description} · ${item.quantity} × ${money(item.unitPriceCents)}`, money(item.lineTotalCents), true,
+    ]),
     ["Minimum adjustment", money(receipt.minimumAdjustmentCents), receipt.minimumAdjustmentCents > 0],
     ["Laundry subtotal", money(receipt.baseChargeCents), true],
     ["Delivery fee", money(receipt.deliveryFeeCents), receipt.deliveryFeeCents > 0],
@@ -1267,16 +1289,20 @@ function renderTip(value) {
     button.disabled = cents < 50 || cents > 100000;
   });
   const tipCents = Number(value.receipt?.tipCents || 0);
-  const tippingStatus = ["out_for_delivery", "delivered"].includes(value.fulfillmentStatus);
-  panel.hidden = !tippingStatus || (tipCents === 0 && (!publicConfig?.tipsEnabled || !value.canTip));
+  const tippingStatus = ["weighed", "ready", "out_for_delivery", "delivered"].includes(value.fulfillmentStatus);
+  panel.hidden = !tippingStatus || (tipCents === 0 && (!publicConfig?.tipsEnabled || (!value.canTip && !value.canReplaceTipCard)));
   form.hidden = !publicConfig?.tipsEnabled || !value.canTip || tipCents > 0;
   const heading = $("#tip-heading");
   if (heading) heading.textContent = tipCents > 0 ? "Thank you for your tip" : "Leave a tip";
-  const terms = panel.querySelector(".pud-fine-print");
+  const terms = panel.querySelector("[data-tip-terms]");
   if (terms) terms.hidden = tipCents > 0;
   summary.textContent = tipCents > 0
     ? `Thank you. You added a ${money(tipCents)} tip to this order.`
-    : "Optional. Charged separately to the card used for this order.";
+    : value.paidExternally || value.paymentStatus === "succeeded_external"
+      ? "Your laundry was paid separately. A tip is an optional new charge to your saved card. Use a different card below if needed."
+      : "Optional. Charged separately to your saved card.";
+  const replaceCard = $("[data-action=tip-card-replace]");
+  if (replaceCard) replaceCard.hidden = !publicConfig?.tipsEnabled || !value.canReplaceTipCard || tipCents > 0;
 }
 
 function focusTipFromEmail() {
@@ -1508,6 +1534,7 @@ function closePaymentReplacement() {
   recoveryPaymentProvider = "stripe";
   const form = $("#pud-payment-method-form");
   if (form) form.hidden = true;
+  if (order?.canReplaceTipCard) $("[data-payment-panel]").hidden = true;
   const actions = $("[data-payment-actions]");
   if (actions) actions.hidden = false;
   $("#pud-payment-method-element")?.replaceChildren();

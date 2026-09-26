@@ -501,6 +501,15 @@
   border-bottom-color: var(--pud-border-strong);
 }
 
+.pud-receipt-grid > [data-receipt-additional-items] {
+  display: block;
+  min-width: 0;
+}
+
+[data-receipt-additional-items] dt { margin-bottom: var(--pud-space-2); }
+[data-receipt-item-list] { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--pud-space-2); }
+[data-receipt-item-list] li { overflow-wrap: anywhere; }
+
 .pud-receipt-grid .pud-receipt-total dt {
   color: inherit;
   font-weight: 800;

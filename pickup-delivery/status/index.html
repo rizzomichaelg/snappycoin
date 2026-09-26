@@ -95,7 +95,7 @@
 
         <section class="pud-status-section pud-tip-panel" data-tip-panel hidden aria-labelledby="tip-heading" tabindex="-1">
           <h3 id="tip-heading">Leave a tip</h3>
-          <p data-tip-summary>Optional. Charged separately to the card used for this order.</p>
+          <p data-tip-summary>Optional. Charged separately to your saved card.</p>
           <form id="pud-tip-form" class="pud-form pud-inline-form">
             <div class="pud-tip-amounts" role="group" aria-label="Suggested tip amounts">
               <button type="button" class="pud-button" data-action="tip-amount" data-percent="10" aria-pressed="false">10%</button>
@@ -109,7 +109,8 @@
             </label>
             <button class="pud-button pud-button-primary" type="submit" disabled>Continue</button>
           </form>
-          <p class="pud-fine-print">You’ll review the amount before paying. Paid tips are final.</p>
+          <p class="pud-fine-print" data-tip-terms>You’ll review the amount before paying. Paid tips are final.</p>
+          <button class="pud-button pud-button-secondary" type="button" data-action="tip-card-replace" hidden>Use a different card for the tip</button>
         </section>
 
         <details class="pud-status-section pud-disclosure" data-reschedule-panel hidden>
@@ -167,6 +168,7 @@
               <div><dt>Processed weight</dt><dd data-receipt-weight></dd></div>
               <div><dt>Price per pound</dt><dd data-receipt-rate></dd></div>
               <div><dt>Weight charge</dt><dd data-receipt-weight-charge></dd></div>
+              <div data-receipt-additional-items hidden><dt>Separately priced items</dt><dd><ul data-receipt-item-list></ul></dd></div>
               <div data-receipt-minimum-row><dt>Minimum adjustment</dt><dd data-receipt-minimum-adjustment></dd></div>
               <div><dt>Laundry subtotal</dt><dd data-receipt-base></dd></div>
               <div data-receipt-delivery-row><dt>Delivery fee</dt><dd data-receipt-delivery></dd></div>
