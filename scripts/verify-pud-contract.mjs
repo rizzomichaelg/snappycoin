@@ -110,7 +110,7 @@ const responseContracts = {
     allowed: [
       "orderNumber", "version", "fulfillmentStatus", "paymentStatus", "pickupWindowCode", "pickupWindowStartAt", "pickupWindowEndAt",
       "deliveryWindowStartAt", "deliveryWindowEndAt", "deliveryPromisedAt", "expectedCompletionAt", "milestones",
-      "estimatedBags", "actualBags", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired", "paymentMethod", "paymentAmountCents",
+      "estimatedBags", "actualBags", "pickupBags", "packedBags", "hangingBundles", "weightTenths", "totalCents", "refundedCents", "receipt", "paymentAttentionRequired", "paymentMethod", "paymentAmountCents",
       "operationalAttentionRequired", "addressReviewRequired", "canCancel", "canTip", "paidExternally", "canReplaceTipCard", "canClaim", "canCreateRecurring",
       "canSubmitFeedback", "feedbackSubmitted", "locale", "timezone", "currency",
       "recurringDefaults", "rescheduleOptions", "recurringSchedules", "updatedAt",
@@ -556,6 +556,10 @@ function verifyResponseGuards() {
   expectGuardFailure("public config analytics flag", () => assertPublicConfig({ ...publicConfig, productAnalyticsEnabled: undefined }));
   expectGuardFailure("public config experiment flag", () => assertPublicConfig({ ...publicConfig, productExperimentEnabled: undefined }));
   expectGuardFailure("route proofs", () => assertOrderStatus({ ...status, rescheduleOptions: [{ ...route, routeProof: "" }] }));
+  assertOrderStatus({ ...status, actualBags: 7, pickupBags: 8, packedBags: 6, hangingBundles: 1 });
+  assertOrderStatus({ ...status, actualBags: 2, pickupBags: 8, packedBags: 0, hangingBundles: 2 });
+  expectGuardFailure("package sum", () => assertOrderStatus({ ...status, actualBags: 8, pickupBags: 8, packedBags: 6, hangingBundles: 1 }));
+  expectGuardFailure("missing hanging count", () => assertOrderStatus({ ...status, actualBags: 6, pickupBags: 8, packedBags: 6 }));
   expectGuardFailure("feedback URL", () => assertFeedbackResult({ ...feedback, googleReviewUrl: "javascript:alert(1)" }));
   expectGuardFailure("private status fields", () => assertOrderStatus({ ...status, phoneCiphertext: "must-not-leak" }));
   expectGuardFailure("recurring defaults", () => assertOrderStatus({ ...status, recurringDefaults: null }));

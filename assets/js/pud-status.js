@@ -978,7 +978,9 @@ function render(value) {
           value.expectedCompletionAt ? formatDate(value.expectedCompletionAt) : "Not scheduled yet");
   $("[data-bag-status]").textContent = value.actualBags == null
     ? `${value.estimatedBags} bag${value.estimatedBags === 1 ? "" : "s"} expected · confirmed at pickup`
-    : `${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`;
+    : value.packedBags != null
+      ? translateText(`${value.pickupBags} bag${value.pickupBags === 1 ? "" : "s"} picked up · ${value.fulfillmentStatus === "delivered" ? "Delivered" : "Now"}: ${value.packedBags} bag${value.packedBags === 1 ? "" : "s"} + ${value.hangingBundles || 0} hanging bundle${value.hangingBundles === 1 ? "" : "s"}`)
+      : translateText(`${value.actualBags} bag${value.actualBags === 1 ? "" : "s"} in this order`);
   $("[data-total]").textContent = value.weightTenths == null ? "Calculated after weighing" : money(value.totalCents);
   $("[data-last-updated]").textContent = value.updatedAt ? `Server status updated ${formatDate(value.updatedAt)}.` : "";
   renderJourney(value);

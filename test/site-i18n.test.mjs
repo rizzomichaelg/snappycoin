@@ -75,6 +75,7 @@ const runtimeTemplateSamples = new Map([
   ["Recurring pickups are now {value}.", ["Recurring pickups are now paused.", "Recurring pickups are now active."]],
   ["The private link for {value} was revoked.", ["The private link for PUD-20260715-AB12CD34 was revoked."]],
   ["{value} bag{value} in this order", ["2 bags in this order"]],
+  ["{value} bag{value} picked up · {value}: {value} bag{value} + {value} hanging bundle{value}", ["8 bags picked up · Now: 6 bags + 1 hanging bundle", "8 bags picked up · Delivered: 5 bags + 2 hanging bundles"]],
   ["{value} bag{value} expected · confirmed at pickup", ["1 bag expected · confirmed at pickup", "2 bags expected · confirmed at pickup"]],
   ["Server status updated {value}.", ["Server status updated Jul 15, 2026, 9:00 AM."]],
   ["Picked up {value}", ["Picked up Jul 15, 2026, 9:00 AM"]],
