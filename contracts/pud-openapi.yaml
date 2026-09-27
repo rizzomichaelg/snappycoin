@@ -3843,7 +3843,10 @@ components:
             outForDeliveryAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
             deliveredAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
         estimatedBags: { type: integer, minimum: 1, maximum: 100 }
-        actualBags: { type: [integer, "null"], minimum: 1 }
+        actualBags: { type: [integer, "null"], minimum: 1, maximum: 100 }
+        pickupBags: { type: [integer, "null"], minimum: 1, maximum: 100 }
+        packedBags: { type: [integer, "null"], minimum: 0, maximum: 100 }
+        hangingBundles: { type: [integer, "null"], minimum: 0, maximum: 100 }
         weightTenths: { type: [integer, "null"], minimum: 0 }
         totalCents: { $ref: "#/components/schemas/MoneyCents" }
         refundedCents: { $ref: "#/components/schemas/MoneyCents" }

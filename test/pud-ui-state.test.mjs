@@ -91,6 +91,8 @@ test("booking and tracking expose the anticipated bag count without connecting i
   assert.match(booking, /estimatedBags: Number\(data\.get\("estimatedBags"\)\)/);
   assert.match(booking, /preferences:\s*\{\s*estimatedBags: state\.order\.estimatedBags/);
   assert.match(status, /value\.estimatedBags[\s\S]*expected · confirmed at pickup/);
+  assert.match(status, /value\.pickupBags[\s\S]*value\.packedBags[\s\S]*value\.hangingBundles/);
+  assert.match(status, /value\.fulfillmentStatus === "delivered" \? "Delivered" : "Now"/);
 });
 
 test("PUD header starts substantial and condenses from scroll without overlapping mobile controls", async () => {

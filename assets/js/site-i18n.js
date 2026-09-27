@@ -1281,6 +1281,7 @@ const TEMPLATE_TRANSLATORS = Object.freeze([
   [/^Recurring pickups are now (paused|active)\.$/, (_m, status) => `Las recogidas recurrentes ahora están ${status === "paused" ? "en pausa" : "activas"}.`],
   [/^The private link for (.+) was revoked\.$/, (_m, order) => `Se revocó el enlace privado de ${order}.`],
   [/^(\d+) bags? in this order$/, (_m, bags) => `${bags} ${Number(bags) === 1 ? "bolsa" : "bolsas"} en este pedido`],
+  [/^(\d+) bags? picked up · (Now|Delivered): (\d+) bags? \+ (\d+) hanging bundles?$/, (_m, pickedUp, state, bags, hanging) => `${pickedUp} ${Number(pickedUp) === 1 ? "bolsa recogida" : "bolsas recogidas"} · ${state === "Delivered" ? "Entregadas" : "Ahora"}: ${bags} ${Number(bags) === 1 ? "bolsa" : "bolsas"} + ${hanging} ${Number(hanging) === 1 ? "grupo de ropa colgada" : "grupos de ropa colgada"}`],
   [/^Server status updated (.+)\.$/, (_m, value) => `Estado del servidor actualizado ${value}.`],
   [/^Order journey\. Current stage: (.+)\.$/, (_m, stage) => `Recorrido del pedido. Etapa actual: ${ES[stage] || stage}.`],
   [/^(.+)\/lb$/, (_m, rate) => `${rate}/libra`],

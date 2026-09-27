@@ -291,6 +291,17 @@ export function assertOrderStatus(value) {
   oneOf(result.currency, ["USD"], "SafeOrderStatus.currency");
   for (const field of ["totalCents", "refundedCents"]) nonnegativeInteger(result[field], `SafeOrderStatus.${field}`);
   positiveInteger(result.estimatedBags, "SafeOrderStatus.estimatedBags");
+  if (result.actualBags !== null && result.actualBags !== undefined) positiveInteger(result.actualBags, "SafeOrderStatus.actualBags");
+  if (result.pickupBags != null) positiveInteger(result.pickupBags, "SafeOrderStatus.pickupBags");
+  if (result.packedBags != null || result.hangingBundles != null) {
+    nonnegativeInteger(result.packedBags, "SafeOrderStatus.packedBags");
+    nonnegativeInteger(result.hangingBundles, "SafeOrderStatus.hangingBundles");
+    positiveInteger(result.pickupBags, "SafeOrderStatus.pickupBags");
+    const packageCount = result.packedBags + result.hangingBundles;
+    if (packageCount < 1 || packageCount > 100 || packageCount !== result.actualBags) {
+      throw new TypeError("SafeOrderStatus package counts must match current custody.");
+    }
+  }
   if (result.paymentMethod !== null) {
     const paymentMethod = object(result.paymentMethod, "SafeOrderStatus.paymentMethod");
     nullableString(paymentMethod.brand, "SafeOrderStatus.paymentMethod.brand");
