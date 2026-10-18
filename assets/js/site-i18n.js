@@ -1275,6 +1275,7 @@ export const CATALOGS = Object.freeze({
 });
 
 const TEMPLATE_TRANSLATORS = Object.freeze([
+  [/^(\d+) bags? picked up · (Now|Delivered): (\d+) bags? \+ (\d+) hanging bundles?$/, (_m, pickedUp, state, bags, hanging) => `${pickedUp} ${Number(pickedUp) === 1 ? "bolsa recogida" : "bolsas recogidas"} · ${state === "Delivered" ? "Entregadas" : "Ahora"}: ${bags} ${Number(bags) === 1 ? "bolsa" : "bolsas"} + ${hanging} ${Number(hanging) === 1 ? "grupo de ropa colgada" : "grupos de ropa colgada"}`],
   [/^Your pickup time has changed\. Your current pickup window is (.+)\.$/, (_, window) => `Cambió tu horario de recogida. Tu horario actual es ${window}.`],
   [/^(\d+)m ago$/, (_m, value) => `hace ${value} min`],
   [/^(\d+)h ago$/, (_m, value) => `hace ${value} h`],
