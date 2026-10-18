@@ -30,5 +30,6 @@
   [data-pud-booking] .pud-review > div { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; }
   [data-pud-booking] .pud-review dt { grid-column: 1; align-self: center; }
   [data-pud-booking] .pud-review dd { grid-column: 1 / -1; overflow-wrap: anywhere; }
-  [data-pud-booking] .pud-review button { grid-column: 2; grid-row: 1; justify-self: end; min-height: 44px; min-width: 44px; }
+  [data-pud-booking] .pud-review .pud-review-edit { grid-column: 2; grid-row: 1; justify-self: end; }
+  [data-pud-booking] .pud-review button { min-height: 44px; min-width: 44px; }
 }

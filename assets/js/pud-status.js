@@ -586,11 +586,11 @@ async function submitReschedule(form) {
   const route = order.rescheduleOptions.find((option) => option.routeId === routeId);
   if (!route?.routeProof) throw new Error("Choose an available pickup window.");
   const reason = String(data.get("reason") || "customer_request").trim() || "customer_request";
-  const signature = `${order.orderNumber}:${order.version}:${route.routeId}:${reason}`;
+  const signature = `${order.orderNumber}:${order.version}:${route.routeId}:${route.deliveryRouteProof || ""}:${reason}`;
   const key = await stableActionKey("reschedule", signature);
   try {
     const actionCapability = await issueCapability("reschedule_order");
-    order = await requestReschedule(token, actionCapability, route.routeProof, order.version, reason, key);
+    order = await requestReschedule(token, actionCapability, route.routeProof, order.version, reason, key, route.deliveryRouteProof);
     render(order);
     rescheduledCalendarPickup = Object.freeze({
       orderNumber: order.orderNumber,
@@ -940,6 +940,11 @@ function render(value) {
   const tokenEntry = $("[data-token-entry]");
   if (tokenEntry) { tokenEntry.open = false; tokenEntry.hidden = true; }
   $("[data-order-number]").textContent = value.orderNumber || "Your order";
+  const changedNotice = $("[data-pickup-changed]");
+  if (changedNotice) {
+    changedNotice.hidden = !value.pickupRescheduledAt || !["submitted", "confirmed"].includes(value.fulfillmentStatus);
+    changedNotice.textContent = `Your pickup time has changed. Your current pickup window is ${formatSavedWindow(value.pickupWindowStartAt, value.pickupWindowEndAt, pickupWindowLabel(value.pickupWindowCode))}.`;
+  }
   const paidExternally = value.paidExternally || value.paymentStatus === "succeeded_external";
   const card = !paidExternally && value.paymentMethod?.last4 ? ` · ${value.paymentMethod.brand || "Card"} ending ${value.paymentMethod.last4}` : "";
   $("[data-payment-status]").textContent = value.paymentStatus === "uncharged"
@@ -987,9 +992,12 @@ function render(value) {
   const expectation = orderExpectation(value);
   const expectationPanel = $("[data-schedule-expectation]");
   if (expectationPanel) {
-    expectationPanel.hidden = !expectation;
+    const pickupChanged = Boolean(changedNotice && !changedNotice.hidden);
+    expectationPanel.hidden = !expectation && !pickupChanged;
     expectationPanel.dataset.attention = String(Boolean(expectation?.attention));
-    $("[data-schedule-expectation-copy]").textContent = translateText(expectation?.text || "");
+    const expectationCopy = $("[data-schedule-expectation-copy]");
+    expectationCopy.hidden = pickupChanged && !expectation?.attention;
+    expectationCopy.textContent = translateText(expectation?.text || "");
   }
 
   renderReceipt(value.receipt, value.paymentStatus);
@@ -1271,6 +1279,15 @@ function renderReschedule(options) {
   const select = $("[data-reschedule-options]");
   select.replaceChildren(new Option("Choose a new pickup window", ""));
   routes.forEach((route) => select.add(new Option(formatRoute({ ...route, id: route.routeId }), route.routeId)));
+  const preview = $("[data-reschedule-return]");
+  const updatePreview = () => {
+    const route = routes.find((option) => option.routeId === select.value);
+    preview.hidden = !route?.expectedReturnAt;
+    preview.textContent = route?.expectedReturnAt
+      ? `${getLocale() === "es" ? "Devolución prevista" : "Expected return"}: ${formatDate(route.expectedReturnAt)}` : "";
+  };
+  select.onchange = updatePreview;
+  updatePreview();
   select.disabled = routes.length === 0;
 }
 

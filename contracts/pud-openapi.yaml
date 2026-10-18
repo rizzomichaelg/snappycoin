@@ -600,6 +600,19 @@ paths:
   /api/admin/pud/orders/{id}/intake:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminIntake" }
+  /api/admin/pud/orders/{id}/repack:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post:
+      tags: [Staff orders]
+      operationId: repackPudOrder
+      security: [{ AccessJWT: [] }]
+      x-roles: [staff, manager]
+      description: Replace selected physical packages after intake and before completed delivery. Preserves pickup history, records a reason, retires selected labels, preserves unselected labels, and updates delivery counts atomically. Hanging bundles each count as one labeled package. Weight and charges are unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/AdminRepackRequest" } }
+      responses: { "200": { $ref: "#/components/responses/GenericSuccess" }, default: { $ref: "#/components/responses/Error" } }
   /api/admin/pud/orders/{id}/weight:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminWeight" }
@@ -664,7 +677,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [expectedVersion, idempotencyKey, amountCents, method, reference]
+              required: [expectedVersion, idempotencyKey, amountCents, method]
               properties:
                 expectedVersion: { type: integer, minimum: 1 }
                 idempotencyKey: { type: string, minLength: 16, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]+$" }
@@ -683,6 +696,33 @@ paths:
   /api/admin/pud/orders/{id}/deliver:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminDeliver" }
+  /api/admin/pud/orders/{id}/delivery-exception:
+    parameters: [{ $ref: "#/components/parameters/ResourceId" }]
+    post:
+      tags: [Staff orders]
+      operationId: recordPudDeliveryException
+      security: [{ AccessJWT: [] }]
+      x-roles: [manager]
+      x-idempotency: required
+      description: >-
+        Online manager report of an unattended delivery that already occurred despite
+        missing authorization. Records the actual delivery time, authenticated actor,
+        server recording time, truthful reason, contact facts, and a snapshot of stored
+        pickup and delivery permissions and consent evidence. Does not grant or change
+        consent, authorize future unattended delivery, or issue a refund. Existing
+        completion qualification and ordinary lifecycle notifications remain unchanged;
+        no incident details are added to outbound messages. Requires the complete bag
+        set and the current out-for-delivery order version. Atomically records custody,
+        route completion, ordinary delivery event, separate exception evidence, and
+        audit. Exact retries return the recorded result; reuse of the same key with
+        changed content conflicts. The ordinary delivery and offline consent gates remain.
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/AdminDeliveryExceptionRequest" } }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        default: { $ref: "#/components/responses/Error" }
   /api/admin/pud/orders/{id}/delivery-failed:
     parameters: [{ $ref: "#/components/parameters/ResourceId" }]
     post: { $ref: "#/components/x-path-operations/AdminDeliveryFailed" }
@@ -2300,7 +2340,7 @@ components:
               required: [actualBags, bagCodes, pickupMode]
               properties:
                 actualBags: { type: integer, minimum: 1, maximum: 100 }
-                bagCodes: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { type: string, pattern: "^[A-Z0-9][A-Z0-9-]{1,63}$" } }
+                bagCodes: { type: array, minItems: 0, maxItems: 100, uniqueItems: true, items: { type: string, pattern: "^[A-Z0-9][A-Z0-9-]{1,63}$" } }
                 pickupMode: { type: string, enum: [attended, unattended] }
             - type: object
               additionalProperties: false
@@ -3734,6 +3774,11 @@ components:
     BookingPreferences:
       type: object
       additionalProperties: false
+      description: >-
+        Pickup and delivery permissions are independent. Each true unattended
+        preference requires its corresponding accepted order consent. Access
+        instructions do not grant permission. Existing false values do not
+        establish an explicit customer refusal or a completed attended handoff.
       required: [detergent, softenerPref, unattendedPickup, unattendedDelivery]
       properties:
         estimatedBags: { type: integer, minimum: 1, maximum: 100, description: "Customer estimate used for capacity and staffing planning; it does not affect price." }
@@ -3813,6 +3858,7 @@ components:
         expectedReturnAt: { $ref: "#/components/schemas/UtcTimestamp" }
         remainingOrders: { type: integer, minimum: 0 }
         remainingBags: { type: integer, minimum: 0 }
+        deliveryRouteProof: { $ref: "#/components/schemas/Token" }
         routeProof: { $ref: "#/components/schemas/Token" }
     PublicRecurringProposal:
       type: object
@@ -3895,6 +3941,7 @@ components:
         version: { type: integer, minimum: 1 }
         fulfillmentStatus: { $ref: "#/components/schemas/FulfillmentStatus" }
         paymentStatus: { $ref: "#/components/schemas/PaymentStatus" }
+        pickupRescheduledAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
         pickupWindowCode: { type: [string, "null"] }
         pickupWindowStartAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
         pickupWindowEndAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
@@ -3915,10 +3962,10 @@ components:
             outForDeliveryAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
             deliveredAt: { anyOf: [{ $ref: "#/components/schemas/UtcTimestamp" }, { type: "null" }] }
         estimatedBags: { type: integer, minimum: 1, maximum: 100 }
-        actualBags: { type: [integer, "null"], minimum: 1, maximum: 100 }
-        pickupBags: { type: [integer, "null"], minimum: 1, maximum: 100 }
-        packedBags: { type: [integer, "null"], minimum: 0, maximum: 100 }
-        hangingBundles: { type: [integer, "null"], minimum: 0, maximum: 100 }
+        actualBags: { type: [integer, "null"], minimum: 1, description: Current active package count including hanging bundles. }
+        pickupBags: { type: [integer, "null"], minimum: 1 }
+        packedBags: { type: [integer, "null"], minimum: 0 }
+        hangingBundles: { type: [integer, "null"], minimum: 0 }
         weightTenths: { type: [integer, "null"], minimum: 0 }
         totalCents: { $ref: "#/components/schemas/MoneyCents" }
         refundedCents: { $ref: "#/components/schemas/MoneyCents" }
@@ -4372,6 +4419,7 @@ components:
       properties:
         token: { $ref: "#/components/schemas/Token" }
         actionCapability: { $ref: "#/components/schemas/Token" }
+        deliveryRouteProof: { $ref: "#/components/schemas/Token" }
         routeProof: { $ref: "#/components/schemas/Token" }
         expectedVersion: { type: integer, minimum: 1 }
         reason: { type: string, maxLength: 500 }
@@ -4634,6 +4682,8 @@ components:
       additionalProperties: false
       required: [expectedVersion, routePurpose, newRouteId, newWindowCode, reason]
       properties:
+        newDeliveryRouteId: { $ref: "#/components/schemas/Identifier" }
+        closePreviousPickup: { type: boolean }
         expectedVersion: { type: integer, minimum: 1 }
         routePurpose: { type: string, enum: [pickup, delivery] }
         newRouteId: { $ref: "#/components/schemas/Identifier" }
@@ -4648,7 +4698,7 @@ components:
         expectedVersion: { type: integer, minimum: 1 }
         actualBags: { type: integer, minimum: 1, maximum: 100 }
         pickupMode: { type: string, enum: [attended, unattended] }
-        bagCodes: { description: "Send an empty array to create bag identifiers from the actual pickup count when no bags exist; otherwise confirm every existing bag code.", type: array, minItems: 0, maxItems: 100, uniqueItems: true, items: { type: string } }
+        bagCodes: { description: "Send an empty array for an unlabeled pickup. Labels are created at store intake; legacy labeled orders must confirm every existing bag code.", type: array, minItems: 0, maxItems: 100, uniqueItems: true, items: { type: string } }
         notes: { type: string, maxLength: 2000 }
     AdminBagLabelsRequest:
       type: object
@@ -4696,6 +4746,29 @@ components:
         endsAt: { $ref: "#/components/schemas/UtcTimestamp" }
         reasonCode: { type: string, pattern: "^[A-Za-z0-9_.:-]{1,64}$" }
         notes: { type: string, maxLength: 2000 }
+    AdminRepackRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, bagCount, hangingCount, reason]
+      properties:
+        sourceBags:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: Labels being replaced and their current versions. Other packages retain their labels. Omit only to replace the entire set.
+          items:
+            type: object
+            additionalProperties: false
+            required: [bagCode, expectedVersion]
+            properties:
+              bagCode: { type: string, minLength: 3, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+              expectedVersion: { type: integer, minimum: 1 }
+
+        expectedVersion: { type: integer, minimum: 1 }
+        bagCount: { type: integer, minimum: 0, maximum: 100 }
+        hangingCount: { type: integer, minimum: 0, maximum: 100 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+      description: Counts describe replacements for the selected sources. At least one replacement is required. Replacements plus unchanged packages must total at most 100. Zero bags is allowed for hanging-only replacements.
     AdminIntakeRequest:
       type: object
       additionalProperties: false
@@ -4703,7 +4776,7 @@ components:
       properties:
         expectedVersion: { type: integer, minimum: 1 }
         actualBags: { type: integer, minimum: 1, maximum: 100 }
-        bagCodes: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { type: string } }
+        bagCodes: { type: array, minItems: 0, maxItems: 100, uniqueItems: true, items: { type: string } }
         station: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 2000 }
     AdminFailureRequest:
@@ -4724,6 +4797,42 @@ components:
         bagCodes: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { type: string } }
         completionMode: { type: string, enum: [attended, unattended] }
         notes: { type: string, maxLength: 2000 }
+    AdminDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, bagCodes, idempotencyKey, deliveredAt, reason, deliveryAlreadyOccurred, customerContactStatus]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        bagCodes: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { type: string } }
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        deliveredAt:
+          allOf: [{ $ref: "#/components/schemas/UtcTimestamp" }]
+          description: Actual past delivery time, no earlier than dispatch or order submission.
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Truthful explanation of what happened and why authorization was absent. Stored encrypted; manager-visible only.
+        deliveryAlreadyOccurred: { type: boolean, const: true }
+        customerContactStatus: { type: string, enum: [none, attempted, made] }
+        contactMethod: { type: string, enum: [phone, sms, email, in_person, other] }
+        contactedAt:
+          allOf: [{ $ref: "#/components/schemas/UtcTimestamp" }]
+          description: Actual past contact or contact-attempt time; required with contactMethod for attempted or made contact.
+        contactDetails:
+          type: string
+          maxLength: 2000
+          description: Optional factual contact details. Stored encrypted; manager-visible only. Omit when contact status is none.
+      allOf:
+        - if: { properties: { customerContactStatus: { enum: [attempted, made] } }, required: [customerContactStatus] }
+          then: { required: [contactMethod, contactedAt] }
+        - if: { properties: { customerContactStatus: { const: none } }, required: [customerContactStatus] }
+          then:
+            not:
+              anyOf:
+                - required: [contactMethod]
+                - required: [contactedAt]
+                - required: [contactDetails]
     WeightRequest:
       type: object
       description: Saves weight and separately priced laundry items before payment. Omitting additionalItems preserves saved items; an empty array removes them. The item subtotal is capped at 10000000 cents. The existing order minimum, discount, and laundry tax rules apply to the combined laundry subtotal.
@@ -5116,7 +5225,7 @@ components:
         occurredAt: { $ref: "#/components/schemas/UtcTimestamp" }
         expectedVersion: { type: integer, minimum: 1, maximum: 1000000000 }
         orderId: { $ref: "#/components/schemas/Identifier" }
-        bagIds: { type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: { $ref: "#/components/schemas/Identifier" } }
+        bagIds: { type: array, minItems: 0, maxItems: 100, uniqueItems: true, items: { $ref: "#/components/schemas/Identifier" } }
         actualBags: { type: integer, minimum: 1, maximum: 100 }
         station: { $ref: "#/components/schemas/Identifier" }
         pickupMode: { type: string, enum: [attended, unattended] }

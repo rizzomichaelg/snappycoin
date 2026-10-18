@@ -11,16 +11,16 @@
   <link rel="icon" href="/assets/logo-96.webp" type="image/webp">
   <link rel="stylesheet" href="/assets/css/pud.css?v=20260901-1">
   <link rel="stylesheet" href="/assets/css/pud-accessibility.css">
-  <script type="module" src="/assets/js/site-i18n.js?v=20260904-2"></script>
+  <script type="module" src="/assets/js/site-i18n.js?v=20261002-handoff-1"></script>
   <script type="module" src="/assets/js/pud-header.js?v=20260727-1"></script>
   <script src="/assets/js/pud-waitlist-continuation.js"></script>
-  <link rel="stylesheet" href="/assets/css/pud-booking.css?v=20260904-1">
+  <link rel="stylesheet" href="/assets/css/pud-booking.css?v=20261002-handoff-1">
 </head>
 <body class="pud-page pud-page--booking">
   <a class="skip-link" href="#booking">Skip to booking</a>
   <header class="pud-header">
     <div class="pud-header__inner">
-      <a class="pud-brand" href="/"><img src="/assets/logo-96.webp" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
+      <a class="pud-brand" href="/" aria-label="Snappy Coin Laundry home"><img src="/assets/logo-96.webp" alt="" width="48" height="48"><span>Snappy Coin Laundry</span></a>
       <nav class="pud-header-actions" aria-label="Pickup and delivery">
         <a class="pud-header-call" href="tel:13146281001">Call (314) 628-1001</a>
         <a class="pud-status-link" href="/pickup-delivery/status/">Check an order</a>
@@ -143,14 +143,23 @@
               <label>Special instructions <textarea name="specialInstructions" rows="3" maxlength="1000" aria-describedby="special-help"></textarea><small id="special-help">Include detergent sensitivities here. Do not include card information.</small></label>
             </section>
             <section class="pud-form-section" aria-labelledby="handoff-section-heading">
-              <h3 id="handoff-section-heading">Handoff</h3>
+              <h3 id="handoff-section-heading">Pickup and delivery handoffs</h3>
+              <p>Choose pickup and delivery separately. Permission for one does not authorize the other.</p>
               <fieldset><legend>How should we collect your bags?</legend>
-                <label class="pud-check"><input name="pickupHandoff" type="radio" value="attended" checked><span>Hand the bags to the driver.</span></label>
+                <label class="pud-check"><input id="booking-pickup-handoff" name="pickupHandoff" type="radio" value="attended" checked><span>Hand the bags to the driver.</span></label>
                 <label class="pud-check"><input name="pickupHandoff" type="radio" value="unattended"><span>Leave the bags in a secure location.</span></label>
               </fieldset>
               <div class="pud-conditional-fields" data-unattended-pickup-details hidden>
-                <label>Secure pickup location and access instructions <textarea name="accessNotes" rows="2" maxlength="500"></textarea></label>
-                <label class="pud-check"><input name="unattendedPickupAuthorization" type="checkbox" value="yes"><span>I authorize pickup from the secure location I described.</span></label>
+                <label>Secure pickup location and access instructions <textarea name="pickupAccessNotes" rows="2" maxlength="500" autocomplete="off" disabled></textarea></label>
+                <label class="pud-check"><input name="unattendedPickupAuthorization" type="checkbox" value="yes" autocomplete="off" disabled><span>I authorize pickup from the secure location I described.</span></label>
+              </div>
+              <fieldset><legend>How should we return your clean laundry?</legend>
+                <label class="pud-check"><input id="booking-delivery-handoff" name="deliveryHandoff" type="radio" value="attended" required autocomplete="off"><span>I will receive my laundry in person.</span></label>
+                <label class="pud-check"><input name="deliveryHandoff" type="radio" value="unattended" required autocomplete="off"><span>Leave my clean laundry in a secure location.</span></label>
+              </fieldset>
+              <div class="pud-conditional-fields" data-unattended-delivery-details hidden>
+                <label>Secure delivery location and access instructions <textarea name="deliveryAccessNotes" rows="2" maxlength="500" autocomplete="off" disabled></textarea></label>
+                <label class="pud-check"><input name="unattendedDeliveryAuthorization" type="checkbox" value="yes" autocomplete="off" disabled><span>I authorize delivery to the secure location I described, even when no one is present.</span></label>
               </div>
             </section>
             <section class="pud-form-section" aria-labelledby="permissions-section-heading">
@@ -187,11 +196,15 @@
           <p class="pud-step-label" data-step-position="review">Step 4 of 4</p>
           <h2 tabindex="-1">Review &amp; Payment</h2>
           <dl class="pud-review">
-            <div><dt>Pickup</dt><dd><span data-review-address></span><br><span data-review-route></span></dd><button type="button" data-action="edit" data-step="details" data-focus="pud-pickup-day" aria-label="Edit pickup">Edit</button></div>
-            <div><dt>Delivery</dt><dd data-review-return></dd><button type="button" data-action="edit" data-step="details" data-focus="pud-delivery-day" aria-label="Edit delivery">Edit</button></div>
-            <div><dt>Expected bags</dt><dd data-review-bags></dd><button type="button" data-action="edit" data-step="details">Edit</button></div>
-            <div><dt>Laundry preferences</dt><dd data-review-laundry></dd><button type="button" data-action="edit" data-step="details" data-focus="booking-detergent" aria-label="Edit laundry preferences">Edit</button></div>
-            <div><dt>Contact</dt><dd data-review-customer></dd><button type="button" data-action="edit" data-step="details" data-focus="booking-first-name" aria-label="Edit contact details">Edit</button></div>
+            <div><dt>Pickup</dt><dd><span data-review-address></span><br><span data-review-route></span></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details" data-focus="pud-pickup-day" aria-label="Edit pickup">Edit</button></dd></div>
+            <div><dt>Delivery</dt><dd data-review-return></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details" data-focus="pud-delivery-day" aria-label="Edit delivery">Edit</button></dd></div>
+            <div><dt>Pickup handoff</dt><dd data-review-pickup-handoff></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details" data-focus="booking-pickup-handoff" aria-label="Edit pickup handoff">Edit</button></dd></div>
+            <div data-review-pickup-instructions-row hidden><dt>Pickup instructions</dt><dd data-review-pickup-instructions data-i18n-skip></dd></div>
+            <div><dt>Delivery handoff</dt><dd data-review-delivery-handoff></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details" data-focus="booking-delivery-handoff" aria-label="Edit delivery handoff">Edit</button></dd></div>
+            <div data-review-delivery-instructions-row hidden><dt>Delivery instructions</dt><dd data-review-delivery-instructions data-i18n-skip></dd></div>
+            <div><dt>Expected bags</dt><dd data-review-bags></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details">Edit</button></dd></div>
+            <div><dt>Laundry preferences</dt><dd data-review-laundry></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details" data-focus="booking-detergent" aria-label="Edit laundry preferences">Edit</button></dd></div>
+            <div><dt>Contact</dt><dd data-review-customer></dd><dd class="pud-review-edit"><button type="button" data-action="edit" data-step="details" data-focus="booking-first-name" aria-label="Edit contact details">Edit</button></dd></div>
             <div><dt>Pricing</dt><dd data-review-pricing>$1.50/lb · $15 minimum. Final total is based on actual weight after pickup.</dd></div>
           </dl>
           <form id="pud-review-form" class="pud-form">
@@ -220,6 +233,7 @@
             </section>
             <div class="pud-turnstile" data-turnstile data-final-turnstile></div>
             <p class="pud-fine-print" data-review-payment-copy>No charge is made when you book. Staff reviews the final weighed amount before charging your saved card.</p>
+            <p class="pud-fine-print" data-booking-retry-notice role="status" hidden></p>
             <button class="pud-button pud-button-primary" type="submit" data-busy-label="Booking pickup…" disabled>Book Pickup</button>
           </form>
         </section>
@@ -316,6 +330,6 @@
 
   <footer class="pud-footer"><p><strong>Snappy Coin Laundry</strong><br>2303 McKelvey Rd · Maryland Heights, MO 63043</p><nav aria-label="Pickup and delivery policies"><a href="tel:13146281001">(314) 628-1001</a><a href="/pickup-delivery/privacy/">Privacy</a><a href="/pickup-delivery/terms/">Terms</a><a href="/">Main site</a></nav></footer>
   <script type="module" src="/assets/js/pud-site-analytics.js?v=20260725-1"></script>
-  <script type="module" src="/assets/js/pud-booking.js?v=20260901-2"></script>
+  <script type="module" src="/assets/js/pud-booking.js?v=20261002-handoff-1"></script>
 </body>
 </html>

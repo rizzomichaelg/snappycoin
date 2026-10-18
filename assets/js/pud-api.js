@@ -308,9 +308,9 @@ export const cancelOrder = async (token, actionCapability, expectedVersion, reas
   { token, actionCapability, expectedVersion, reason, idempotencyKey: key },
   key,
 ));
-export const requestReschedule = async (token, actionCapability, routeProof, expectedVersion, reason, key) => assertOrderStatus(await postContract(
+export const requestReschedule = async (token, actionCapability, routeProof, expectedVersion, reason, key, deliveryRouteProof) => assertOrderStatus(await postContract(
   "/api/pud/orders/reschedule-request",
-  { token, actionCapability, routeProof, expectedVersion, reason, idempotencyKey: key },
+  { token, actionCapability, routeProof, deliveryRouteProof, expectedVersion, reason, idempotencyKey: key },
   key,
 ));
 export const paymentSession = async (token, actionCapability) => assertPaymentSession(await postContract(

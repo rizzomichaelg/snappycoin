@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { readHandoffChoices } from '../assets/js/pud-booking-handoff.js';
 const source = readFileSync(new URL('../assets/js/pud-booking.js', import.meta.url), 'utf8');
 function fn(name) {
   const start = source.search(new RegExp(`^(?:async )?function ${name}\\(`, 'm'));
@@ -10,10 +11,10 @@ function fn(name) {
   return next < 0 ? tail : tail.slice(0, next + 1);
 }
 function detailsContext(phone, proofExpiry) {
-  const fields = new Map(Object.entries({routeId:'pickup',deliveryRouteId:'delivery',firstName:'Alex',lastName:'Test',email:'alex@example.test',phone,estimatedBags:'2',terms:'yes'}));
+  const fields = new Map(Object.entries({routeId:'pickup',deliveryRouteId:'delivery',firstName:'Alex',lastName:'Test',email:'alex@example.test',phone,estimatedBags:'2',terms:'yes',pickupHandoff:'attended',deliveryHandoff:'attended'}));
   const calls = {sms:0,review:0};
   const state = {routes:[{id:'pickup'}],deliveryRoutes:[{id:'delivery'}],config:{},phoneProof:'proof',verifiedPhone:'+13145550123',phoneProofExpiresAt:proofExpiry};
-  const context = {state, Date, FormData:class {get(key){return fields.get(key);}}, eligibleDeliveryRoutes:(routes)=>routes, normalizeUsPhone:v=>v, $:()=>({}),trackFunnel:()=>{},go:()=>{}, beginPhoneVerification:async()=>{calls.sms++;return {verificationId:'new'};},openReview:async()=>{calls.review++;}};
+  const context = {state, Date, FormData:class {get(key){return fields.get(key);}}, readHandoffChoices, eligibleDeliveryRoutes:(routes)=>routes, normalizeUsPhone:v=>v, $:()=>({}),trackFunnel:()=>{},go:()=>{}, beginPhoneVerification:async()=>{calls.sms++;return {verificationId:'new'};},openReview:async()=>{calls.review++;}};
   runInNewContext(fn('canReusePhoneVerification') + fn('submitDetails') + '\nglobalThis.submit = submitDetails;',context);
   return {context,calls,state};
 }

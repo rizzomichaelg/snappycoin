@@ -25,6 +25,7 @@ const requiredPudPages = Object.freeze([
 
 const runtimeModules = Object.freeze([
   "assets/js/pud-booking.js",
+  "assets/js/pud-booking-handoff.js",
   "assets/js/pud-status.js",
   "assets/js/pud-claims.js",
   "assets/js/pud-recovery.js",
@@ -54,9 +55,14 @@ const nonUiRuntimeLiterals = new Set([
 
 const nonUiRuntimeTemplates = new Set([
   "The {value} body and Idempotency-Key header must match.",
+  // Stable labels inside shared encrypted storage; review labels are localized
+  // independently and customer-entered instructions remain verbatim.
+  "Pickup instructions: {value}",
+  "Delivery instructions: {value}",
 ]);
 
 const runtimeTemplateSamples = new Map([
+  ["Your pickup time has changed. Your current pickup window is {value}.", ["Your pickup time has changed. Your current pickup window is Jul 20, 10:00 AM–11:00 AM."]],
   ["Reviewing a recurring pickup from {value}. Recheck the address, pickup and delivery times, phone, and card before confirming it.", ["Reviewing a recurring pickup from PUD-20260715-AB12CD34. Recheck the address, pickup and delivery times, phone, and card before confirming it."]],
   ["Reordering {value}. Recheck the address, schedule, phone, and card to create a new order.", ["Reordering PUD-20260715-AB12CD34. Recheck the address, schedule, phone, and card to create a new order."]],
   ["Detergent: {value} · Softener: {value}{value}", ["Detergent: premium · Softener: liquid", "Detergent: free clear · Softener: none · fragrance-free"]],
@@ -74,8 +80,8 @@ const runtimeTemplateSamples = new Map([
   ["Thank you. You added a {value} tip to this order.", ["Thank you. You added a $5.00 tip to this order."]],
   ["Recurring pickups are now {value}.", ["Recurring pickups are now paused.", "Recurring pickups are now active."]],
   ["The private link for {value} was revoked.", ["The private link for PUD-20260715-AB12CD34 was revoked."]],
+  ["{value} picked up · {value}: {value} bag{value} + {value} hanging bundle{value}", ["8 picked up · Now: 6 bags + 1 hanging bundle", "8 picked up · Delivered: 0 bags + 2 hanging bundles"]],
   ["{value} bag{value} in this order", ["2 bags in this order"]],
-  ["{value} bag{value} picked up · {value}: {value} bag{value} + {value} hanging bundle{value}", ["8 bags picked up · Now: 6 bags + 1 hanging bundle", "8 bags picked up · Delivered: 5 bags + 2 hanging bundles"]],
   ["{value} bag{value} expected · confirmed at pickup", ["1 bag expected · confirmed at pickup", "2 bags expected · confirmed at pickup"]],
   ["Server status updated {value}.", ["Server status updated Jul 15, 2026, 9:00 AM."]],
   ["Picked up {value}", ["Picked up Jul 15, 2026, 9:00 AM"]],

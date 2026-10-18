@@ -67,6 +67,7 @@
         </section>
 
         <div class="pud-schedule-expectation" data-schedule-expectation role="status" hidden>
+          <p data-pickup-changed hidden></p>
           <p data-schedule-expectation-copy></p>
           <a href="tel:+13146281001">Contact the store</a>
         </div>
@@ -117,9 +118,10 @@
           <summary><span>Need a different pickup time?</span></summary>
           <div class="pud-disclosure-body">
           <h3 id="reschedule-heading" class="pud-visually-hidden">Need a different pickup time?</h3>
-          <p>Only open windows are shown. Your current time stays reserved until the change succeeds.</p>
+          <p>Only open windows are shown. Choose a pickup to see its expected return time, which may change with your pickup. Your current time stays reserved until the change succeeds.</p>
           <form id="pud-reschedule-form" class="pud-form pud-inline-form">
             <label>New pickup window <select name="routeId" data-reschedule-options required></select></label>
+            <p data-reschedule-return role="status" hidden></p>
             <label class="pud-visually-hidden">Reason <input name="reason" maxlength="500" value="customer_request"></label>
             <button class="pud-button pud-button-primary" type="submit">Change pickup window</button>
           </form>

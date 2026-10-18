@@ -1,4 +1,5 @@
 import { PUD_CONFIG } from "./pud-config.js";
+import { resetHandoffFields } from "./pud-booking-handoff.js";
 
 const ttlMs = 30 * 60 * 1000;
 
@@ -53,7 +54,6 @@ export function prefillReorderDetails(form, bootstrap) {
     detergent: bootstrap.preferences.detergent,
     softenerPref: bootstrap.preferences.softenerPref,
     specialInstructions: bootstrap.preferences.specialInstructions || "",
-    accessNotes: bootstrap.preferences.accessNotes || "",
   };
   for (const [field, value] of Object.entries(values)) {
     const control = form.elements.namedItem(field);
@@ -64,8 +64,7 @@ export function prefillReorderDetails(form, bootstrap) {
     }
     control.value = value;
   }
-  const unattended = form.elements.namedItem("unattendedPickup");
-  if (unattended) unattended.checked = Boolean(bootstrap.preferences.unattendedPickup);
+  resetHandoffFields(form);
 }
 
 function assertBootstrap(value) {

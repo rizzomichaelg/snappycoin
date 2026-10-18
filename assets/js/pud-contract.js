@@ -72,7 +72,7 @@ export const PUD_PUBLIC_REQUEST_CONTRACTS = Object.freeze({
   "/api/pud/orders/reschedule-request": define(
     "RescheduleRequest",
     ["token", "actionCapability", "routeProof", "expectedVersion", "idempotencyKey"],
-    ["reason"],
+    ["reason", "deliveryRouteProof"],
     { idempotent: true },
   ),
   "/api/pud/orders/payment-session": define("PaymentSessionRequest", ["token", "actionCapability"]),
@@ -276,6 +276,7 @@ export function assertOrderStatus(value) {
   for (const field of ["pickupWindowStartAt", "pickupWindowEndAt", "deliveryWindowStartAt", "deliveryWindowEndAt"]) {
     nullableTimestamp(result[field], `SafeOrderStatus.${field}`);
   }
+  if (result.pickupRescheduledAt !== undefined) nullableTimestamp(result.pickupRescheduledAt, "SafeOrderStatus.pickupRescheduledAt");
   nullableTimestamp(result.expectedCompletionAt, "SafeOrderStatus.expectedCompletionAt");
   const milestones = object(result.milestones, "SafeOrderStatus.milestones");
   timestamp(milestones.submittedAt, "SafeOrderStatus.milestones.submittedAt");
@@ -294,7 +295,6 @@ export function assertOrderStatus(value) {
   oneOf(result.currency, ["USD"], "SafeOrderStatus.currency");
   for (const field of ["totalCents", "refundedCents"]) nonnegativeInteger(result[field], `SafeOrderStatus.${field}`);
   positiveInteger(result.estimatedBags, "SafeOrderStatus.estimatedBags");
-  if (result.actualBags !== null && result.actualBags !== undefined) positiveInteger(result.actualBags, "SafeOrderStatus.actualBags");
   if (result.pickupBags != null) positiveInteger(result.pickupBags, "SafeOrderStatus.pickupBags");
   if (result.packedBags != null || result.hangingBundles != null) {
     nonnegativeInteger(result.packedBags, "SafeOrderStatus.packedBags");
@@ -609,6 +609,7 @@ function assertRouteOption(value) {
   for (const field of ["routeId", "routeDate", "windowCode", "windowStartAt", "windowEndAt", "routeProof"]) {
     string(route[field], `PublicRouteOption.${field}`);
   }
+  optionalString(route.deliveryRouteProof, "PublicRouteOption.deliveryRouteProof");
   optionalString(route.expectedReturnAt, "PublicRouteOption.expectedReturnAt");
   nonnegativeInteger(route.remainingOrders, "PublicRouteOption.remainingOrders");
   nonnegativeInteger(route.remainingBags, "PublicRouteOption.remainingBags");

@@ -7,6 +7,7 @@ import { beginPhoneVerification, bindPhoneFormatting, confirmPhoneVerification, 
 import { destroySquareCard, prepareSquareCard, tokenizeSquareCard } from "./pud-payment.js";
 import { stableActionKey, retireActionKey } from "./pud-idempotency.js";
 import { clearReorderBootstrap, prefillReorderAddress, prefillReorderDetails, takeReorderBootstrap } from "./pud-reorder.js";
+import { readHandoffChoices, handoffConsentDecisions, resetHandoffFields, syncHandoffFields } from "./pud-booking-handoff.js";
 import { downloadPickupCalendar } from "./pud-calendar.js";
 import { formatCurrencyCents, getLocale, translateExternalText, translateText, withLocalePath } from "./site-i18n.js";
 
@@ -35,6 +36,7 @@ const state = {
   waitlistContinuationToken: waitlistBootstrap?.token || "",
   waitlistRouteId: waitlistBootstrap?.routeId || "",
   calendarPickup: null,
+  detailsDirty: false,
 };
 
 const allSteps = ["address", "details", "phone", "review", "complete"];
@@ -42,11 +44,13 @@ const $ = (selector) => root.querySelector(selector);
 let turnstileSiteKey = "";
 let submissionInFlight = false;
 let addressConfirmationInFlight = false;
+let bookingAttempt = null;
 if (root && window.top !== window.self) fatal(new Error("Booking is available only in a full browser window."));
 else if (root) boot().catch((error) => fatal(error));
 
 async function boot() {
   bind();
+  resetHandoffFields($("#pud-details-form"));
   state.reorderBootstrap = takeReorderBootstrap();
   if (state.reorderBootstrap) {
     prefillReorderAddress($("#pud-address-form"), state.reorderBootstrap);
@@ -81,9 +85,21 @@ function bind() {
   root.addEventListener("submit", onSubmit);
   root.addEventListener("click", onClick);
   root.addEventListener("change", onChange);
+  root.addEventListener("input", (event) => {
+    if (event.target?.closest?.("#pud-details-form")) state.detailsDirty = true;
+  });
   window.addEventListener("popstate", () => {
     if (state.step === "complete" || submissionInFlight || state.paymentLoading) return;
+    if (bookingAttempt) {
+      history.pushState({ pudStep: "review" }, "", "#review");
+      return showStep("review", true);
+    }
     const requested = history.state?.pudStep || "address";
+    if (["phone", "review"].includes(requested) && state.detailsDirty) {
+      state.step = "details";
+      history.replaceState({ pudStep: "details" }, "", "#details");
+      return showStep("details", true);
+    }
     if (requested === "address" || (requested === "details" && state.addressProof) ||
         (requested === "phone" && state.verificationId) || (requested === "review" && state.phoneProof)) {
       state.step = requested;
@@ -96,7 +112,7 @@ function bind() {
 async function onSubmit(event) {
   event.preventDefault();
   const form = event.target;
-  if (!(form instanceof HTMLFormElement) || submissionInFlight) return;
+  if (!(form instanceof HTMLFormElement) || submissionInFlight || (bookingAttempt && form.id !== "pud-review-form")) return;
   submissionInFlight = true;
   clearMessage();
   clearFieldErrors(form);
@@ -109,7 +125,7 @@ async function onSubmit(event) {
     if (form.id === "pud-review-form") await submitOrder();
     if (form.id === "pud-waitlist-form") await submitWaitlist(form);
   } catch (error) {
-    resetTurnstile(form);
+    if (!bookingAttempt) resetTurnstile(form);
     showError(error, form);
   } finally {
     submissionInFlight = false;
@@ -228,6 +244,7 @@ function continueBookableAddress(result, pendingReview) {
     renderSchedulingChoices();
     $("[data-reorder-phone-last4]").textContent = `For security, re-enter and verify the mobile number ending in ${state.reorderBootstrap.customer.phoneLast4}.`;
   }
+  configureHandoff();
   trackFunnel("pud_address_eligible");
   go("details");
 }
@@ -297,30 +314,28 @@ async function submitDetails(form) {
     email: String(data.get("email") || "").trim(),
     phone: normalizeUsPhone(data.get("phone")),
   };
-  const unattendedPickup = data.get("pickupHandoff") === "unattended";
-  const unattendedPickupAuthorized = data.get("unattendedPickupAuthorization") === "yes";
-  if (unattendedPickup && !unattendedPickupAuthorized) {
-    throw new Error("Authorize pickup from the secure location or choose to hand the bags to the driver.");
-  }
+  const handoffs = readHandoffChoices(data);
   state.order = {
     estimatedBags: Number(data.get("estimatedBags")),
     detergent: String(data.get("detergent") || "premium"),
     softenerPref: String(data.get("softenerPref") || "liquid"),
     specialInstructions: String(data.get("specialInstructions") || "").trim(),
-    unattendedPickup,
-    accessNotes: unattendedPickup ? String(data.get("accessNotes") || "").trim() : "",
+    ...handoffs,
   };
   state.consents = {
     terms: data.get("terms") === "yes",
     privacy: true,
     transactionalSms: true,
     savedPaymentMethod: false,
-    unattendedPickup: unattendedPickupAuthorized,
+    unattendedPickup: handoffs.unattendedPickup,
+    unattendedDelivery: handoffs.unattendedDelivery,
     marketingEmail: false,
     marketingSms: false,
     consentVersion: state.config.consentVersion || "owner-approval-required",
   };
   if (!state.consents.terms) throw new Error("Accept the service terms.");
+  state.detailsDirty = false;
+  state.reviewedHandoffs = JSON.stringify(handoffs);
   if (canReusePhoneVerification()) {
     await openReview();
     return;
@@ -354,6 +369,10 @@ function canReusePhoneVerification() {
 }
 
 async function openReview() {
+  if (state.detailsDirty || JSON.stringify(readHandoffChoices(new FormData($("#pud-details-form")))) !== state.reviewedHandoffs) {
+    go("details");
+    throw new Error("Review your updated pickup and delivery choices before booking.");
+  }
   populateReview();
   go("review");
   if (!state.paymentReady) await loadBookingPayment();
@@ -387,81 +406,104 @@ async function loadBookingPayment() {
 }
 
 async function submitOrder() {
-  if (!state.paymentReady) throw new Error("Secure Square card fields are not ready.");
-  if (!canReusePhoneVerification()) {
-    go("details");
-    throw new Error("Phone verification expired. Continue from your details to request a new code.");
+  if (!bookingAttempt) {
+    let currentHandoffs;
+    try { currentHandoffs = readHandoffChoices(new FormData($("#pud-details-form"))); }
+    catch (error) { go("details"); throw error; }
+    if (state.detailsDirty || JSON.stringify(currentHandoffs) !== state.reviewedHandoffs) {
+      go("details");
+      throw new Error("Review your updated pickup and delivery choices before booking.");
+    }
+    if (!state.paymentReady) throw new Error("Secure Square card fields are not ready.");
+    if (!canReusePhoneVerification()) {
+      go("details");
+      throw new Error("Phone verification expired. Continue from your details to request a new code.");
+    }
+    const consentVersion = state.config.consentVersions || {};
+    const route = state.routes.find((item) => item.id === state.routeId);
+    const deliveryRoute = state.deliveryRoutes.find((item) => item.id === state.deliveryRouteId);
+    if (!route?.routeProof || !deliveryRoute?.routeProof) throw new Error("The selected pickup or delivery window expired. Please check the address again.");
+    const optionalData = new FormData($("#pud-review-form"));
+    const source = optionalData.get("selfReportedSource");
+    const sourceDetail = String(optionalData.get("selfReportedSourceDetail") || "").trim();
+    setSelfReportedSource(state.attribution, source, sourceDetail || undefined);
+    state.consents.marketingEmail = optionalData.get("marketingEmail") === "yes";
+    state.consents.savedPaymentMethod = optionalData.get("savedPaymentMethod") === "yes";
+    if (!state.consents.savedPaymentMethod) throw new Error("Accept the saved-card authorization to book pickup.");
+    const squareCardToken = await tokenizeSquareCard({
+      givenName: state.customer.firstName,
+      familyName: state.customer.lastName,
+      email: state.customer.email,
+      countryCode: "US",
+    });
+    const intent = {
+      firstName: state.customer.firstName,
+      lastName: state.customer.lastName,
+      email: state.customer.email,
+      address: state.address,
+      routeId: state.routeId,
+      deliveryRouteId: state.deliveryRouteId,
+      phoneProof: state.phoneProof,
+      addressProof: state.addressProof,
+      routeProof: route.routeProof,
+      deliveryRouteProof: deliveryRoute.routeProof,
+      squareCardToken,
+      turnstileToken: turnstileValue($("#pud-review-form")),
+      preferences: {
+        estimatedBags: state.order.estimatedBags,
+        detergent: state.order.detergent,
+        softenerPref: state.order.softenerPref,
+        unattendedPickup: state.order.unattendedPickup,
+        unattendedDelivery: state.order.unattendedDelivery,
+        ...(state.order.specialInstructions ? { specialInstructions: state.order.specialInstructions } : {}),
+        ...(state.order.accessNotes ? { accessNotes: state.order.accessNotes } : {}),
+      },
+      consents: {
+        terms: { accepted: state.consents.terms, version: consentVersion.terms || state.consents.consentVersion },
+        privacy: { accepted: state.consents.privacy, version: consentVersion.privacy || state.consents.consentVersion },
+        transactional_sms: { accepted: state.consents.transactionalSms, version: consentVersion.transactional_sms || state.consents.consentVersion },
+        saved_payment_method: { accepted: state.consents.savedPaymentMethod, version: consentVersion.saved_payment_method || state.consents.consentVersion },
+        ...handoffConsentDecisions(state.order, consentVersion, state.consents.consentVersion),
+        marketing_email: { accepted: state.consents.marketingEmail, version: consentVersion.marketing_email || state.consents.consentVersion },
+        marketing_sms: { accepted: state.consents.marketingSms, version: consentVersion.marketing_sms || state.consents.consentVersion },
+      },
+      attribution: state.attribution,
+      promotionCode: state.config.promotionsEnabled === true ? $("#pud-promotion-code")?.value.trim() || undefined : undefined,
+      referralCode: state.config.referralsEnabled === true ? $("#pud-referral-code")?.value.trim() || undefined : undefined,
+      recurringProposalId: state.reorderBootstrap?.recurringProposalId || undefined,
+      waitlistContinuationToken: state.waitlistContinuationToken || undefined,
+      locale: getLocale?.() || undefined,
+    };
+    const stableIntent = { ...intent, squareCardToken: "[square-token]", turnstileToken: "[turnstile-token]" };
+    const orderSignature = JSON.stringify([state.phoneProof, state.addressProof, route.routeProof, deliveryRoute.routeProof, stableIntent]);
+    const orderKey = await stableActionKey("order", orderSignature);
+    // Snapshot nested address/attribution as well as consent. Unknown outcomes
+    // retry the exact request, without tokenizing another card or changing proof.
+    bookingAttempt = { signature: orderSignature, body: JSON.parse(JSON.stringify({ idempotencyKey: orderKey, ...intent })) };
+    lockBookingAttempt(true);
   }
-  const consentVersion = state.config.consentVersions || {};
-  const route = state.routes.find((item) => item.id === state.routeId);
-  const deliveryRoute = state.deliveryRoutes.find((item) => item.id === state.deliveryRouteId);
-  if (!route?.routeProof || !deliveryRoute?.routeProof) throw new Error("The selected pickup or delivery window expired. Please check the address again.");
-  const optionalData = new FormData($("#pud-review-form"));
-  const source = optionalData.get("selfReportedSource");
-  const sourceDetail = String(optionalData.get("selfReportedSourceDetail") || "").trim();
-  setSelfReportedSource(state.attribution, source, sourceDetail || undefined);
-  state.consents.marketingEmail = optionalData.get("marketingEmail") === "yes";
-  state.consents.savedPaymentMethod = optionalData.get("savedPaymentMethod") === "yes";
-  if (!state.consents.savedPaymentMethod) throw new Error("Accept the saved-card authorization to book pickup.");
-  const squareCardToken = await tokenizeSquareCard({
-    givenName: state.customer.firstName,
-    familyName: state.customer.lastName,
-    email: state.customer.email,
-    countryCode: "US",
-  });
-  const intent = {
-    firstName: state.customer.firstName,
-    lastName: state.customer.lastName,
-    email: state.customer.email,
-    address: state.address,
-    routeId: state.routeId,
-    deliveryRouteId: state.deliveryRouteId,
-    phoneProof: state.phoneProof,
-    addressProof: state.addressProof,
-    routeProof: route.routeProof,
-    deliveryRouteProof: deliveryRoute.routeProof,
-    squareCardToken,
-    turnstileToken: turnstileValue($("#pud-review-form")),
-    preferences: {
-      estimatedBags: state.order.estimatedBags,
-      detergent: state.order.detergent,
-      softenerPref: state.order.softenerPref,
-      unattendedPickup: state.order.unattendedPickup,
-      unattendedDelivery: false,
-      ...(state.order.specialInstructions ? { specialInstructions: state.order.specialInstructions } : {}),
-      ...(state.order.accessNotes ? { accessNotes: state.order.accessNotes } : {}),
-    },
-    consents: {
-      terms: { accepted: state.consents.terms, version: consentVersion.terms || state.consents.consentVersion },
-      privacy: { accepted: state.consents.privacy, version: consentVersion.privacy || state.consents.consentVersion },
-      transactional_sms: { accepted: state.consents.transactionalSms, version: consentVersion.transactional_sms || state.consents.consentVersion },
-      saved_payment_method: { accepted: state.consents.savedPaymentMethod, version: consentVersion.saved_payment_method || state.consents.consentVersion },
-      unattended_pickup: { accepted: state.consents.unattendedPickup, version: consentVersion.unattended_pickup || state.consents.consentVersion },
-      unattended_delivery: { accepted: false, version: consentVersion.unattended_delivery || state.consents.consentVersion },
-      marketing_email: { accepted: state.consents.marketingEmail, version: consentVersion.marketing_email || state.consents.consentVersion },
-      marketing_sms: { accepted: state.consents.marketingSms, version: consentVersion.marketing_sms || state.consents.consentVersion },
-    },
-    attribution: state.attribution,
-    promotionCode: state.config.promotionsEnabled === true ? $("#pud-promotion-code")?.value.trim() || undefined : undefined,
-    referralCode: state.config.referralsEnabled === true ? $("#pud-referral-code")?.value.trim() || undefined : undefined,
-    recurringProposalId: state.reorderBootstrap?.recurringProposalId || undefined,
-    waitlistContinuationToken: state.waitlistContinuationToken || undefined,
-    locale: getLocale?.() || undefined,
-  };
-  const stableIntent = { ...intent, squareCardToken: "[square-token]", turnstileToken: "[turnstile-token]" };
-  const orderSignature = JSON.stringify([state.phoneProof, state.addressProof, route.routeProof, deliveryRoute.routeProof, stableIntent]);
-  const orderKey = await stableActionKey("order", orderSignature);
+  const attempt = bookingAttempt;
   let result;
   try {
-    result = await createOrder({ idempotencyKey: orderKey, ...intent }, orderKey);
+    result = await createOrder(attempt.body, attempt.body.idempotencyKey);
+    if (!result.statusToken || !result.orderNumber) throw new Error("The order was created without a private status link. Contact support with the request ID.");
   } catch (error) {
     // A confirmed card-save decline creates no order. A different card must not
     // reuse Square's rejected attempt; unknown/network outcomes retain the key.
-    if (error.code === "PUD_CARD_DECLINED") await retireActionKey("order", orderSignature);
+    if (error.status >= 400 && error.status < 500 && error.status !== 408) {
+      if (error.code === "PUD_CARD_DECLINED") await retireActionKey("order", attempt.signature);
+      bookingAttempt = null;
+      lockBookingAttempt(false);
+    } else {
+      const retryNotice = $("[data-booking-retry-notice]");
+      retryNotice.textContent = translateText("The booking result is not confirmed. Retry the same booking below. Your reviewed choices are locked while the result is uncertain.");
+      retryNotice.hidden = false;
+    }
     throw error;
   }
+  bookingAttempt = null;
+  lockBookingAttempt(false);
   const token = result.statusToken;
-  if (!token || !result.orderNumber) throw new Error("The order was created without a private status link. Contact support with the request ID.");
   try {
     await window.SnappyAnalytics?.trackWdfPickupBookingCompleted?.({
       orderNumber: result.orderNumber,
@@ -548,6 +590,7 @@ async function submitWaitlist(form) {
 async function onClick(event) {
   const button = event.target.closest("[data-action]");
   if (!button || submissionInFlight || state.paymentLoading) return;
+  if (bookingAttempt && ["edit", "back", "start-over", "retry-booking"].includes(button.dataset.action)) return;
   if (button.dataset.action === "retry-payment") return loadBookingPayment();
   if (button.dataset.action === "use-suggested-address") {
     if (addressConfirmationInFlight) return;
@@ -663,6 +706,7 @@ async function onClick(event) {
 }
 
 function onChange(event) {
+  if (event.target?.closest?.("#pud-details-form")) state.detailsDirty = true;
   if (event.target?.matches?.('[name="phone"]')) {
     const samePhone = (() => { try { return normalizeUsPhone(event.target.value) === state.verifiedPhone; } catch { return false; } })();
     $('#pud-details-form button[type="submit"]').textContent = translateText(samePhone && canReusePhoneVerification() ? "Continue to review" : "Text me a code");
@@ -671,7 +715,7 @@ function onChange(event) {
   if (event.target?.matches?.('[name="routeId"]')) renderDeliveryChoices();
   if (event.target?.matches?.('[name="deliveryDay"]')) renderDeliveryTimes();
   if (event.target?.matches?.('[name="deliveryRouteId"]')) renderSelectedSchedule();
-  if (event.target?.matches?.('[name="pickupHandoff"]')) configureHandoff();
+  if (event.target?.matches?.('[name="pickupHandoff"], [name="deliveryHandoff"]')) configureHandoff();
   if (event.target?.matches?.('[name="selfReportedSource"]')) configureReferralOther(event.target);
 }
 
@@ -741,14 +785,7 @@ function configureCodeFields() {
 }
 
 function configureHandoff() {
-  const details = $("[data-unattended-pickup-details]");
-  const unattended = $('[name="pickupHandoff"]:checked')?.value === "unattended";
-  if (!details) return;
-  details.hidden = !unattended;
-  const notes = details.querySelector('[name="accessNotes"]');
-  const authorization = details.querySelector('[name="unattendedPickupAuthorization"]');
-  if (notes) notes.required = unattended;
-  if (authorization) authorization.required = unattended;
+  syncHandoffFields($("#pud-details-form"));
 }
 
 function showResumeMessage() {
@@ -847,11 +884,27 @@ function populateReview() {
   const detergent = state.order.detergent.replaceAll("_", " ");
   const softener = state.order.softenerPref.replaceAll("_", " ");
   $("[data-review-laundry]").textContent = `Detergent: ${detergent} · Softener: ${softener}${state.order.specialInstructions ? ` · ${state.order.specialInstructions}` : ""}`;
+  $("[data-review-pickup-handoff]").textContent = translateText(state.order.unattendedPickup ? "Unattended pickup authorized" : "Hand bags to the driver in person");
+  $("[data-review-delivery-handoff]").textContent = translateText(state.order.unattendedDelivery ? "Unattended delivery authorized" : "Receive clean laundry in person");
+  $("[data-review-pickup-instructions]").textContent = state.order.pickupAccessNotes;
+  $("[data-review-delivery-instructions]").textContent = state.order.deliveryAccessNotes;
+  $("[data-review-pickup-instructions-row]").hidden = !state.order.unattendedPickup;
+  $("[data-review-delivery-instructions-row]").hidden = !state.order.unattendedDelivery;
+}
+
+function lockBookingAttempt(locked) {
+  root.querySelectorAll('#pud-details-form input, #pud-details-form select, #pud-details-form textarea, #pud-review-form input, #pud-review-form select, #pud-review-form textarea, [data-action="edit"], [data-action="back"], [data-action="start-over"]').forEach((control) => { control.disabled = locked; });
+  if (!locked) {
+    configureHandoff();
+    const retryNotice = $("[data-booking-retry-notice]");
+    retryNotice.hidden = true;
+    retryNotice.textContent = "";
+  }
 }
 
 function setBusy(form, busy) {
   form.querySelectorAll("button").forEach((control) => {
-    control.disabled = busy || (form.id === "pud-review-form" && control.type === "submit" && !state.paymentReady);
+    control.disabled = busy || (bookingAttempt && !(form.id === "pud-review-form" && control.type === "submit")) || (form.id === "pud-review-form" && control.type === "submit" && !state.paymentReady);
     if (!control.dataset.busyLabel) return;
     if (busy) {
       control.dataset.idleLabel = control.textContent;

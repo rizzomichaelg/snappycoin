@@ -49,7 +49,7 @@ test("WDF pickup conversion rejects replayed and invalid order responses", () =>
 test("booking invokes the conversion only after validating a successful backend order", async () => {
   const source = await readFile(new URL("../assets/js/pud-booking.js", import.meta.url), "utf8");
   const createOrderAt = source.indexOf("result = await createOrder(");
-  const validateOrderAt = source.indexOf("if (!token || !result.orderNumber)", createOrderAt);
+  const validateOrderAt = source.indexOf("if (!result.statusToken || !result.orderNumber)", createOrderAt);
   const conversionAt = source.indexOf("trackWdfPickupBookingCompleted", validateOrderAt);
   const completeAt = source.indexOf('go("complete")', conversionAt);
 
