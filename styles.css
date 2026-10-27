@@ -380,16 +380,6 @@ input::placeholder { color: #596b80; opacity: 1; }
 .policy-updated { color: var(--muted-text); margin-bottom: 24px; }
 
 /* Consent stays explicit and readable, with unchanged analytics behavior. */
-.cookie-consent-banner { position: fixed; z-index: 2000; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 24px; width: min(1060px, calc(100% - 40px)); padding: 20px 24px; background: var(--dark-bg); color: var(--white); border-radius: 8px; box-shadow: 0 8px 30px rgb(9 46 99 / 15%); }
-.cookie-consent-copy { flex: 1; }
-.cookie-consent-copy strong { display: block; margin-bottom: 5px; font-size: 16px; }
-.cookie-consent-copy p { color: #e2eaf5; font-size: 13px; line-height: 1.5; }
-.cookie-consent-copy a { color: var(--secondary-color); }
-.cookie-consent-actions { display: flex; flex-shrink: 0; gap: 9px; }
-.cookie-consent-button { min-height: 44px; padding: 10px 14px; border: 1px solid transparent; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.cookie-consent-button.primary { background: var(--secondary-color); color: var(--dark-bg); }
-.cookie-consent-button.secondary { background: transparent; border-color: #9aabc0; color: var(--white); }
-.cookie-consent-button:hover { text-decoration: underline; }
 
 /* Responsive composition: visit decisions and availability come first on phones. */
 /* Leave room for the complete visit strip below the hero on laptop windows.
@@ -453,8 +443,6 @@ input::placeholder { color: #596b80; opacity: 1; }
   .content-section { padding-block: 52px; }
   .promo-paused-panel { grid-template-columns: 1fr; }
   .promo-paused-panel > p:not(.eyebrow), .promo-paused-panel > .promo-facts, .promo-paused-panel > .promo-paused-actions { grid-column: auto; grid-row: auto; }
-  .cookie-consent-banner { flex-direction: column; align-items: stretch; gap: 15px; }
-  .cookie-consent-actions { justify-content: flex-end; }
 }
 @media (max-width: 700px) {
   .arrival-layout { display: flex; flex-direction: column; }
@@ -538,9 +526,6 @@ input::placeholder { color: #596b80; opacity: 1; }
   .footer-site-links a { padding-block: 9px; }
   .footer-policy-links { gap: 14px; }
   .social-links { flex-direction: column; gap: 14px; }
-  .cookie-consent-banner { bottom: 12px; width: calc(100% - 24px); padding: 18px; }
-  .cookie-consent-actions { flex-wrap: wrap; justify-content: flex-start; }
-  .cookie-consent-button { flex-grow: 1; }
 }
 @media (max-width: 360px) {
   :root { --gutter: 18px; }
@@ -888,3 +873,6 @@ input::placeholder { color: #596b80; opacity: 1; }
   .service-tab-indicator, .faq-item summary::after { transition: none; }
   .review-track { scroll-behavior: auto; }
 }
+
+/* The retired offer stays hidden even if its historical API is active. */
+[data-retired-promotion] { display: none !important; }

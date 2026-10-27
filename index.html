@@ -23,7 +23,7 @@
   <script src="assets/js/marketing-motion.js?v=20261024-3"></script>
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20261025-1" />
+  <link rel="stylesheet" href="styles.css?v=20261027-cutover1" />
 
   <script src="assets/js/promo-config.js?v=20260531"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -49,15 +49,15 @@
           <ul class="nav-submenu">
             <li><a class="nav-link" href="#self-service">Self-service laundry</a></li>
             <li><a class="nav-link" href="#drop-off">Drop-off wash &amp; fold</a></li>
-            <li><a href="/pickup-delivery/">Pickup &amp; delivery</a></li>
+            <li><a href="https://book.snappycoinlaundry.com">Pickup &amp; delivery</a></li>
             <li><a class="nav-link" href="#mending-alterations">Mending &amp; alterations</a></li>
-            <li id="promo-nav-item"><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
+            <li id="promo-nav-item" data-retired-promotion hidden inert><a href="#free-weekday-wash" class="nav-link">Free Wash</a></li>
           </ul>
         </details></li>
         <li><a href="#about" class="nav-link">About</a></li>
         <li><a href="#contact-section" class="nav-link">Visit us</a></li>
-        <li><a href="/pickup-delivery/status/" class="nav-link">Check an order</a></li>
-        <li><a class="nav-booking" href="/pickup-delivery/#booking">Book a pickup <span class="material-icons" aria-hidden="true">arrow_forward</span></a></li>
+        <li><a href="https://book.snappycoinlaundry.com" class="nav-link">Check an order</a></li>
+        <li><a class="nav-booking" href="https://book.snappycoinlaundry.com">Book a pickup <span class="material-icons" aria-hidden="true">arrow_forward</span></a></li>
       </ul>
     </nav>
   </header>
@@ -74,7 +74,7 @@
         <p class="hero-tagline">Wash &amp; Dry in a Snap!</p>
         <div class="hero-ctas" role="group" aria-label="Primary actions">
           <a href="https://www.google.com/maps/dir/?api=1&amp;destination=2303+McKelvey+Rd+Maryland+Heights+MO+63043" class="btn-cta primary" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">place</span>Get directions</a>
-          <a href="/pickup-delivery/#booking" class="btn-cta ghost"><span class="material-icons" aria-hidden="true">local_shipping</span>Book a pickup</a>
+          <a href="https://book.snappycoinlaundry.com" class="btn-cta ghost"><span class="material-icons" aria-hidden="true">local_shipping</span>Book a pickup</a>
         </div>
         <div class="hero-visit">
           <p><span class="material-icons" aria-hidden="true">place</span><span>2303 McKelvey Rd<br />Maryland Heights</span></p>
@@ -171,7 +171,7 @@
       </article>
       <article data-entrance="comparison">
         <span class="material-icons" aria-hidden="true">local_shipping</span>
-        <div><h2><a href="/pickup-delivery/">Pickup &amp; delivery</a></h2><p class="pickup-price">$1.50/lb · $15 minimum</p><p>Free pickup &amp; delivery within our service area.<br />Bulky items priced separately.</p><a class="service-link" href="/pickup-delivery/#booking">Book pickup &amp; delivery</a></div>
+        <div><h2><a href="https://book.snappycoinlaundry.com">Pickup &amp; delivery</a></h2><p class="pickup-price">$30 per bag</p><p>Free pickup &amp; delivery within our service area.<br />Bulky items priced separately.</p><a class="service-link" href="https://book.snappycoinlaundry.com">Book pickup &amp; delivery</a></div>
       </article>
     </div>
   </section>
@@ -239,7 +239,7 @@
             <li><span class="material-icons bullet-icon" aria-hidden="true">check_circle</span> Text updates when your order is ready</li>
             <li><span class="material-icons bullet-icon" aria-hidden="true">check_circle</span> Neatly folded and bundled for easy put-away</li>
           </ul>
-          <a class="service-link" href="/pickup-delivery/">Schedule a pickup</a></div>
+          <a class="service-link" href="https://book.snappycoinlaundry.com">Schedule a pickup</a></div>
           </article>
 <article id="mending-alterations" class="service-panel">
             <div class="service-panel-heading">
@@ -263,7 +263,7 @@
           </article>          </div>
         </div>
       </div>
-      <a class="hero-wdf-service" data-reveal href="/pickup-delivery/#booking" aria-label="Book Wash/Dry/Fold pickup and delivery">
+      <a class="hero-wdf-service" data-reveal href="https://book.snappycoinlaundry.com" aria-label="Book Wash/Dry/Fold pickup and delivery">
         <span class="material-icons" aria-hidden="true">local_shipping</span>
         <span class="hero-wdf-copy"><span class="hero-wdf-eyebrow">Pickup &amp; delivery Wash/Dry/Fold</span><span class="hero-wdf-title">Laundry picked up, cleaned, folded, and returned.</span><span class="hero-wdf-action">Book pickup &amp; delivery</span></span>
         <span class="material-icons" aria-hidden="true">arrow_forward</span>
@@ -547,7 +547,7 @@
     </div>
   </section>
 
-<section id="free-weekday-wash" class="content-section promo-embed-section" data-promo-section>
+<section id="free-weekday-wash" class="content-section promo-embed-section" data-promo-section data-retired-promotion hidden inert>
     <div class="section-inner promo-embed-layout" hidden>
       <div class="promo-embed-copy" data-reveal data-promo-active-content hidden>
         <p class="eyebrow">Weekday offer</p>
@@ -642,7 +642,10 @@
           <a class="btn-cta ghost" href="#services">Explore Services</a>
         </div>
       </section>
-    </div><div class="section-inner"><section class="newsletter-card" data-reveal aria-labelledby="newsletter-heading">
+    </div>
+  </section>
+  <section class="content-section newsletter-section" aria-labelledby="newsletter-heading">
+    <div class="section-inner"><section class="newsletter-card" data-reveal aria-labelledby="newsletter-heading">
         <div class="newsletter-copy">
           <p class="eyebrow">Deals &amp; updates</p>
           <h3 id="newsletter-heading">Get future Snappy Coin Laundry offers.</h3>
@@ -669,7 +672,7 @@
   <footer class="footer" data-reveal>
     <div class="footer-inner">
       <a class="brand footer-brand" href="#hero"><img src="assets/logo-96.webp" width="56" height="56" alt="Snappy Coin Laundry turtle logo" /><span class="brand-wordmark">Snappy<span>COIN LAUNDRY</span></span></a>
-      <nav class="footer-site-links" aria-label="Explore Snappy"><a href="#hero">Home</a><a href="#about">About</a><a href="#services">Services</a><a href="#why-choose-us">Why Choose Us</a><a href="#highlights">Facility Highlights</a><a href="#faq">FAQ</a><a href="#contact-section">Contact</a><a href="/pickup-delivery/status/">Check an order</a></nav>
+      <nav class="footer-site-links" aria-label="Explore Snappy"><a href="#hero">Home</a><a href="#about">About</a><a href="#services">Services</a><a href="#why-choose-us">Why Choose Us</a><a href="#highlights">Facility Highlights</a><a href="#faq">FAQ</a><a href="#contact-section">Contact</a><a href="https://book.snappycoinlaundry.com">Check an order</a></nav>
       <p>
         <strong>Snappy Coin Laundry</strong> | 2303 McKelvey Rd, Maryland Heights, MO 63043
         | <em>(Mon–Sun: 6:00 AM–1:30 AM)</em>
@@ -701,7 +704,7 @@
   </footer>
 
   <!-- JAVASCRIPT -->
-  <script type="module" src="assets/js/site-analytics.js?v=20261023-legal1"></script>
+  <script type="module" src="assets/js/site-analytics.js?v=20261027-cutover1"></script>
   <script src="assets/js/availability-widget.js" defer></script>
   <script src="assets/js/promo-signup.js?v=20261023-stage1" defer></script>
   <script src="script.js?v=20261024-3"></script>

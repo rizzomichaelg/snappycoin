@@ -492,7 +492,7 @@ function verifyStaticPage() {
   assert(html.includes("Send me future Snappy Coin Laundry deals"), "email marketing consent wording is missing");
   assert(html.includes('id="newsletter-signup-form"'), "newsletter signup form is missing");
   assert(!/name=["']attribution/i.test(html), "attribution must not be exposed as a hidden field");
-  assert(html.includes("assets/js/site-analytics.js?v=20261023-legal1"), "global analytics script is missing from main page");
+  assert(html.includes("assets/js/site-analytics.js?v=20261027-cutover1"), "global analytics script is missing from main page");
   assert(html.includes("connect.facebook.net"), "main page CSP must allow Meta Pixel script");
   assert(html.includes("www.facebook.com"), "main page CSP must allow Meta Pixel beacon");
   assert(html.includes("www.googletagmanager.com"), "main page CSP must allow Google tag script");
@@ -503,28 +503,28 @@ function verifyStaticPage() {
   assert(html.includes('class="hero-wdf-service"'), "main page Wash/Dry/Fold service link is missing");
   assert(html.includes("Pickup &amp; delivery Wash/Dry/Fold"), "main page Wash/Dry/Fold service label is missing");
   assert(html.includes("Book pickup &amp; delivery"), "main page Wash/Dry/Fold booking CTA is missing");
-  assert(html.includes('href="/pickup-delivery/#booking"'), "main page Wash/Dry/Fold service must link directly to booking");
+  assert(html.includes('href="https://book.snappycoinlaundry.com"'), "main page Wash/Dry/Fold service must link directly to booking");
   assert(!/10% off|August 31|Claim 10% discount|hero-wdf-promo/i.test(html), "expired Wash/Dry/Fold promotion copy is still present");
-  assert(redirectHtml.includes("../../assets/js/site-analytics.js?v=20261023-legal1"), "global analytics script is missing from promo redirect page");
+  assert(!redirectHtml.includes("site-analytics.js"), "transient ad redirect must not race the destination page for measurement");
   assert(redirectHtml.includes("connect.facebook.net"), "promo redirect CSP must allow Meta Pixel script");
   assert(redirectHtml.includes("www.googleadservices.com"), "promo redirect CSP must allow Google Ads measurement");
   assert(!redirectHtml.includes("noscript=1"), "promo redirect must not bypass consent with a noscript Meta Pixel");
   assert(html.includes('href="privacy.html"'), "footer privacy policy link is missing");
   assert(html.includes('href="terms.html"'), "footer terms link is missing");
   assert(html.includes('href="cookies.html"'), "footer cookie statement link is missing");
-  assert(html.includes("styles.css?v=20261025-1"), "main stylesheet cache buster was not updated");
+  assert(html.includes("styles.css?v=20261027-cutover1"), "main stylesheet cache buster was not updated");
   assert(!privacyHtml.includes("noscript=1"), "privacy page must not bypass consent with a noscript Meta Pixel");
   assert(privacyHtml.includes("Privacy Policy"), "privacy page heading is missing");
   assert(privacyHtml.includes("a one-time code to verify that a mobile number belongs to you"), "privacy page must explain SMS verification");
   assert(privacyHtml.includes("We do not send your name, email"), "privacy page must describe Meta Lead privacy limits");
   assert(privacyHtml.includes("Neither site has a cookie banner"), "privacy page must describe the no-banner policy");
   assert(privacyHtml.includes("Google Ads"), "privacy page must describe Google Ads measurement");
-  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20261023-legal1"), "privacy page must load global analytics");
+  assert(privacyHtml.includes("assets/js/site-analytics.js?v=20261027-cutover1"), "privacy page must load global analytics");
   assert(!termsHtml.includes("noscript=1"), "terms page must not bypass consent with a noscript Meta Pixel");
   assert(termsHtml.includes("Terms of Use"), "terms page heading is missing");
   assert(termsHtml.includes("limited to one per"), "terms page must describe promo claim limit");
   assert(termsHtml.includes("not integrated with DexterPay"), "terms page must preserve manual redemption boundary");
-  assert(termsHtml.includes("assets/js/site-analytics.js?v=20261023-legal1"), "terms page must load global analytics");
+  assert(termsHtml.includes("assets/js/site-analytics.js?v=20261027-cutover1"), "terms page must load global analytics");
   assert(!cookiesHtml.includes("noscript=1"), "cookie page must not bypass consent with a noscript Meta Pixel");
   assert(cookiesHtml.includes("Cookie Statement"), "cookie statement heading is missing");
   assert(cookiesText.includes("tools load for every visitor"), "cookie statement must describe default tag loading");
@@ -532,7 +532,7 @@ function verifyStaticPage() {
   assert(cookiesHtml.includes("Meta Pixel"), "cookie statement must describe Meta Pixel");
   assert(cookiesHtml.includes("It does not include your name, email address, phone number"), "cookie statement must describe Lead event PII limits");
   assert(cookiesHtml.includes("Google Ads"), "cookie page must describe Google Ads measurement");
-  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20261023-legal1"), "cookie page must load global analytics");
+  assert(cookiesHtml.includes("assets/js/site-analytics.js?v=20261027-cutover1"), "cookie page must load global analytics");
 }
 
 async function verifySignupStartPayload() {
@@ -931,13 +931,13 @@ async function verifySiteAnalyticsMetaPixel() {
     assert(sessionStorage.getItem("snappyCookieConsent:v1") === (priorChoice || null), "legacy session choice must be retained");
     assert(typeof window.fbq === "function", "Meta must initialize for fresh and returning visitors");
     assert(scripts.filter(s => s.src.includes("connect.facebook.net/en_US/fbevents.js")).length === 1, "Meta script must load once");
-    assert(scripts.filter(s => s.src.includes("googletagmanager.com/gtag/js?id=G-W0E4GHV24B")).length === 1, "Google loader must load once");
+    assert(scripts.filter(s => s.src.includes("googletagmanager.com/gtag/js?id=G-7RE3YVW1DR")).length === 1, "Google loader must load once");
     const queuedCalls = () => window.fbq.queue.map(args => Array.from(args));
     assert(queuedCalls().some(c => c[0] === "set" && c[1] === "autoConfig" && c[2] === false), "Meta automatic configuration must remain off");
     assert(queuedCalls().some(c => c[0] === "init" && c[1] === "1554256442781789" && c.length === 2), "Meta must initialize without contact matching fields");
     assert(queuedCalls().filter(c => c[0] === "track" && c[1] === "PageView").length === 1, "Meta page view must fire once");
     assert(!queuedCalls().some(c => c[1] === "Lead"), "page load must not report a successful claim");
-    for (const id of ["G-W0E4GHV24B", "AW-18256973572"]) {
+    for (const id of ["G-7RE3YVW1DR", "AW-18256973572"]) {
       const config = window.dataLayer.find(c => c[0] === "config" && c[1] === id);
       assert(config && config[2].allow_ad_personalization_signals === false && config[2].allow_google_signals === false, "Google measurement must disable personalization signals");
       assert(config[2].page_location === "https://snappycoinlaundry.com/", "Google page location must omit query and fragment");

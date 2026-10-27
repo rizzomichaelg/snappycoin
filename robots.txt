@@ -1,6 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /pickup-delivery/status/
-Disallow: /pickup-delivery/claims/
 
 Sitemap: https://snappycoinlaundry.com/sitemap.xml

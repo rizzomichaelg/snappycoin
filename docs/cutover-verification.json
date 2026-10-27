@@ -1,0 +1,69 @@
+{
+  "branch": "cutover-2026-10",
+  "baseCommit": "21d483909aec2444a4f4f6031dc702ba583aa596",
+  "date": "2026-10-27",
+  "status": "local candidate; not pushed or merged",
+  "checks": {
+    "i": {
+      "passed": true,
+      "evidence": "Real-library local browser audit; no alternate SDK or superseded GA requests on all four marketing pages."
+    },
+    "ii": {
+      "passed": true,
+      "marketingPages": 4,
+      "GA4PageViewsPerLoad": 1,
+      "authoredGALoadersPerPage": 1,
+      "note": "Google itself also fetches its Ads destination. Static redirects contain no analytics runtime."
+    },
+    "iii": {
+      "passed": true,
+      "priorChoices": [
+        "fresh",
+        "accepted",
+        "declined"
+      ],
+      "banners": 0,
+      "consentStorageAccesses": 0,
+      "consentCookieWrites": 0,
+      "applicationCookieAccesses": 0
+    },
+    "iv": {
+      "passed": true,
+      "retiredDocuments": 6,
+      "redirectCases": 12,
+      "javascriptDisabled": true,
+      "destination": "https://book.snappycoinlaundry.com/",
+      "queryAndFragmentForwarded": false,
+      "noindex": true,
+      "crawlAllowed": true
+    },
+    "v": {
+      "passed": true,
+      "sourceContentMatches": 0,
+      "scope": "All working tree text files excluding Git internal data; no dependencies or generated output in repository."
+    }
+  },
+  "additional": {
+    "cutoverTests": 5,
+    "promotionVerifier": "passed",
+    "publicBaseline": "18 files passed",
+    "marketingCSPsUnchanged": 5,
+    "unchangedIntegrationSHA256": {
+      "assets/js/promo-signup.js": "77ee449f8b5dbc214becda5a69cc1b0ecdf5ab0181ea22089d8b000c92472183",
+      "assets/js/promo-config.js": "699bbbeb01fa36b2e3385de2787f963dcf4d3676e40bb76afd7f138e1f005c7e",
+      "assets/js/availability-widget.js": "b343a0777c08488784d730ab8c59b05be21f2ed898b6766fde8c118153d46b29"
+    },
+    "retiredOfferHiddenWithActiveAPIFixture": true,
+    "newsletterVisible": true,
+    "physicalPhoneAndRealtime": "deferred until explicit launch go",
+    "lateOrderMonitoring": "seven days starting at actual launch; not yet started"
+  },
+  "localAudit": "/private/tmp/snappy-cutover-audit-20261027/report.json",
+  "workerEvidence": {
+    "deployment": "370a37a3-1d83-4fcd-96c5-ce53b81f5e98",
+    "version": "7af64198-ab2c-4e3f-a40f-d411eefd3c47",
+    "sourceRevision": "4e62d35",
+    "promoContactDispatchToMeta": false,
+    "scope": "Promo route/service/provider source inspection at annotated deployed revision; no live customer action."
+  }
+}

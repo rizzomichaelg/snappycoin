@@ -7,7 +7,10 @@
     return;
   }
 
-  const GA_MEASUREMENT_ID = "G-W0E4GHV24B";
+  if (window.__SNAPPY_MARKETING_ANALYTICS_STARTED__) return;
+  window.__SNAPPY_MARKETING_ANALYTICS_STARTED__ = true;
+
+  const GA_MEASUREMENT_ID = "G-7RE3YVW1DR";
   const GOOGLE_ADS_ID = "AW-18256973572";
   const GOOGLE_ADS_SIGNUP_SEND_TO = "AW-18256973572/JyFnCPXZx8IcEISezYFE";
   const GA_SRC = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
@@ -19,8 +22,6 @@
 let initialized = false;
 let analyticsStarted = false;
 let ctaTrackingAttached = false;
-let usingFirebase = false;
-let firebaseTrack = null;
 
 function browserStorage(name) {
   try {
@@ -43,15 +44,6 @@ function storageSet(storage, key, value) {
   if (!storage) return;
   try {
     storage.setItem(key, value);
-  } catch (_error) {
-    // Storage may be unavailable in private browsing or strict privacy modes.
-  }
-}
-
-function storageRemove(storage, key) {
-  if (!storage) return;
-  try {
-    storage.removeItem(key);
   } catch (_error) {
     // Storage may be unavailable in private browsing or strict privacy modes.
   }
@@ -178,29 +170,19 @@ window.SnappyAnalytics = {
 };
 
 function bootstrapGtag() {
-  if (typeof window.gtag === "function") {
-    return Promise.resolve();
-  }
-
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function () {
+  window.gtag = window.gtag || function () {
     window.dataLayer.push(arguments);
   };
 
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      return;
-    }
-
+  if (!document.querySelector(`script[src="${GA_SRC}"]`)) {
     const script = document.createElement("script");
     script.async = true;
     script.src = GA_SRC;
-    script.onload = resolve;
-    script.onerror = () => reject(new Error("Failed to load GA script"));
     document.head.appendChild(script);
-  });
+  }
+  // Queue configuration before the asynchronous library arrives.
+  return Promise.resolve();
 }
 
 function initGoogleAnalytics() {
@@ -211,8 +193,7 @@ function initGoogleAnalytics() {
         allow_google_signals: false,
         allow_ad_personalization_signals: false,
         page_location: publicPageUrl(window.location.href),
-        page_referrer: publicPageUrl(document.referrer),
-        send_page_view: false
+        page_referrer: publicPageUrl(document.referrer)
       };
       window.gtag("config", GA_MEASUREMENT_ID, measurementOptions);
       window.gtag("config", GOOGLE_ADS_ID, measurementOptions);
@@ -223,33 +204,8 @@ function initGoogleAnalytics() {
     });
 }
 
-async function tryInitFirebase() {
-  const cfg = window.__SNAPPY_ANALYTICS_CONFIG__;
-  if (!cfg || !cfg.apiKey || !cfg.appId || !cfg.projectId) {
-    return false;
-  }
-
-  try {
-    const appMod = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js");
-    const analyticsMod = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js");
-    const app = appMod.initializeApp(cfg);
-    const analytics = analyticsMod.getAnalytics(app);
-    firebaseTrack = (name, params) => analyticsMod.logEvent(analytics, name, params);
-    usingFirebase = true;
-    initialized = true;
-    return true;
-  } catch (_err) {
-    return false;
-  }
-}
-
 function trackEvent(name, params = {}) {
   if (!initialized) return;
-
-  if (usingFirebase && typeof firebaseTrack === "function") {
-    firebaseTrack(name, params);
-    return;
-  }
 
   if (typeof window.gtag === "function") {
     window.gtag("event", name, params);
@@ -287,25 +243,17 @@ async function initAnalytics() {
   analyticsStarted = true;
   bootstrapMetaPixel();
 
-  const firebaseConfigured = await tryInitFirebase();
-  if (!firebaseConfigured) {
-    await initGoogleAnalytics();
-  }
+  await initGoogleAnalytics();
 
   if (!initialized) {
     return;
   }
 
   trackCtaClicks();
-  trackEvent("page_view", {
-    page_title: document.title,
-    page_location: publicPageUrl(window.location.href),
-  });
 }
 
 function init() {
-  // Notice-based marketing-site policy. Legacy cookie choices are retained,
-  // but no longer gate these tags; this does not constitute affirmative consent.
+  // Marketing-site notice: tags load on every HTTP(S) page, independently of prior choices.
   initAnalytics();
 }
 

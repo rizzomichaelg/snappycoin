@@ -17,13 +17,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Run browser-module tests
+      - name: Verify cutover routes and retained marketing integrations
         run: node --test test/*.test.mjs
-      - name: Verify public runtime configuration
-        run: node scripts/verify-pud-config.mjs
-      - name: Verify OpenAPI client contract mirror
-        run: node scripts/verify-pud-contract.mjs
-        env:
-          PUD_OPENAPI: ${{ github.workspace }}/contracts/pud-openapi.yaml
-      - name: Verify static asset inventory
-        run: node scripts/verify-pud.mjs
+      - name: Verify approved public baseline
+        run: node scripts/verify-public-baseline.mjs
+      - name: Verify promotion, newsletter, and conversion behavior
+        run: node tools/verify-promo-signup.js
