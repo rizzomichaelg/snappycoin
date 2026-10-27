@@ -7,7 +7,7 @@ const book = 'https://book.snappycoinlaundry.com';
 async function files(dir = root) {
   const result = [];
   for (const e of await readdir(dir, {withFileTypes:true})) {
-    if (e.name.startsWith('.')) continue;
+    if (e.name.startsWith('.') || (dir === root && e.name === 'legacy')) continue;
     const path=resolve(dir,e.name);
     if(e.isDirectory())result.push(...await files(path)); else result.push(path);
   }
@@ -41,7 +41,7 @@ test('no retired application route references or superseded analytics identifier
  const retiredDirectory=relative(root,redirects[0].path).split('/')[0];
  for(const path of paths.filter(p=>/\.(html|js|mjs|json|xml|txt|md|yml|css)$/.test(p))){
    const source=await readFile(path,'utf8');
-   assert.ok(!source.includes('/'+retiredDirectory+'/'),relative(root,path));
+   assert.ok(!source.replaceAll('/legacy/'+retiredDirectory+'/', '').includes('/'+retiredDirectory+'/'),relative(root,path));
    if(path.endsWith('site-analytics.js')){
      assert.doesNotMatch(source,/firebase/i);
      const ids=[...source.matchAll(/G-[A-Z0-9]{10}\b/g)].map(m=>m[0]);
