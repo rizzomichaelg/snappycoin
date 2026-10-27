@@ -1,17 +1,23 @@
 {
-  "source": "rizzomichaelg/snappycoin@origin/main with approved PUD entry-point links, standard Wash/Dry/Fold booking entry point, and responsive header sizing",
+  "source": "Approved Snappy marketing redesign with October 25, 2026 laptop hero spacing refinement; existing availability and current PUD integration preserved",
   "files": {
     "assets/js/availability-widget.js": "b343a0777c08488784d730ab8c59b05be21f2ed898b6766fde8c118153d46b29",
-    "assets/js/promo-signup.js": "6382bedb875acc4645eba9c573968c73b1f3a46949a0727fe01020894eb3e102",
-    "assets/js/site-analytics.js": "c874338ec1e3505b35e0ac6ea383ecfc40b201551dd22e33ad68889d08df4e07",
-    "cookies.html": "9488a542c1e8d9f40e5cd71cef022d9bc6d1eb35b6fcb3d0a87b2ce78a5088ad",
+    "assets/js/promo-signup.js": "77ee449f8b5dbc214becda5a69cc1b0ecdf5ab0181ea22089d8b000c92472183",
+    "assets/js/site-analytics.js": "5dea3479d807989c4d206934930970fc41af6441c7db7675f6df9826f8d83cdf",
+    "cookies.html": "a03c1fd91f8131645cbdb77f9c5e03df68017fbe9f4e23e061aca4c68f085fe2",
     "docs/security-headers.md": "1fb191765d0a4a631dc3a2ae754e5bcfab1917fc9ff2c354086b3f262915a069",
-    "index.html": "ff354dda2e408f946a37422d0ebee163320a1489114c5d6452d59c86117c805e",
+    "index.html": "9c96c6d14a9e9fc640ac7fb330f75d7e331a6d728cdaf1b3c220e986fa2979fd",
     "manifest.json": "c0efb3ede062ce9ec98276f90ab8349f289563d312119bee78b1b6785cf1496d",
-    "privacy.html": "5dec1f4881134619c35827761c9334d004fa8cd218d1ffe62b364c1250549306",
-    "promos/free-weekday-wash/index.html": "3691ad648e33f3fffedc489b890d07ca57f7a2903769ef2a2192f23b47c05f40",
-    "script.js": "acc2a03af13da2dd0745ba03c56be88abe2f7975ec9905d2c6a8543127d9c891",
-    "styles.css": "0ccf685967d8dea48396f2f3a5853a3c34a02c1feb775a0a2c8b92419b202e94",
-    "terms.html": "38e700b2068d633e4c2aa09cefec40bb65de62909956aec3a0fd722aebd1aeaa"
+    "privacy.html": "ed2318996c6fde89f15b902f1cfcff0a7903bbec14fa6cc676774e92a4d58ba0",
+    "promos/free-weekday-wash/index.html": "53fe0874a177058ed88667968c70dae3ea9599464900627a99ca221e78d30d6b",
+    "script.js": "427bf012ee547915aae50d7841ba23833454ce5cdc7331f8341839e0ccab01c7",
+    "styles.css": "40c3e7c5027c90188aeaee91a4e8a1ca87cccfb7b5317c35383154ea9c87c559",
+    "terms.html": "0dfa6fdfdcbe63a691b9fb40f0a61d34ec1efd29e312f67ab4f26878221eddad",
+    "assets/logo-96.webp": "a11248f64deeb48df2582ea636d4d1cc9ad52dd8fa1cb6d050ad39e96723de1c",
+    "assets/laundryrow-960.webp": "d9fc468a297b38f313c14794a24ecd0cb59fe8dd2ee0897bdd1039e7733b24e8",
+    "assets/laundryrow-1600.webp": "041bd8aff071f4d8221130b728f7e9e0f2707fa6e08a3e4200f5d45251e9e2f3",
+    "assets/laundryrow-2400.webp": "edad5da8b58e9e7769010ab44c322163ba35817797da859d7f08845b56b3c86d",
+    "assets/snappy-kenzie-laundry.webp": "29088e7a782da3a3049edaa15953341525e03a115df1854c16dabe359984e51f",
+    "assets/js/marketing-motion.js": "cb449dc7fff03d02677aa16b950242c256911fbb8d09d771bda47ff4921e1cec"
   }
 }

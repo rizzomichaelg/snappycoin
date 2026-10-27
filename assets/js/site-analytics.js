@@ -15,13 +15,9 @@
   const META_SRC = "https://connect.facebook.net/en_US/fbevents.js";
   const META_LEAD_STORAGE_PREFIX = "snappyMetaLeadFired";
   const META_LEAD_CONTENT_NAME = "Snappy Promo Coupon Claim";
-  const COOKIE_CONSENT_STORAGE_KEY = "snappyCookieConsent:v1";
-  const COOKIE_CONSENT_ACCEPTED = "accepted";
-  const COOKIE_CONSENT_DECLINED = "declined";
-  const PENDING_META_LEAD_KEY = "snappyPendingMetaLead:v1";
 
 let initialized = false;
-let optionalAnalyticsStarted = false;
+let analyticsStarted = false;
 let ctaTrackingAttached = false;
 let usingFirebase = false;
 let firebaseTrack = null;
@@ -61,87 +57,7 @@ function storageRemove(storage, key) {
   }
 }
 
-function cookieConsentValue() {
-  const localStore = browserStorage("localStorage");
-  const sessionStore = browserStorage("sessionStorage");
-  return (
-    storageGet(localStore, COOKIE_CONSENT_STORAGE_KEY) ||
-    storageGet(sessionStore, COOKIE_CONSENT_STORAGE_KEY)
-  );
-}
-
-function hasOptionalCookieConsent() {
-  return cookieConsentValue() === COOKIE_CONSENT_ACCEPTED;
-}
-
-function hasCookieConsentChoice() {
-  const value = cookieConsentValue();
-  return value === COOKIE_CONSENT_ACCEPTED || value === COOKIE_CONSENT_DECLINED;
-}
-
-function setCookieConsent(value) {
-  const localStore = browserStorage("localStorage");
-  const sessionStore = browserStorage("sessionStorage");
-  storageSet(localStore, COOKIE_CONSENT_STORAGE_KEY, value);
-  storageSet(sessionStore, COOKIE_CONSENT_STORAGE_KEY, value);
-}
-
-function removeCookieBanner() {
-  const banner = document.querySelector(".cookie-consent-banner");
-  if (banner && typeof banner.remove === "function") {
-    banner.remove();
-  }
-}
-
-function renderCookieBanner() {
-  if (hasCookieConsentChoice() || document.querySelector(".cookie-consent-banner")) {
-    return;
-  }
-
-  const banner = document.createElement("section");
-  banner.className = "cookie-consent-banner";
-  banner.setAttribute("role", "dialog");
-  banner.setAttribute("aria-live", "polite");
-  banner.setAttribute("aria-label", "Cookie consent");
-  banner.innerHTML = `
-    <div class="cookie-consent-copy">
-      <strong>Cookie choices</strong>
-      <p>
-        We use optional analytics and advertising cookies to measure visits and promo claims.
-        Essential security and form tools still run either way.
-        <a href="cookies.html">Cookie Statement</a>
-      </p>
-    </div>
-    <div class="cookie-consent-actions">
-      <button class="cookie-consent-button secondary" type="button" data-cookie-consent="decline">Decline optional</button>
-      <button class="cookie-consent-button primary" type="button" data-cookie-consent="accept">Accept optional cookies</button>
-    </div>
-  `;
-
-  const accept = banner.querySelector("[data-cookie-consent='accept']");
-  const decline = banner.querySelector("[data-cookie-consent='decline']");
-  if (accept) {
-    accept.addEventListener("click", () => {
-      setCookieConsent(COOKIE_CONSENT_ACCEPTED);
-      removeCookieBanner();
-      initOptionalAnalytics();
-    });
-  }
-  if (decline) {
-    decline.addEventListener("click", () => {
-      setCookieConsent(COOKIE_CONSENT_DECLINED);
-      removeCookieBanner();
-    });
-  }
-
-  document.body.appendChild(banner);
-}
-
 function bootstrapMetaPixel() {
-  if (!hasOptionalCookieConsent()) {
-    return;
-  }
-
   if (window.__SNAPPY_META_PIXEL_INITIALIZED__) {
     return;
   }
@@ -173,12 +89,13 @@ function bootstrapMetaPixel() {
     }
   }
 
+  // Do not enable automatic form-event collection or advanced matching.
+  window.fbq("set", "autoConfig", false, META_PIXEL_ID);
   window.fbq("init", META_PIXEL_ID);
   window.fbq("track", "PageView");
 }
 
 function trackMetaLead() {
-  if (!hasOptionalCookieConsent()) return false;
   if (typeof window.fbq !== "function") bootstrapMetaPixel();
   if (typeof window.fbq !== "function") return false;
   window.fbq("track", "Lead", {
@@ -188,7 +105,6 @@ function trackMetaLead() {
 }
 
 function trackGoogleAdsSignupConversion() {
-  if (!hasOptionalCookieConsent()) return false;
 
   const sendConversion = () => {
     if (typeof window.gtag !== "function") return;
@@ -234,44 +150,6 @@ function claimSuccessTrackingTarget(details = {}) {
   };
 }
 
-function pendingCouponClaimDetails(details = {}) {
-  const promotionSlug = String(details.promotionSlug || "promo").trim() || "promo";
-  const claimId = String(
-    details.claimId ||
-      details.couponClaimId ||
-      details.redemptionId ||
-      details.successId ||
-      ""
-  ).trim();
-  return {
-    promotionSlug,
-    claimId,
-    successMarker: String(details.successMarker || "coupon-claim-success").trim()
-  };
-}
-
-function storePendingCouponClaimSuccess(details) {
-  const sessionStore = browserStorage("sessionStorage");
-  storageSet(sessionStore, PENDING_META_LEAD_KEY, JSON.stringify(pendingCouponClaimDetails(details)));
-}
-
-function processPendingCouponClaimSuccess() {
-  if (!hasOptionalCookieConsent()) return;
-  const sessionStore = browserStorage("sessionStorage");
-  const pending = storageGet(sessionStore, PENDING_META_LEAD_KEY);
-  if (!pending) return;
-
-  storageRemove(sessionStore, PENDING_META_LEAD_KEY);
-  try {
-    const parsed = JSON.parse(pending);
-    if (parsed && typeof parsed === "object") {
-      trackCouponClaimSuccess(parsed);
-    }
-  } catch (_error) {
-    // Ignore malformed pending tracking data.
-  }
-}
-
 function trackCouponClaimSuccess(details = {}) {
   const target = claimSuccessTrackingTarget(details);
   const localStore = browserStorage("localStorage");
@@ -281,11 +159,6 @@ function trackCouponClaimSuccess(details = {}) {
     (target.durable && storageGet(localStore, target.key) === "1");
 
   if (alreadyTracked) return false;
-
-  if (!hasOptionalCookieConsent()) {
-    if (!hasCookieConsentChoice()) storePendingCouponClaimSuccess(details);
-    return false;
-  }
 
   const metaTracked = trackMetaLead();
   const googleAdsTracked = trackGoogleAdsSignupConversion();
@@ -301,8 +174,7 @@ window.SnappyAnalytics = {
   ...(window.SnappyAnalytics || {}),
   trackMetaLead,
   trackGoogleAdsSignupConversion,
-  trackCouponClaimSuccess,
-  hasOptionalCookieConsent
+  trackCouponClaimSuccess
 };
 
 function bootstrapGtag() {
@@ -335,8 +207,15 @@ function initGoogleAnalytics() {
   return bootstrapGtag()
     .then(() => {
       window.gtag("js", new Date());
-      window.gtag("config", GA_MEASUREMENT_ID);
-      window.gtag("config", GOOGLE_ADS_ID);
+      const measurementOptions = {
+        allow_google_signals: false,
+        allow_ad_personalization_signals: false,
+        page_location: publicPageUrl(window.location.href),
+        page_referrer: publicPageUrl(document.referrer),
+        send_page_view: false
+      };
+      window.gtag("config", GA_MEASUREMENT_ID, measurementOptions);
+      window.gtag("config", GOOGLE_ADS_ID, measurementOptions);
       initialized = true;
     })
     .catch(() => {
@@ -377,6 +256,15 @@ function trackEvent(name, params = {}) {
   }
 }
 
+function publicPageUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.origin + url.pathname : "";
+  } catch {
+    return "";
+  }
+}
+
 function trackCtaClicks() {
   if (ctaTrackingAttached) return;
   ctaTrackingAttached = true;
@@ -386,17 +274,17 @@ function trackCtaClicks() {
 
     trackEvent("cta_click", {
       link_text: (target.textContent || "").trim(),
-      link_href: target.getAttribute("href") || "",
+      link_href: publicPageUrl(new URL(target.getAttribute("href") || "", window.location.href).href),
     });
   });
 }
 
-async function initOptionalAnalytics() {
-  if (optionalAnalyticsStarted || !hasOptionalCookieConsent()) {
+async function initAnalytics() {
+  if (analyticsStarted) {
     return;
   }
 
-  optionalAnalyticsStarted = true;
+  analyticsStarted = true;
   bootstrapMetaPixel();
 
   const firebaseConfigured = await tryInitFirebase();
@@ -411,14 +299,14 @@ async function initOptionalAnalytics() {
   trackCtaClicks();
   trackEvent("page_view", {
     page_title: document.title,
-    page_location: window.location.href,
+    page_location: publicPageUrl(window.location.href),
   });
-  processPendingCouponClaimSuccess();
 }
 
 function init() {
-  renderCookieBanner();
-  initOptionalAnalytics();
+  // Notice-based marketing-site policy. Legacy cookie choices are retained,
+  // but no longer gate these tags; this does not constitute affirmative consent.
+  initAnalytics();
 }
 
 if (document.readyState === "loading") {

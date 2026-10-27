@@ -1,22 +1,22 @@
 :root {
   --pud-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  --pud-page: #f3f6f8;
-  --pud-surface: #f8fafb;
+  --pud-page: #ffffff;
+  --pud-surface: #ffffff;
   --pud-surface-strong: #ffffff;
-  --pud-surface-subtle: #edf3f7;
+  --pud-surface-subtle: #f2f6fa;
 
-  --pud-ink: #17232d;
-  --pud-muted: #5b6872;
-  --pud-border: #d7e0e6;
-  --pud-border-strong: #afbdc7;
+  --pud-ink: #243c59;
+  --pud-muted: #52657b;
+  --pud-border: #d7e0eb;
+  --pud-border-strong: #8b9db2;
 
-  --pud-primary: #135b82;
-  --pud-primary-hover: #0e4d70;
-  --pud-primary-active: #0b405e;
-  --pud-primary-soft: #e9f3f8;
+  --pud-primary: #073b91;
+  --pud-primary-hover: #124fa3;
+  --pud-primary-active: #092e63;
+  --pud-primary-soft: #edf3fb;
 
-  --pud-accent: #e7a423;
+  --pud-accent: #ffce32;
   --pud-accent-soft: #fff6df;
 
   --pud-info: #3158b7;
@@ -32,14 +32,14 @@
   --pud-danger-hover: #8f3030;
   --pud-danger-soft: #fff0f0;
 
-  --pud-radius-sm: 6px;
+  --pud-radius-sm: 8px;
   --pud-radius-md: 8px;
   --pud-radius-lg: 10px;
 
-  --pud-shadow-sm: 0 1px 3px rgba(23, 35, 45, 0.06);
-  --pud-shadow-md: 0 5px 18px rgba(23, 35, 45, 0.08);
+  --pud-shadow-sm: none;
+  --pud-shadow-md: 0 6px 18px rgba(9, 46, 99, 0.06);
 
-  --pud-focus-ring: 0 0 0 3px rgba(223, 152, 53, 0.38);
+  --pud-focus-ring: 0 0 0 3px rgba(7, 59, 145, 0.3);
 
   --pud-space-1: 4px;
   --pud-space-2: 8px;
@@ -59,7 +59,7 @@
   /* Compatibility aliases for existing selectors and scripts. */
   --ink: var(--pud-ink);
   --blue: var(--pud-info);
-  --blue-dark: #274693;
+  --blue-dark: #073b91;
   --yellow: var(--pud-accent);
   --paper: var(--pud-page);
   --white: var(--pud-surface-strong);
@@ -214,7 +214,7 @@ h3 {
   padding: 10px max(20px, calc((100vw - var(--pud-shell-max)) / 2));
   background: var(--pud-surface);
   border-bottom: 1px solid var(--pud-border);
-  box-shadow: 0 1px 3px rgba(23, 35, 45, 0.05);
+  box-shadow: none;
   transition: min-height 160ms ease, padding 160ms ease, box-shadow 160ms ease;
 }
 
@@ -253,7 +253,7 @@ h3 {
   min-height: 56px;
   padding-top: 6px;
   padding-bottom: 6px;
-  box-shadow: 0 2px 8px rgba(23, 35, 45, 0.1);
+  box-shadow: none;
 }
 
 .pud-header.is-condensed .pud-header__inner {
@@ -409,20 +409,20 @@ h3 {
 }
 
 .pud-button-primary {
-  color: #ffffff;
-  background: var(--pud-primary);
-  border-color: var(--pud-primary);
+  color: #092e63;
+  background: var(--pud-accent);
+  border-color: var(--pud-accent);
 }
 
 .pud-button-primary:hover:not(:disabled) {
-  color: #ffffff;
-  background: var(--pud-primary-hover);
-  border-color: var(--pud-primary-hover);
+  color: #092e63;
+  background: #f4bf19;
+  border-color: #f4bf19;
 }
 
 .pud-button-primary:active:not(:disabled) {
-  background: var(--pud-primary-active);
-  border-color: var(--pud-primary-active);
+  background: #eab316;
+  border-color: #eab316;
 }
 
 .pud-button-secondary {
@@ -1580,3 +1580,11 @@ h3 {
     box-shadow: none;
   }
 }
+
+/* Shared marketing identity, while preserving the established booking layouts. */
+::selection { color: #092e63; background: #ffdf79; }
+html { scrollbar-color: #9aabc0 #f2f6fa; }
+input, textarea { caret-color: var(--pud-primary); }
+.pud-brand { color: var(--pud-primary); }
+.pud-brand img { border-radius: 6px; }
+.pud-hero h1, .pud-card h2, .pud-policy h1, .pud-policy h2 { color: var(--pud-primary); }

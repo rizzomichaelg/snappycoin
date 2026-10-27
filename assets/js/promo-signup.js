@@ -92,7 +92,7 @@
   let resendRequestInFlight = false;
   let newsletterRequestInFlight = false;
   let resendTimerId = 0;
-  let promoIsActive = true;
+  let promoIsActive = false;
 
   function showMessage(node, text, variant) {
     if (!node) return;
@@ -267,11 +267,8 @@
   const firstTouchAttribution = storedFirstTouchAttribution();
 
   function metaAttribution(currentSnapshot) {
-    const analytics = window.SnappyAnalytics || {};
-    const optionalCookieConsent =
-      typeof analytics.hasOptionalCookieConsent === "function"
-        ? analytics.hasOptionalCookieConsent()
-        : false;
+    // No opt-in is collected under the notice-based policy. Never fabricate consent.
+    const optionalCookieConsent = false;
 
     return {
       meta_click_id: firstTouchAttribution.fbclid || currentSnapshot.fbclid || "",
@@ -283,11 +280,8 @@
   }
 
   function googleAdsAttribution(currentSnapshot) {
-    const analytics = window.SnappyAnalytics || {};
-    const optionalCookieConsent =
-      typeof analytics.hasOptionalCookieConsent === "function"
-        ? analytics.hasOptionalCookieConsent()
-        : false;
+    // No opt-in is collected under the notice-based policy. Never fabricate consent.
+    const optionalCookieConsent = false;
 
     return {
       google_click_id: firstTouchAttribution.gclid || currentSnapshot.gclid || "",
@@ -307,9 +301,9 @@
         currentSnapshot.gad_adgroupid ||
         currentSnapshot.adgroupid ||
         "",
-      google_gcl_aw: optionalCookieConsent ? cookieValue("_gcl_aw") : "",
-      google_gcl_dc: optionalCookieConsent ? cookieValue("_gcl_dc") : "",
-      google_gcl_au: optionalCookieConsent ? cookieValue("_gcl_au") : "",
+      google_gcl_aw: cookieValue("_gcl_aw"),
+      google_gcl_dc: cookieValue("_gcl_dc"),
+      google_gcl_au: cookieValue("_gcl_au"),
       google_optional_cookie_consent: optionalCookieConsent,
       google_ads_loaded: typeof window.gtag === "function"
     };
@@ -438,7 +432,10 @@
       node.hidden = !active;
     });
     if (els.promoPaused) els.promoPaused.hidden = active;
-    if (els.promoLayout) els.promoLayout.classList.toggle("is-promo-hidden", !active);
+    if (els.promoLayout) {
+      els.promoLayout.hidden = false;
+      els.promoLayout.classList.toggle("is-promo-hidden", !active);
+    }
     if (els.promoNavItem) els.promoNavItem.hidden = !active;
     if (els.heroPromoCta) {
       els.heroPromoCta.textContent = active ? "Claim Free Wash" : "Plan Your Visit";
@@ -454,7 +451,8 @@
     const data = await requestJson(`/api/promotions/${promotionSlug}/public`, { method: "GET" });
     const offer = document.getElementById("promo-offer");
     if (offer && data.offerLabel) offer.textContent = data.offerLabel;
-    setPromoActiveState(data.active !== false);
+    if (typeof data.active !== "boolean") throw new Error("Promotion status is unavailable.");
+    setPromoActiveState(data.active === true);
     if (!resolvedTurnstileSiteKey && data.turnstileSiteKey) {
       resolvedTurnstileSiteKey = String(data.turnstileSiteKey);
     }
@@ -462,6 +460,7 @@
 
   async function startClaim(event) {
     event.preventDefault();
+    if (!promoIsActive) return;
     if (claimRequestInFlight) return;
     showMessage(els.message, "", "info");
     if (els.form && !els.form.reportValidity()) return;
@@ -629,7 +628,11 @@
   if (els.newsletterForm) els.newsletterForm.addEventListener("submit", joinNewsletter);
   loadPromotion()
     .catch((error) => {
-      if (!turnstileSiteKey()) showMessage(els.message, error.message, "error");
+      setPromoActiveState(false);
+      const title = document.getElementById("promo-paused-title");
+      const message = document.getElementById("promo-paused-message");
+      if (title) title.textContent = "Promotion details are unavailable.";
+      if (message) message.textContent = "We couldn't check current promotions. Please try again later, or contact our team for help.";
     })
     .finally(renderConfiguredTurnstiles);
   window.setTimeout(warnIfTurnstileMissing, turnstileLoadWarningMs);
