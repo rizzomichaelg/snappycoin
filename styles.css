@@ -895,7 +895,7 @@ input::placeholder { color: #596b80; opacity: 1; }
 .directions-dialog-content { padding: 28px; }
 .directions-dialog h2 { font-size: 25px; letter-spacing: -0.025em; }
 .directions-dialog p { margin-top: 10px; font-size: 16px; line-height: 1.5; }
-.directions-options { display: flex; flex-direction: column; gap: 4px; margin-block: 24px 20px; }
+.directions-options { display: flex; flex-direction: column; gap: 12px; margin-block: 24px 24px; }
 .directions-option {
   display: flex;
   align-items: center;
@@ -923,7 +923,7 @@ input::placeholder { color: #596b80; opacity: 1; }
   cursor: pointer;
 }
 .directions-cancel:hover { background: var(--light-bg); }
-.directions-dialog :focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+.directions-dialog :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 @media (max-width: 600px) {
   .directions-dialog {
     width: 100%;
@@ -933,5 +933,5 @@ input::placeholder { color: #596b80; opacity: 1; }
     margin: auto 0 0;
     border-radius: 16px 16px 0 0;
   }
-  .directions-dialog-content { padding: 28px 24px calc(24px + env(safe-area-inset-bottom)); }
+  .directions-dialog-content { padding: 32px 24px calc(24px + env(safe-area-inset-bottom)); }
 }
