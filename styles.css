@@ -876,3 +876,62 @@ input::placeholder { color: #596b80; opacity: 1; }
 
 /* The retired offer stays hidden even if its historical API is active. */
 [data-retired-promotion] { display: none !important; }
+
+/* Shared directions chooser: native modal on desktop, bottom sheet on phones. */
+.directions-dialog {
+  width: min(420px, calc(100% - 40px));
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--text-color);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.directions-dialog::backdrop { background: rgb(9 46 99 / 40%); }
+.directions-dialog-content { padding: 28px; }
+.directions-dialog h2 { font-size: 25px; letter-spacing: -0.025em; }
+.directions-dialog p { margin-top: 10px; font-size: 16px; line-height: 1.5; }
+.directions-options { display: flex; flex-direction: column; gap: 4px; margin-block: 24px 20px; }
+.directions-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--light-bg);
+  color: var(--primary-color);
+  font-weight: 700;
+  text-decoration: none;
+}
+.directions-option:hover { background: #e5edf7; color: var(--primary-color); }
+.directions-option .material-icons { font-size: 20px; }
+.directions-cancel {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--primary-color);
+  font-weight: 700;
+  cursor: pointer;
+}
+.directions-cancel:hover { background: var(--light-bg); }
+.directions-dialog :focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+@media (max-width: 600px) {
+  .directions-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    margin: auto 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+  .directions-dialog-content { padding: 28px 24px calc(24px + env(safe-area-inset-bottom)); }
+}

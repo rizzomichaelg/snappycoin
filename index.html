@@ -23,7 +23,7 @@
   <script src="assets/js/marketing-motion.js?v=20261024-3"></script>
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20261027-cutover1" />
+  <link rel="stylesheet" href="styles.css?v=20261029-directions1" />
 
   <script src="assets/js/promo-config.js?v=20260531"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -73,7 +73,7 @@
         <p class="hero-lead">Wash here, drop it off, or let us pick it up.</p>
         <p class="hero-tagline">Wash &amp; Dry in a Snap!</p>
         <div class="hero-ctas" role="group" aria-label="Primary actions">
-          <a href="https://www.google.com/maps/dir/?api=1&amp;destination=2303+McKelvey+Rd+Maryland+Heights+MO+63043" class="btn-cta primary" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">place</span>Get directions</a>
+          <a data-directions-opener aria-haspopup="dialog" href="https://www.google.com/maps/dir/?api=1&amp;destination=2303%20McKelvey%20Rd%20Maryland%20Heights%20MO%2063043" class="btn-cta primary" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">place</span>Get directions</a>
           <a href="https://book.snappycoinlaundry.com" class="btn-cta ghost"><span class="material-icons" aria-hidden="true">local_shipping</span>Book a pickup</a>
         </div>
         <div class="hero-visit">
@@ -215,7 +215,7 @@
             <li><span class="material-icons bullet-icon" aria-hidden="true">check_circle</span> Money Changers</li>
             <li><span class="material-icons bullet-icon" aria-hidden="true">check_circle</span> DexterPay Laundry App</li>
           </ul>
-          <a class="service-link" href="#contact-section">Get directions</a></div>
+          <a class="service-link" data-directions-opener aria-haspopup="dialog" href="https://www.google.com/maps/dir/?api=1&amp;destination=2303%20McKelvey%20Rd%20Maryland%20Heights%20MO%2063043" target="_blank" rel="noopener noreferrer">Get directions</a></div>
           </article>
 <article id="drop-off" class="service-panel">
             <div class="service-panel-heading">
@@ -543,7 +543,7 @@
           src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3101.985597864419!2d-90.44907098447274!3d38.724194464008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87df366a0b621e19%3A0x777de607952b1f61!2s2303%20McKelvey%20Rd%2C%20Maryland%20Heights%2C%20MO%2063043!5e0!3m2!1sen!2sus!4v1610000000000!5m2!1sen!2sus"
           allowfullscreen="" loading="lazy">
         </iframe>
-      </div><div class="map-actions"><a class="btn-cta primary" href="https://www.google.com/maps/dir/?api=1&amp;destination=2303+McKelvey+Rd+Maryland+Heights+MO+63043" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">directions</span>Get directions</a><a href="tel:13146281001">Call (314) 628-1001</a></div></div></div>
+      </div><div class="map-actions"><a class="btn-cta primary" data-directions-opener aria-haspopup="dialog" href="https://www.google.com/maps/dir/?api=1&amp;destination=2303%20McKelvey%20Rd%20Maryland%20Heights%20MO%2063043" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">directions</span>Get directions</a><a href="tel:13146281001">Call (314) 628-1001</a></div></div></div>
     </div>
   </section>
 
@@ -703,11 +703,24 @@
     </div>
   </footer>
 
+  <dialog class="directions-dialog" id="directions-dialog" aria-labelledby="directions-heading" aria-describedby="directions-address">
+    <div class="directions-dialog-content">
+      <h2 id="directions-heading">Get directions</h2>
+      <p id="directions-address">2303 McKelvey Rd, Maryland Heights</p>
+      <div class="directions-options">
+        <a class="directions-option" data-directions-app="google" href="https://www.google.com/maps/dir/?api=1&amp;destination=2303%20McKelvey%20Rd%20Maryland%20Heights%20MO%2063043" target="_blank" rel="noopener">Google Maps<span class="material-icons" aria-hidden="true">arrow_outward</span></a>
+        <a class="directions-option" data-directions-app="apple" href="https://maps.apple.com/?daddr=2303+McKelvey+Rd,+Maryland+Heights,+MO+63043&amp;dirflg=d" target="_blank" rel="noopener">Apple Maps<span class="material-icons" aria-hidden="true">arrow_outward</span></a>
+        <a class="directions-option" data-directions-app="waze" href="https://waze.com/ul?ll=38.7221281,-90.4488371&amp;navigate=yes" target="_blank" rel="noopener" hidden>Waze<span class="material-icons" aria-hidden="true">arrow_outward</span></a>
+      </div>
+      <button class="directions-cancel" type="button">Cancel</button>
+    </div>
+  </dialog>
+
   <!-- JAVASCRIPT -->
   <script type="module" src="assets/js/site-analytics.js?v=20261027-cutover1"></script>
   <script src="assets/js/availability-widget.js" defer></script>
   <script src="assets/js/promo-signup.js?v=20261023-stage1" defer></script>
-  <script src="script.js?v=20261024-3"></script>
+  <script src="script.js?v=20261029-directions1"></script>
 </body>
 
 </html>

@@ -71,7 +71,86 @@ function updateOpenStatus() {
   statusEl.classList.add("is-closed");
 }
 
+// Keep the actual map URLs usable even when JavaScript or Google tags are blocked.
+function initializeDirectionsChooser() {
+  const dialog = document.getElementById("directions-dialog");
+  if (!dialog || typeof dialog.showModal !== "function") return;
+
+  const options = dialog.querySelector(".directions-options");
+  const appLinks = Array.from(options.querySelectorAll("[data-directions-app]"));
+  const cancel = dialog.querySelector(".directions-cancel");
+  const appleDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (/Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1);
+  const androidDevice = /Android/i.test(navigator.userAgent);
+  const appOrder = appleDevice ? ["apple", "google", "waze"] :
+    androidDevice ? ["google", "waze"] : ["google", "apple"];
+  let opener;
+  let backdropPointerDown = false;
+
+  appLinks.forEach((link) => { link.hidden = !appOrder.includes(link.dataset.directionsApp); });
+  appOrder.forEach((app) => {
+    options.append(appLinks.find((link) => link.dataset.directionsApp === app));
+  });
+
+  document.querySelectorAll("[data-directions-opener]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      // Modified clicks retain the anchor's normal new-tab behavior.
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      opener = link;
+      dialog.showModal();
+      options.querySelector("a:not([hidden])").focus({ preventScroll: true });
+    });
+  });
+
+  appLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      // Never wait for a tag callback or replace the link's native navigation.
+      // An unavailable/blocked tag must not prevent opening the maps app.
+      try {
+        if (typeof gtag === 'function') {
+          gtag('event', 'conversion', { send_to: 'AW-18256973572/dUlhCJ68nK4dEISezYFE' });
+        }
+      } catch (_error) {
+        // Optional measurement cannot interrupt the customer's directions.
+      }
+      dialog.close();
+    });
+  });
+  cancel.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("close", () => {
+    opener?.focus({ preventScroll: true });
+  });
+
+  function outsideDialog(event) {
+    const bounds = dialog.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX > bounds.right ||
+      event.clientY < bounds.top || event.clientY > bounds.bottom;
+  }
+  dialog.addEventListener("pointerdown", (event) => {
+    backdropPointerDown = event.target === dialog && outsideDialog(event);
+  });
+  dialog.addEventListener("click", (event) => {
+    if (backdropPointerDown && event.target === dialog && outsideDialog(event)) dialog.close();
+    backdropPointerDown = false;
+  });
+  // Explicitly wrap keyboard focus among the currently visible app links and Cancel.
+  // The native modal also makes the rest of the document inert while it is open.
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const first = options.querySelector("a:not([hidden])");
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      cancel.focus();
+    } else if (!event.shiftKey && document.activeElement === cancel) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+}
+
 function initializeMarketingPage() {
+  initializeDirectionsChooser();
   const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
   // Show every service without JavaScript; progressively enhance to accessible tabs.
   const tabList = document.querySelector(".service-tabs");
