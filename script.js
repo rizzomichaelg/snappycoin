@@ -100,6 +100,8 @@ function initializeDirectionsChooser() {
       opener = link;
       dialog.showModal();
       options.querySelector("a:not([hidden])").focus({ preventScroll: true });
+      // A previous keyboard visit may have scrolled a short sheet to Cancel.
+      dialog.scrollTop = 0;
     });
   });
 

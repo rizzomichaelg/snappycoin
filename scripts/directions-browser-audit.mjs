@@ -26,6 +26,8 @@ const report = { origin, checkedAt: new Date().toISOString(), measurementInterce
 const conversion = { send_to: 'AW-18256973572/dUlhCJ68nK4dEISezYFE' };
 const google = 'https://www.google.com/maps/dir/?api=1&destination=2303%20McKelvey%20Rd%20Maryland%20Heights%20MO%2063043';
 const profiles = [
+  ['phone-landscape', { viewport: { width: 844, height: 390 }, userAgent: devices['iPhone 13'].userAgent, hasTouch: true }, ['apple', 'google', 'waze']],
+  ['short-phone', { viewport: { width: 320, height: 350 }, userAgent: devices['iPhone SE'].userAgent, hasTouch: true }, ['apple', 'google', 'waze']],
   ['desktop', { viewport: { width: 1440, height: 900 } }, ['google', 'apple']],
   ['iphone', devices['iPhone 13'], ['apple', 'google', 'waze']],
   ['ipad-desktop-ua', { viewport: { width: 1024, height: 768 }, hasTouch: true, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15' }, ['apple', 'google', 'waze']],
@@ -101,6 +103,15 @@ try {
         assert.equal(await page.locator('[data-directions-opener]').nth(entry).evaluate(el => el === document.activeElement), true);
       }
     }
+    // Short sheets must restart at the heading after keyboard scrolling to Cancel.
+    await open(page);
+    await page.locator('.directions-cancel').focus();
+    await page.keyboard.press('Enter');
+    await open(page);
+    assert.equal(await page.locator('#directions-dialog').evaluate(d => {
+      return d.scrollTop === 0 && d.querySelector('h2').getBoundingClientRect().top >= d.getBoundingClientRect().top;
+    }), true, `${name}: heading clipped after reopening`);
+    await page.getByRole('button', {name:'Cancel',exact:true}).click();
     // Reach the opener with keyboard, then verify forward/backward containment and Escape.
     await page.locator('.hero-ctas [data-directions-opener]').focus();
     await page.keyboard.press('Shift+Tab');
